@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
+import busynotfree.exception.CommandException;
+
 /**
  * Tests entity/action parsing while preserving unparsed argument text.
  */
@@ -61,12 +63,12 @@ class CommandParserTest {
 
     @Test
     public void parse_emptyInput_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> parser.parse(""));
+        assertThrows(CommandException.class, () -> parser.parse(""));
     }
 
     @Test
     public void parse_blankInput_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> parser.parse(" \t "));
+        assertThrows(CommandException.class, () -> parser.parse(" \t "));
     }
 
     @Test
@@ -89,21 +91,21 @@ class CommandParserTest {
 
     @Test
     public void parse_missingDot_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> parser.parse("project"));
+        assertThrows(CommandException.class, () -> parser.parse("project"));
     }
 
     @Test
     public void parse_missingAction_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> parser.parse("task. project/P001"));
+        assertThrows(CommandException.class, () -> parser.parse("task. project/P001"));
     }
 
     @Test
     public void parse_missingEntity_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> parser.parse(".add name/Website"));
+        assertThrows(CommandException.class, () -> parser.parse(".add name/Website"));
     }
 
     @Test
     public void parse_extraDot_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> parser.parse("event.add.more project/P001"));
+        assertThrows(CommandException.class, () -> parser.parse("event.add.more project/P001"));
     }
 }

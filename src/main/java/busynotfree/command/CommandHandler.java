@@ -2,6 +2,8 @@ package busynotfree.command;
 
 import java.util.Map;
 
+import busynotfree.exception.BusyNotFreeException;
+import busynotfree.exception.CommandException;
 import busynotfree.model.Event;
 import busynotfree.model.Project;
 import busynotfree.model.ProjectManager;
@@ -49,7 +51,7 @@ public class CommandHandler {
                 command = commandParser.parse(userInput);
                 routeCommand(command);
             }
-        } catch (IllegalArgumentException exception) {
+        } catch (BusyNotFreeException exception) {
             ui.showError(exception.getMessage());
             if (command != null && command.getAction().equals("add")) {
                 ui.showAddCommandUsage(command.getEntityType());
@@ -62,7 +64,7 @@ public class CommandHandler {
     /** Routes the supported add action to its target-specific handler. */
     private void routeCommand(ParsedCommand command) {
         if (!command.getAction().equals("add")) {
-            throw new IllegalArgumentException("Unsupported action: " + command.getAction() + ".");
+            throw new CommandException("Unsupported action: " + command.getAction() + ".");
         }
         String argumentText = command.getArgumentText();
         switch (command.getEntityType()) {
@@ -76,7 +78,7 @@ public class CommandHandler {
             handleEventAdd(argumentText);
             break;
         default:
-            throw new IllegalArgumentException("Unsupported target: " + command.getEntityType() + ".");
+            throw new CommandException("Unsupported target: " + command.getEntityType() + ".");
         }
     }
 

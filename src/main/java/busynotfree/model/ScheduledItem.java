@@ -1,6 +1,9 @@
 package busynotfree.model;
 
 import java.time.LocalDate;
+import java.util.function.Function;
+
+import busynotfree.exception.BusyNotFreeException;
 
 /**
  * Stores the immutable data shared by a project's dated tasks and events.
@@ -19,20 +22,22 @@ public abstract class ScheduledItem {
      * @param project project that owns this item
      * @param description non-blank description
      * @param date calendar date of the item
-     * @throws IllegalArgumentException if required data is missing
+     * @param exceptionFactory creates the subclass's exception from a validation message
+     * @throws BusyNotFreeException if required data is missing, using the supplied exception type
      */
-    protected ScheduledItem(String id, Project project, String description, LocalDate date) {
+    protected ScheduledItem(String id, Project project, String description, LocalDate date,
+            Function<String, ? extends BusyNotFreeException> exceptionFactory) {
         if (id == null || id.isBlank()) {
-            throw new IllegalArgumentException("An item ID must not be blank.");
+            throw exceptionFactory.apply("An item ID must not be blank.");
         }
         if (project == null) {
-            throw new IllegalArgumentException("An item must belong to a project.");
+            throw exceptionFactory.apply("An item must belong to a project.");
         }
         if (description == null || description.isBlank()) {
-            throw new IllegalArgumentException("An item description must not be blank.");
+            throw exceptionFactory.apply("An item description must not be blank.");
         }
         if (date == null) {
-            throw new IllegalArgumentException("An item date is required.");
+            throw exceptionFactory.apply("An item date is required.");
         }
         this.id = id.trim();
         this.project = project;

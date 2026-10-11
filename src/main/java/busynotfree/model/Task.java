@@ -2,6 +2,8 @@ package busynotfree.model;
 
 import java.time.LocalDate;
 
+import busynotfree.exception.TaskException;
+
 /**
  * Represents a dated internal task belonging to one project.
  */
@@ -13,10 +15,10 @@ public final class Task extends ScheduledItem {
      * @param project project that owns the task
      * @param description non-blank description of the work
      * @param date calendar date of the task
-     * @throws IllegalArgumentException if required data is missing
+     * @throws TaskException if required data is missing
      */
     public Task(String taskId, Project project, String description, LocalDate date) {
-        super(taskId, project, description, date);
+        super(taskId, project, description, date, TaskException::new);
     }
 
     /** Returns the task type for polymorphic messages. */

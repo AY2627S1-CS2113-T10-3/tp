@@ -2,6 +2,7 @@ package busynotfree.command;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
@@ -10,6 +11,11 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import busynotfree.exception.BusyNotFreeException;
+import busynotfree.exception.CommandException;
+import busynotfree.exception.EventException;
+import busynotfree.exception.ProjectException;
+import busynotfree.exception.TaskException;
 import busynotfree.model.PlaceholderClientLookup;
 import busynotfree.model.Project;
 import busynotfree.model.ProjectManager;
@@ -211,6 +217,46 @@ class CommandHandlerTest {
 
         assertEquals(List.of("Missing required prefix: project/."), ui.errors);
         assertEquals(List.of(EVENT_FORMAT), ui.messages);
+    }
+
+    @Test
+    public void execute_applicationExceptionSubtypes_reportsWithoutShutdown() {
+        List<BusyNotFreeException> exceptions = List.of(new CommandException("Command failure."),
+                new ProjectException("Project failure."), new TaskException("Task failure."),
+                new EventException("Event failure."));
+        for (BusyNotFreeException exception : exceptions) {
+            CommandHandler failingHandler = new CommandHandler(new FailingParser(exception), ui, projectManager);
+
+            assertFalse(failingHandler.execute("project.add"));
+        }
+
+        assertEquals(List.of("Command failure.", "Project failure.", "Task failure.", "Event failure."), ui.errors);
+        assertTrue(ui.messages.isEmpty());
+    }
+
+    @Test
+    public void execute_unrelatedProgrammingError_doesNotHideFailure() {
+        IllegalArgumentException programmingError = new IllegalArgumentException("Unexpected parser failure.");
+        CommandHandler failingHandler = new CommandHandler(new FailingParser(programmingError), ui, projectManager);
+
+        assertEquals(programmingError, assertThrows(IllegalArgumentException.class,
+                () -> failingHandler.execute("project.add")));
+        assertTrue(ui.errors.isEmpty());
+        assertTrue(ui.messages.isEmpty());
+    }
+
+    /** Simulates parser failures to verify the CLI's exception boundary. */
+    private static class FailingParser extends CommandParser {
+        private final RuntimeException exception;
+
+        private FailingParser(RuntimeException exception) {
+            this.exception = exception;
+        }
+
+        @Override
+        public ParsedCommand parse(String userInput) {
+            throw exception;
+        }
     }
 
     /** Captures handler output without writing to the console. */

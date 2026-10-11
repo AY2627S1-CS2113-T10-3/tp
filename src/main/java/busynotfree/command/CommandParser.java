@@ -1,5 +1,7 @@
 package busynotfree.command;
 
+import busynotfree.exception.CommandException;
+
 /**
  * Extracts the entity type, action and argument text from raw input.
  * Adapted from the MimiMeow individual project's CommandParser class.
@@ -11,7 +13,7 @@ public class CommandParser {
      *
      * @param userInput non-null raw user input
      * @return entity type, action and argument text
-     * @throws IllegalArgumentException if the command name is not in the form target.action
+     * @throws CommandException if the command name is not in the form target.action
      */
     public ParsedCommand parse(String userInput) {
         String[] commandParts = userInput.trim().split("\\s+", 2);
@@ -29,7 +31,7 @@ public class CommandParser {
     private ParsedCommand parseCommandWord(String word, String argumentText) {
         String[] wordParts = word.split("\\.", -1);
         if (wordParts.length != 2 || wordParts[0].isBlank() || wordParts[1].isBlank()) {
-            throw new IllegalArgumentException("Use target.action, such as project.add.");
+            throw new CommandException("Use target.action, such as project.add.");
         }
         return new ParsedCommand(wordParts[0], wordParts[1], argumentText);
     }

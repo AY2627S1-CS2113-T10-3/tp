@@ -7,6 +7,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
+import busynotfree.exception.EventException;
+import busynotfree.exception.ProjectException;
+import busynotfree.exception.TaskException;
+
 /**
  * Keeps projects in memory and assigns independent project, task and event IDs.
  * Counters advance only after successful additions and are shared across projects.
@@ -35,12 +39,12 @@ public final class ProjectManager {
      * @param name non-blank project name
      * @param deadline project deadline
      * @return the newly registered project
-     * @throws IllegalArgumentException if required data is missing or the client does not exist
+     * @throws ProjectException if required data is missing or the client does not exist
      */
     public Project addProject(String clientId, String name, LocalDate deadline) {
         Project project = new Project(formatId("P", nextProjectNumber), clientId, name, deadline);
         if (!clientLookup.exists(project.getClientId())) {
-            throw new IllegalArgumentException("Client " + project.getClientId() + " does not exist.");
+            throw new ProjectException("Client " + project.getClientId() + " does not exist.");
         }
         projects.put(project.getProjectId(), project);
         nextProjectNumber++;
@@ -54,7 +58,8 @@ public final class ProjectManager {
      * @param description non-blank description of the work
      * @param date task date
      * @return the newly attached task
-     * @throws IllegalArgumentException if required data is missing or the project does not exist
+     * @throws ProjectException if the project ID is blank or the project does not exist
+     * @throws TaskException if required task data is missing or the task cannot be attached
      */
     public Task addTask(String projectId, String description, LocalDate date) {
         Project project = getProject(projectId);
@@ -71,7 +76,8 @@ public final class ProjectManager {
      * @param description non-blank description of the event
      * @param date event date
      * @return the newly attached event
-     * @throws IllegalArgumentException if required data is missing or the project does not exist
+     * @throws ProjectException if the project ID is blank or the project does not exist
+     * @throws EventException if required event data is missing or the event cannot be attached
      */
     public Event addEvent(String projectId, String description, LocalDate date) {
         Project project = getProject(projectId);
@@ -86,15 +92,15 @@ public final class ProjectManager {
      *
      * @param projectId project ID to look up
      * @return the existing project
-     * @throws IllegalArgumentException if the ID is blank or does not identify an existing project
+     * @throws ProjectException if the ID is blank or does not identify an existing project
      */
     public Project getProject(String projectId) {
         if (projectId == null || projectId.isBlank()) {
-            throw new IllegalArgumentException("A project ID must not be blank.");
+            throw new ProjectException("A project ID must not be blank.");
         }
         Project project = projects.get(projectId.trim());
         if (project == null) {
-            throw new IllegalArgumentException("Project " + projectId.trim() + " does not exist.");
+            throw new ProjectException("Project " + projectId.trim() + " does not exist.");
         }
         return project;
     }

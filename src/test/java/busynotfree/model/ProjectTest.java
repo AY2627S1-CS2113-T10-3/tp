@@ -10,6 +10,10 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import busynotfree.exception.EventException;
+import busynotfree.exception.ProjectException;
+import busynotfree.exception.TaskException;
+
 /**
  * Tests project data, status and exclusive ownership of scheduled items.
  */
@@ -38,25 +42,25 @@ class ProjectTest {
 
     @Test
     public void constructor_missingProjectId_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> new Project("", "C001", "Website", deadline));
-        assertThrows(IllegalArgumentException.class, () -> new Project(null, "C001", "Website", deadline));
+        assertThrows(ProjectException.class, () -> new Project("", "C001", "Website", deadline));
+        assertThrows(ProjectException.class, () -> new Project(null, "C001", "Website", deadline));
     }
 
     @Test
     public void constructor_missingClientId_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> new Project("P002", "", "Website", deadline));
-        assertThrows(IllegalArgumentException.class, () -> new Project("P002", null, "Website", deadline));
+        assertThrows(ProjectException.class, () -> new Project("P002", "", "Website", deadline));
+        assertThrows(ProjectException.class, () -> new Project("P002", null, "Website", deadline));
     }
 
     @Test
     public void constructor_missingName_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> new Project("P002", "C001", " \t ", deadline));
-        assertThrows(IllegalArgumentException.class, () -> new Project("P002", "C001", null, deadline));
+        assertThrows(ProjectException.class, () -> new Project("P002", "C001", " \t ", deadline));
+        assertThrows(ProjectException.class, () -> new Project("P002", "C001", null, deadline));
     }
 
     @Test
     public void constructor_missingDeadline_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> new Project("P002", "C001", "Website", null));
+        assertThrows(ProjectException.class, () -> new Project("P002", "C001", "Website", null));
     }
 
     @Test
@@ -86,7 +90,7 @@ class ProjectTest {
         Project otherProject = new Project("P002", "C001", "Logo design", deadline);
         Task task = new Task("T001", otherProject, "Create wireframe", deadline);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        TaskException exception = assertThrows(TaskException.class,
                 () -> project.addTask(task));
 
         assertEquals("The task belongs to another project.", exception.getMessage());
@@ -98,7 +102,7 @@ class ProjectTest {
         Project otherProject = new Project("P002", "C001", "Logo design", deadline);
         Event event = new Event("E001", otherProject, "Client review", deadline);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        EventException exception = assertThrows(EventException.class,
                 () -> project.addEvent(event));
 
         assertEquals("The event belongs to another project.", exception.getMessage());
@@ -110,7 +114,7 @@ class ProjectTest {
         Task original = new Task("T001", project, "Create wireframe", deadline);
         project.addTask(original);
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(TaskException.class,
                 () -> project.addTask(new Task("T001", project, "Another task", deadline)));
 
         assertEquals(List.of(original), project.getTasks());
@@ -121,7 +125,7 @@ class ProjectTest {
         Event original = new Event("E001", project, "Client review", deadline);
         project.addEvent(original);
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(EventException.class,
                 () -> project.addEvent(new Event("E001", project, "Another meeting", deadline)));
 
         assertEquals(List.of(original), project.getEvents());
@@ -129,8 +133,8 @@ class ProjectTest {
 
     @Test
     public void addItem_nullItem_rejectsWithoutMutation() {
-        assertThrows(IllegalArgumentException.class, () -> project.addTask(null));
-        assertThrows(IllegalArgumentException.class, () -> project.addEvent(null));
+        assertThrows(TaskException.class, () -> project.addTask(null));
+        assertThrows(EventException.class, () -> project.addEvent(null));
 
         assertEquals(0, project.getItemCount());
     }
@@ -173,7 +177,7 @@ class ProjectTest {
     public void changeStatus_nullStatus_preservesStatus() {
         project.changeStatus(ProjectStatus.PAUSED);
 
-        assertThrows(IllegalArgumentException.class, () -> project.changeStatus(null));
+        assertThrows(ProjectException.class, () -> project.changeStatus(null));
 
         assertEquals(ProjectStatus.PAUSED, project.getStatus());
     }

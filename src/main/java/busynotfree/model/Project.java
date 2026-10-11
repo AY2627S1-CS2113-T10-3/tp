@@ -3,6 +3,12 @@ package busynotfree.model;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
+
+import busynotfree.exception.BusyNotFreeException;
+import busynotfree.exception.EventException;
+import busynotfree.exception.ProjectException;
+import busynotfree.exception.TaskException;
 
 /**
  * Stores a client's project and owns separate collections of tasks and events.
@@ -25,20 +31,20 @@ public final class Project {
      * @param clientId ID of the existing client who owns the project
      * @param name non-blank project name
      * @param deadline project deadline as a calendar date
-     * @throws IllegalArgumentException if required data is missing
+     * @throws ProjectException if required data is missing
      */
     public Project(String projectId, String clientId, String name, LocalDate deadline) {
         if (projectId == null || projectId.isBlank()) {
-            throw new IllegalArgumentException("A project ID must not be blank.");
+            throw new ProjectException("A project ID must not be blank.");
         }
         if (clientId == null || clientId.isBlank()) {
-            throw new IllegalArgumentException("A client ID must not be blank.");
+            throw new ProjectException("A client ID must not be blank.");
         }
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("A project name must not be blank.");
+            throw new ProjectException("A project name must not be blank.");
         }
         if (deadline == null) {
-            throw new IllegalArgumentException("A project deadline is required.");
+            throw new ProjectException("A project deadline is required.");
         }
         this.projectId = projectId.trim();
         this.clientId = clientId.trim();
@@ -88,10 +94,10 @@ public final class Project {
      * Adds a task that belongs to this project.
      *
      * @param task task to add
-     * @throws IllegalArgumentException if the task is null, belongs elsewhere or has a duplicate ID
+     * @throws TaskException if the task is null, belongs elsewhere or has a duplicate ID
      */
     public void addTask(Task task) {
-        validateNewItem(task, tasks);
+        validateNewItem(task, tasks, TaskException::new);
         tasks.add(task);
     }
 
@@ -99,10 +105,10 @@ public final class Project {
      * Adds an event that belongs to this project.
      *
      * @param event event to add
-     * @throws IllegalArgumentException if the event is null, belongs elsewhere or has a duplicate ID
+     * @throws EventException if the event is null, belongs elsewhere or has a duplicate ID
      */
     public void addEvent(Event event) {
-        validateNewItem(event, events);
+        validateNewItem(event, events, EventException::new);
         events.add(event);
     }
 
@@ -110,11 +116,11 @@ public final class Project {
      * Changes the project's status without changing its scheduled items.
      *
      * @param status new project status
-     * @throws IllegalArgumentException if the status is null
+     * @throws ProjectException if the status is null
      */
     public void changeStatus(ProjectStatus status) {
         if (status == null) {
-            throw new IllegalArgumentException("A project status is required.");
+            throw new ProjectException("A project status is required.");
         }
         this.status = status;
     }
@@ -128,17 +134,18 @@ public final class Project {
         return tasks.size() + events.size();
     }
 
-    /** Checks ownership and ID uniqueness before either collection is changed. */
-    private void validateNewItem(ScheduledItem item, List<? extends ScheduledItem> existingItems) {
+    /** Checks ownership and ID uniqueness using the task or event exception supplied by the caller. */
+    private void validateNewItem(ScheduledItem item, List<? extends ScheduledItem> existingItems,
+            Function<String, ? extends BusyNotFreeException> exceptionFactory) {
         if (item == null) {
-            throw new IllegalArgumentException("A scheduled item is required.");
+            throw exceptionFactory.apply("A scheduled item is required.");
         }
         if (item.getProject() != this) {
-            throw new IllegalArgumentException("The " + item.getType() + " belongs to another project.");
+            throw exceptionFactory.apply("The " + item.getType() + " belongs to another project.");
         }
         for (ScheduledItem existingItem : existingItems) {
             if (existingItem.getId().equals(item.getId())) {
-                throw new IllegalArgumentException("Item ID " + item.getId() + " already exists in this project.");
+                throw exceptionFactory.apply("Item ID " + item.getId() + " already exists in this project.");
             }
         }
     }

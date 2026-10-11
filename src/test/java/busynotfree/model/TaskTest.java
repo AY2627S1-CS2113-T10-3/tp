@@ -8,6 +8,8 @@ import java.time.LocalDate;
 
 import org.junit.jupiter.api.Test;
 
+import busynotfree.exception.TaskException;
+
 /**
  * Tests task data, validation and behaviour through the shared scheduled-item type.
  */
@@ -35,24 +37,24 @@ class TaskTest {
 
     @Test
     public void constructor_missingDescription_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> new Task("T001", project, " \t ", date));
-        assertThrows(IllegalArgumentException.class, () -> new Task("T001", project, null, date));
+        assertThrows(TaskException.class, () -> new Task("T001", project, " \t ", date));
+        assertThrows(TaskException.class, () -> new Task("T001", project, null, date));
     }
 
     @Test
     public void constructor_missingId_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> new Task("", project, "Create wireframe", date));
-        assertThrows(IllegalArgumentException.class, () -> new Task(null, project, "Create wireframe", date));
+        assertThrows(TaskException.class, () -> new Task("", project, "Create wireframe", date));
+        assertThrows(TaskException.class, () -> new Task(null, project, "Create wireframe", date));
     }
 
     @Test
     public void constructor_missingProject_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> new Task("T001", null, "Create wireframe", date));
+        assertThrows(TaskException.class, () -> new Task("T001", null, "Create wireframe", date));
     }
 
     @Test
     public void constructor_missingDate_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> new Task("T001", project, "Create wireframe", null));
+        assertThrows(TaskException.class, () -> new Task("T001", project, "Create wireframe", null));
     }
 
     @Test

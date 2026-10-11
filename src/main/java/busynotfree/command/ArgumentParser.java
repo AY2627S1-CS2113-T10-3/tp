@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import busynotfree.exception.CommandException;
+
 /**
  * Parses required prefix/value arguments and strict calendar dates for add commands.
  */
@@ -21,7 +23,7 @@ public final class ArgumentParser {
      * @param argumentText argument text after the command word
      * @param requiredPrefixes allowed prefixes, without trailing slashes
      * @return an unmodifiable map of prefixes to trimmed, non-blank values
-     * @throws IllegalArgumentException if an argument is missing, repeated, blank or unexpected
+     * @throws CommandException if an argument is missing, repeated, blank or unexpected
      */
     public Map<String, String> parse(String argumentText, String... requiredPrefixes) {
         List<String> allowedPrefixes = List.of(requiredPrefixes);
@@ -32,14 +34,14 @@ public final class ArgumentParser {
         while (matcher.find()) {
             if (previousPrefix == null) {
                 if (!argumentText.substring(0, matcher.start()).isBlank()) {
-                    throw new IllegalArgumentException("Arguments must start with a prefix such as name/.");
+                    throw new CommandException("Arguments must start with a prefix such as name/.");
                 }
             } else {
                 putArgument(arguments, previousPrefix, argumentText.substring(valueStart, matcher.start()));
             }
             previousPrefix = matcher.group(1);
             if (!allowedPrefixes.contains(previousPrefix)) {
-                throw new IllegalArgumentException("Unexpected prefix: " + previousPrefix + "/.");
+                throw new CommandException("Unexpected prefix: " + previousPrefix + "/.");
             }
             valueStart = matcher.end();
         }
@@ -55,26 +57,26 @@ public final class ArgumentParser {
      *
      * @param dateText date supplied by the user
      * @return the validated calendar date
-     * @throws IllegalArgumentException if the format or calendar date is invalid
+     * @throws CommandException if the format or calendar date is invalid
      */
     public LocalDate parseDate(String dateText) {
         if (!dateText.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}")) {
-            throw new IllegalArgumentException("Use a valid date in YYYY-MM-DD format.");
+            throw new CommandException("Use a valid date in YYYY-MM-DD format.");
         }
         try {
             return LocalDate.parse(dateText);
         } catch (DateTimeParseException exception) {
-            throw new IllegalArgumentException("Use a valid date in YYYY-MM-DD format.", exception);
+            throw new CommandException("Use a valid date in YYYY-MM-DD format.", exception);
         }
     }
 
     /** Stores one non-blank value without silently replacing an earlier argument. */
     private void putArgument(Map<String, String> arguments, String prefix, String value) {
         if (arguments.containsKey(prefix)) {
-            throw new IllegalArgumentException("Repeated prefix: " + prefix + "/.");
+            throw new CommandException("Repeated prefix: " + prefix + "/.");
         }
         if (value.isBlank()) {
-            throw new IllegalArgumentException("A value is required after " + prefix + "/.");
+            throw new CommandException("A value is required after " + prefix + "/.");
         }
         arguments.put(prefix, value.trim());
     }
@@ -83,7 +85,7 @@ public final class ArgumentParser {
     private void validateRequiredArguments(Map<String, String> arguments, List<String> requiredPrefixes) {
         for (String prefix : requiredPrefixes) {
             if (!arguments.containsKey(prefix)) {
-                throw new IllegalArgumentException("Missing required prefix: " + prefix + "/.");
+                throw new CommandException("Missing required prefix: " + prefix + "/.");
             }
         }
     }

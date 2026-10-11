@@ -8,6 +8,8 @@ import java.time.LocalDate;
 
 import org.junit.jupiter.api.Test;
 
+import busynotfree.exception.EventException;
+
 /**
  * Tests event data, validation and behaviour through the shared scheduled-item type.
  */
@@ -35,24 +37,24 @@ class EventTest {
 
     @Test
     public void constructor_missingDescription_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> new Event("E001", project, " \t ", date));
-        assertThrows(IllegalArgumentException.class, () -> new Event("E001", project, null, date));
+        assertThrows(EventException.class, () -> new Event("E001", project, " \t ", date));
+        assertThrows(EventException.class, () -> new Event("E001", project, null, date));
     }
 
     @Test
     public void constructor_missingId_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> new Event("", project, "Stakeholder meeting", date));
-        assertThrows(IllegalArgumentException.class, () -> new Event(null, project, "Stakeholder meeting", date));
+        assertThrows(EventException.class, () -> new Event("", project, "Stakeholder meeting", date));
+        assertThrows(EventException.class, () -> new Event(null, project, "Stakeholder meeting", date));
     }
 
     @Test
     public void constructor_missingProject_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> new Event("E001", null, "Stakeholder meeting", date));
+        assertThrows(EventException.class, () -> new Event("E001", null, "Stakeholder meeting", date));
     }
 
     @Test
     public void constructor_missingDate_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> new Event("E001", project, "Stakeholder meeting", null));
+        assertThrows(EventException.class, () -> new Event("E001", project, "Stakeholder meeting", null));
     }
 
     @Test

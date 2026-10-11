@@ -2,6 +2,8 @@ package busynotfree.model;
 
 import java.time.LocalDate;
 
+import busynotfree.exception.EventException;
+
 /**
  * Represents a dated meeting, review or other event belonging to one project.
  */
@@ -13,10 +15,10 @@ public final class Event extends ScheduledItem {
      * @param project project that owns the event
      * @param description non-blank description of the event
      * @param date calendar date of the event
-     * @throws IllegalArgumentException if required data is missing
+     * @throws EventException if required data is missing
      */
     public Event(String eventId, Project project, String description, LocalDate date) {
-        super(eventId, project, description, date);
+        super(eventId, project, description, date, EventException::new);
     }
 
     /** Returns the event type for polymorphic messages. */

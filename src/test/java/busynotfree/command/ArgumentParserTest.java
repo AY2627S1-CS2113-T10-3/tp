@@ -1,12 +1,16 @@
 package busynotfree.command;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+
+import busynotfree.exception.CommandException;
 
 /**
  * Tests prefix validation, multi-word values and strict calendar-date parsing.
@@ -39,7 +43,7 @@ class ArgumentParserTest {
 
     @Test
     public void parse_missingPrefix_throwsException() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        CommandException exception = assertThrows(CommandException.class,
                 () -> parser.parse("client/C001 name/Website", "client", "name", "due"));
 
         assertEquals("Missing required prefix: due/.", exception.getMessage());
@@ -47,19 +51,19 @@ class ArgumentParserTest {
 
     @Test
     public void parse_noArguments_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> parser.parse("", "client", "name", "due"));
+        assertThrows(CommandException.class, () -> parser.parse("", "client", "name", "due"));
     }
 
     @Test
     public void parse_blankValues_throwsException() {
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(CommandException.class,
                 () -> parser.parse("client/C001 name/ \t due/2026-11-30", "client", "name", "due"));
-        assertThrows(IllegalArgumentException.class, () -> parser.parse("name/ ", "name"));
+        assertThrows(CommandException.class, () -> parser.parse("name/ ", "name"));
     }
 
     @Test
     public void parse_repeatedPrefix_throwsException() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        CommandException exception = assertThrows(CommandException.class,
                 () -> parser.parse("name/Website name/Other", "name"));
 
         assertEquals("Repeated prefix: name/.", exception.getMessage());
@@ -67,7 +71,7 @@ class ArgumentParserTest {
 
     @Test
     public void parse_unexpectedPrefix_throwsException() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        CommandException exception = assertThrows(CommandException.class,
                 () -> parser.parse("project/P001 name/Wireframe due/2026-10-15", "project", "name", "date"));
 
         assertEquals("Unexpected prefix: due/.", exception.getMessage());
@@ -75,7 +79,7 @@ class ArgumentParserTest {
 
     @Test
     public void parse_leadingUnprefixedText_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> parser.parse("unexpected name/Website", "name"));
+        assertThrows(CommandException.class, () -> parser.parse("unexpected name/Website", "name"));
     }
 
     @Test
@@ -92,15 +96,23 @@ class ArgumentParserTest {
 
     @Test
     public void parseDate_impossibleDate_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> parser.parseDate("2026-02-29"));
-        assertThrows(IllegalArgumentException.class, () -> parser.parseDate("2026-04-31"));
-        assertThrows(IllegalArgumentException.class, () -> parser.parseDate("2026-13-01"));
+        assertThrows(CommandException.class, () -> parser.parseDate("2026-02-29"));
+        assertThrows(CommandException.class, () -> parser.parseDate("2026-04-31"));
+        assertThrows(CommandException.class, () -> parser.parseDate("2026-13-01"));
+    }
+
+    @Test
+    public void parseDate_invalidCalendarDate_preservesCause() {
+        CommandException exception = assertThrows(CommandException.class, () -> parser.parseDate("2026-02-30"));
+
+        assertEquals("Use a valid date in YYYY-MM-DD format.", exception.getMessage());
+        assertInstanceOf(DateTimeParseException.class, exception.getCause());
     }
 
     @Test
     public void parseDate_inexactFormat_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> parser.parseDate("2026-1-01"));
-        assertThrows(IllegalArgumentException.class, () -> parser.parseDate("01-01-2026"));
-        assertThrows(IllegalArgumentException.class, () -> parser.parseDate("2026-01-01 extra"));
+        assertThrows(CommandException.class, () -> parser.parseDate("2026-1-01"));
+        assertThrows(CommandException.class, () -> parser.parseDate("01-01-2026"));
+        assertThrows(CommandException.class, () -> parser.parseDate("2026-01-01 extra"));
     }
 }
