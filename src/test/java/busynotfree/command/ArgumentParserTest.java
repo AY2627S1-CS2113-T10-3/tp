@@ -42,6 +42,46 @@ class ArgumentParserTest {
     }
 
     @Test
+    public void parse_slashWithinDescription_preservesValue() {
+        Map<String, String> values = parser.parse(
+                "project/P001 name/Create UI/UX mockup date/2026-10-15", "project", "name", "date");
+
+        assertEquals(Map.of("project", "P001", "name", "Create UI/UX mockup", "date", "2026-10-15"), values);
+    }
+
+    @Test
+    public void parse_pathWithinDescription_preservesValue() {
+        Map<String, String> values = parser.parse(
+                "project/P001 name/Review src/main changes date/2026-10-15", "project", "name", "date");
+
+        assertEquals(Map.of("project", "P001", "name", "Review src/main changes", "date", "2026-10-15"), values);
+    }
+
+    @Test
+    public void parse_slashesWithinLastArgument_preservesValue() {
+        Map<String, String> values = parser.parse(
+                "project/P001 date/2026-10-15 name/Review UI/UX and src/main", "project", "name", "date");
+
+        assertEquals("Review UI/UX and src/main", values.get("name"));
+    }
+
+    @Test
+    public void parse_slashWithinDescriptionWithMissingDate_reportsMissingPrefix() {
+        CommandException exception = assertThrows(CommandException.class,
+                () -> parser.parse("project/P001 name/Create UI/UX mockup", "project", "name", "date"));
+
+        assertEquals("Missing required prefix: date/.", exception.getMessage());
+    }
+
+    @Test
+    public void parse_leadingSlashText_throwsException() {
+        CommandException exception = assertThrows(CommandException.class,
+                () -> parser.parse("UI/UX name/Website", "name"));
+
+        assertEquals("Arguments must start with a prefix such as name/.", exception.getMessage());
+    }
+
+    @Test
     public void parse_missingPrefix_throwsException() {
         CommandException exception = assertThrows(CommandException.class,
                 () -> parser.parse("client/C001 name/Website", "client", "name", "due"));

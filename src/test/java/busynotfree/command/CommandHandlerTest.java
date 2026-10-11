@@ -86,6 +86,37 @@ class CommandHandlerTest {
     }
 
     @Test
+    public void execute_projectAddWithSlashInName_createsProject() {
+        assertFalse(handler.execute("project.add client/C001 name/Create UI/UX redesign due/2026-11-30"));
+
+        assertEquals(List.of("Created project P001 for client C001."), ui.messages);
+        assertEquals("Create UI/UX redesign", projectManager.getProject("P001").getName());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_taskAddWithSlashInDescription_createsTask() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+
+        assertFalse(handler.execute("task.add project/P001 name/Create UI/UX mockup date/2026-10-15"));
+
+        assertEquals(List.of("Added task T001 to project P001."), ui.messages);
+        assertEquals("Create UI/UX mockup", project.getTasks().getFirst().getDescription());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_eventAddWithPathInDescription_createsEvent() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+
+        assertFalse(handler.execute("event.add project/P001 date/2026-10-20 name/Review src/main changes"));
+
+        assertEquals(List.of("Added event E001 to project P001."), ui.messages);
+        assertEquals("Review src/main changes", project.getEvents().getFirst().getDescription());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
     public void execute_unsupportedTarget_reportsError() {
         assertFalse(handler.execute("client.add name/Acme"));
 

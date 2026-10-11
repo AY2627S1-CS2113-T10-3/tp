@@ -6,7 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -129,5 +132,99 @@ class ProjectManagerTest {
 
         assertEquals("P1000", manager.addProject("C001", "Another project", date).getProjectId());
         assertEquals(1000, manager.getProjects().size());
+    }
+
+    @Test
+    public void addProject_paddedClientId_passesTrimmedIdToLookup() {
+        List<String> checkedIds = new ArrayList<>();
+        ProjectManager checkedManager = new ProjectManager(clientId -> {
+            checkedIds.add(clientId);
+            return true;
+        });
+
+        Project project = checkedManager.addProject(" \tC007 \t", " Website ", date);
+
+        assertEquals(List.of("C007"), checkedIds);
+        assertEquals("C007", project.getClientId());
+        assertEquals("Website", project.getName());
+    }
+
+    @Test
+    public void addProject_nullRequiredValues_doesNotMutateOrConsumeId() {
+        assertThrows(ProjectException.class, () -> manager.addProject(null, "Website", date));
+        assertThrows(ProjectException.class, () -> manager.addProject("C001", null, date));
+        assertThrows(ProjectException.class, () -> manager.addProject("C001", "Website", null));
+
+        assertTrue(manager.getProjects().isEmpty());
+        assertEquals("P001", manager.addProject("C001", "Website", date).getProjectId());
+    }
+
+    @Test
+    public void addItems_nullRequiredValues_doesNotMutateOrConsumeIds() {
+        Project project = manager.addProject("C001", "Website", date);
+        assertThrows(ProjectException.class, () -> manager.addTask(null, "Work", date));
+        assertThrows(ProjectException.class, () -> manager.addEvent(null, "Meeting", date));
+        assertThrows(TaskException.class, () -> manager.addTask("P001", null, date));
+        assertThrows(EventException.class, () -> manager.addEvent("P001", null, date));
+        assertThrows(TaskException.class, () -> manager.addTask("P001", "Work", null));
+        assertThrows(EventException.class, () -> manager.addEvent("P001", "Meeting", null));
+
+        assertEquals(0, project.getItemCount());
+        assertEquals("T001", manager.addTask("P001", "Work", date).getId());
+        assertEquals("E001", manager.addEvent("P001", "Meeting", date).getId());
+    }
+
+    @Test
+    public void addItems_paddedProjectIdAndDescription_preservesOwnerAndTrimmedText() {
+        Project project = manager.addProject("C001", "Website", date);
+
+        Task task = manager.addTask(" \tP001 \t", " \tCreate UI/UX mockup \t", date);
+        Event event = manager.addEvent(" \tP001 \t", " \tReview src/main changes \t", date);
+
+        assertSame(project, task.getProject());
+        assertSame(project, event.getProject());
+        assertEquals("Create UI/UX mockup", task.getDescription());
+        assertEquals("Review src/main changes", event.getDescription());
+        assertEquals(List.of(task), project.getTasks());
+        assertEquals(List.of(event), project.getEvents());
+    }
+
+    @Test
+    public void addItems_after999Ids_keepsIndependentUniqueIds() {
+        Project project = manager.addProject("C001", "Website", date);
+        Set<String> taskIds = new HashSet<>();
+        Set<String> eventIds = new HashSet<>();
+        for (int number = 1; number <= 1000; number++) {
+            assertTrue(taskIds.add(manager.addTask("P001", "Task " + number, date).getId()));
+            assertTrue(eventIds.add(manager.addEvent("P001", "Event " + number, date).getId()));
+        }
+
+        assertEquals("T999", project.getTasks().get(998).getId());
+        assertEquals("T1000", project.getTasks().getLast().getId());
+        assertEquals("E999", project.getEvents().get(998).getId());
+        assertEquals("E1000", project.getEvents().getLast().getId());
+        assertEquals(1000, taskIds.size());
+        assertEquals(1000, eventIds.size());
+        assertEquals(2000, project.getItemCount());
+    }
+
+    @Test
+    public void addItems_failureAfterSuccess_preservesExistingDataAndNextIds() {
+        Project project = manager.addProject("C001", "Website", date);
+        Task firstTask = manager.addTask("P001", "First task", date);
+        Event firstEvent = manager.addEvent("P001", "First event", date);
+
+        assertThrows(ProjectException.class, () -> manager.addProject("C001", " ", date));
+        assertThrows(TaskException.class, () -> manager.addTask("P001", " ", date));
+        assertThrows(EventException.class, () -> manager.addEvent("P001", " ", date));
+        assertThrows(ProjectException.class, () -> manager.addTask("P999", "Work", date));
+        assertThrows(ProjectException.class, () -> manager.addEvent("P999", "Meeting", date));
+
+        assertEquals(List.of(project), manager.getProjects());
+        assertEquals(List.of(firstTask), project.getTasks());
+        assertEquals(List.of(firstEvent), project.getEvents());
+        assertEquals("P002", manager.addProject("C001", "Another project", date).getProjectId());
+        assertEquals("T002", manager.addTask("P001", "Second task", date).getId());
+        assertEquals("E002", manager.addEvent("P001", "Second event", date).getId());
     }
 }

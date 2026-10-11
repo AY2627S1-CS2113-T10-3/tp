@@ -98,6 +98,47 @@ class BusyNotFreeTest {
         assertTrue(ui.errors.isEmpty());
     }
 
+    @Test
+    public void run_mixedCommandsWithWindowsLineEndings_preservesDataAfterErrors() {
+        List<String> commands = List.of(
+                "project.add client/C001 name/Create UI/UX redesign due/2026-11-30",
+                "task.add project/P001 name/First task date/2026-10-15",
+                "event.add project/P001 name/First event date/2026-10-20",
+                "project.add client/C001 name/Invalid due/2026-02-30",
+                "task.add project/P001 name/Invalid date/2026-11-31",
+                "event.add project/P999 name/Invalid date/2026-10-20",
+                "task.add date/2026-10-15 name/Review src/main changes project/P001",
+                "event.add project/P001 date/2026-10-20 name/Review UI/UX mockup",
+                "exit");
+
+        runWithInput(String.join("\r\n", commands) + "\r\n");
+
+        assertEquals(List.of("Use a valid date in YYYY-MM-DD format.",
+                "Use a valid date in YYYY-MM-DD format.", "Project P999 does not exist."), ui.errors);
+        assertEquals(1, projectManager.getProjects().size());
+        assertEquals("Create UI/UX redesign", projectManager.getProject("P001").getName());
+        assertEquals(List.of("T001", "T002"), projectManager.getProject("P001").getTasks().stream()
+                .map(task -> task.getId()).toList());
+        assertEquals(List.of("E001", "E002"), projectManager.getProject("P001").getEvents().stream()
+                .map(event -> event.getId()).toList());
+        assertEquals("Review src/main changes",
+                projectManager.getProject("P001").getTasks().getLast().getDescription());
+        assertEquals("Review UI/UX mockup", projectManager.getProject("P001").getEvents().getLast().getDescription());
+        assertEquals(commands.size(), ui.messages.stream().filter("Enter a command:"::equals).count());
+        assertEquals("Goodbye!", ui.messages.getLast());
+    }
+
+    @Test
+    public void run_invalidCommandAtEndOfInput_reportsOnceAndExitsCleanly() {
+        runWithInput("event.add project/P001 name/Meeting");
+
+        assertEquals(List.of("Missing required prefix: date/."), ui.errors);
+        assertTrue(projectManager.getProjects().isEmpty());
+        assertEquals(2, ui.messages.stream().filter("Enter a command:"::equals).count());
+        assertEquals(1, ui.messages.stream().filter("Goodbye!"::equals).count());
+        assertEquals("Goodbye!", ui.messages.getLast());
+    }
+
     /** Supplies simulated input while closing only the test's scanner. */
     private void runWithInput(String input) {
         try (Scanner scanner = new Scanner(input)) {
