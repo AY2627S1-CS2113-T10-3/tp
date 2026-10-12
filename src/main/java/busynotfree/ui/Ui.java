@@ -14,8 +14,8 @@ public class Ui {
     public void showWelcome() {
         showSeparator();
         showMessage("Welcome to BusyNotFree!");
-        showMessage("Commands: project.add, task.add, event.add, exit");
-        showMessage("Client lookup is a placeholder: supplied client IDs are assumed to exist.");
+        showMessage("Commands: client.add, "
+                + "project.add, task.add, event.add, exit");
         showMessage("Data is kept in memory only and is not saved on exit.");
         showSeparator();
     }

@@ -118,9 +118,9 @@ class CommandHandlerTest {
 
     @Test
     public void execute_unsupportedTarget_reportsError() {
-        assertFalse(handler.execute("client.add name/Acme"));
+        assertFalse(handler.execute("invoice.add name/Acme"));
 
-        assertEquals(List.of("Unsupported target: client."), ui.errors);
+        assertEquals(List.of("Unsupported target: invoice."), ui.errors);
         assertTrue(ui.messages.isEmpty());
     }
 
