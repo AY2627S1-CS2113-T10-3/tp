@@ -3,6 +3,7 @@ package busynotfree.command;
 import java.util.Map;
 
 import busynotfree.exception.CommandException;
+import busynotfree.model.Client;
 import busynotfree.model.ClientManager;
 import busynotfree.ui.ClientUi;
 import busynotfree.ui.Ui;
@@ -32,6 +33,9 @@ public final class ClientCommandHandler {
         case "add":
             handleAdd(arguments);
             break;
+        case "note":
+            handleNote(arguments);
+            break;
         default:
             throw new CommandException("Unsupported action: " + command.getAction() + ".");
         }
@@ -46,6 +50,19 @@ public final class ClientCommandHandler {
     private void handleAdd(String arguments) {
         Map<String, String> values = argumentParser.parse(arguments, "name");
         clientUi.showClientAdded(clientManager.addClient(values.get("name")));
+    }
+
+    /** Separates the positional ID from the note's prefixed free text. */
+    private void handleNote(String arguments) {
+        String[] parts = arguments.trim().split("\\s+", 2);
+        String clientId = parts[0];
+        if (clientId.isBlank() || clientId.contains("/")) {
+            throw new CommandException("A client ID is required before text/.");
+        }
+        String noteArguments = parts.length > 1 ? parts[1] : "";
+        Map<String, String> values = argumentParser.parse(noteArguments, "text");
+        Client client = clientManager.addNote(clientId, values.get("text"));
+        clientUi.showNoteAdded(client);
     }
 
 }

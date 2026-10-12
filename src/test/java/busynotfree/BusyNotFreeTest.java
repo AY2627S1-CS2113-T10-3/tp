@@ -92,7 +92,7 @@ class BusyNotFreeTest {
         runWithInput("");
 
         assertTrue(ui.messages.contains("Welcome to BusyNotFree!"));
-        assertTrue(ui.messages.stream().anyMatch(message -> message.contains("client.add")));
+        assertTrue(ui.messages.stream().anyMatch(message -> message.contains("client.add, client.note")));
         assertTrue(ui.messages.contains("Data is kept in memory only and is not saved on exit."));
         assertEquals("Goodbye!", ui.messages.getLast());
         assertTrue(ui.errors.isEmpty());

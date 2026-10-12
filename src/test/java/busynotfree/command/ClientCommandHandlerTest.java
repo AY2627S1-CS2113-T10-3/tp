@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 
+import busynotfree.model.Client;
 import busynotfree.model.ClientManager;
 import busynotfree.model.ProjectManager;
 import busynotfree.ui.Ui;
@@ -21,6 +22,7 @@ import busynotfree.ui.Ui;
  */
 class ClientCommandHandlerTest {
     private static final String ADD_FORMAT = "Format: client.add name/CLIENT_NAME";
+    private static final String NOTE_FORMAT = "Format: client.note CLIENT_ID text/NOTE";
 
     private final ClientManager manager = new ClientManager();
     private final ProjectManager projectManager = new ProjectManager(manager);
@@ -59,6 +61,53 @@ class ClientCommandHandlerTest {
                 assertTrue(fixture.manager.getClients().isEmpty());
                 fixture.handler.execute("client.add name/Acme");
                 assertEquals("C001", fixture.manager.getClients().getFirst().getClientId());
+            }));
+        }
+        return tests;
+    }
+
+    @Test
+    public void execute_noteClient_appendsNotesToSpecifiedClient() {
+        Client first = manager.addClient("Acme Studio");
+        Client second = manager.addClient("Bright Ideas");
+        assertFalse(handler.execute("client.note C002 text/Prefers weekly updates"));
+        assertFalse(handler.execute("client.note C002 text/Follow up on Friday"));
+
+        assertEquals(List.of("Note added to client C002.", "Note added to client C002."), ui.messages);
+        assertEquals(List.of("Prefers weekly updates", "Follow up on Friday"), second.getNotes());
+        assertTrue(first.getNotes().isEmpty());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    /** Tests malformed note arguments without mutating previously recorded notes. */
+    @TestFactory
+    public List<DynamicTest> execute_invalidNoteArguments_reportsErrorWithoutMutation() {
+        List<String> inputs = List.of("client.note", "client.note text/Note", "client.note C001",
+                "client.note C001 Note", "client.note C001 text/", "client.note C001 text/ \t ",
+                "client.note C001 text/First text/Second", "client.note C001 text/Note name/Other",
+                "client.note C001 extra text/Note", "client.note C999 text/Note",
+                "client.note P001 text/Note", "client.note c001 text/Note", "client.note C1 text/Note");
+        List<String> errors = List.of("A client ID is required before text/.",
+                "A client ID is required before text/.", "Missing required prefix: text/.",
+                "Missing required prefix: text/.", "A value is required after text/.",
+                "A value is required after text/.", "Repeated prefix: text/.", "Unexpected prefix: name/.",
+                "Arguments must start with a prefix such as name/.", "Client C999 does not exist.",
+                "Client P001 does not exist.", "Client c001 does not exist.", "Client C1 does not exist.");
+        List<DynamicTest> tests = new ArrayList<>();
+        for (int i = 0; i < inputs.size(); i++) {
+            String input = inputs.get(i);
+            String error = errors.get(i);
+            tests.add(dynamicTest(input, () -> {
+                ClientCommandHandlerTest fixture = new ClientCommandHandlerTest();
+                Client client = fixture.manager.addClient("Acme");
+                client.addNote("Original note");
+                assertFalse(fixture.handler.execute(input));
+                assertEquals(List.of(error), fixture.ui.errors);
+                assertEquals(List.of(NOTE_FORMAT), fixture.ui.messages);
+                assertEquals(List.of(client), fixture.manager.getClients());
+                assertEquals(List.of("Original note"), client.getNotes());
+                fixture.handler.execute("client.note C001 text/Corrected note");
+                assertEquals(List.of("Original note", "Corrected note"), client.getNotes());
             }));
         }
         return tests;
