@@ -14,7 +14,7 @@ public class Ui {
     public void showWelcome() {
         showSeparator();
         showMessage("Welcome to BusyNotFree!");
-        showMessage("Commands: client.add, client.note, client.view, "
+        showMessage("Commands: client.add, client.note, client.view, client.list, "
                 + "project.add, task.add, event.add, exit");
         showMessage("Data is kept in memory only and is not saved on exit.");
         showSeparator();

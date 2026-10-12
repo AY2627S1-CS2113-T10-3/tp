@@ -37,6 +37,17 @@ public final class ClientUi {
         }
     }
 
+    /** Displays numbered client entries, or a message when the list is empty. */
+    public void showClients(List<Client> clients) {
+        if (clients.isEmpty()) {
+            ui.showMessage("No clients found.");
+            return;
+        }
+        for (int i = 0; i < clients.size(); i++) {
+            ui.showMessage((i + 1) + ". " + formatClient(clients.get(i)));
+        }
+    }
+
     /** Displays the expected syntax after a supported client command fails. */
     public void showCommandUsage(String action) {
         switch (action) {
@@ -48,6 +59,9 @@ public final class ClientUi {
             break;
         case "view":
             ui.showMessage("Format: client.view CLIENT_ID");
+            break;
+        case "list":
+            ui.showMessage("Format: client.list");
             break;
         default:
             break;

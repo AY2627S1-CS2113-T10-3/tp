@@ -39,6 +39,10 @@ public final class ClientCommandHandler {
         case "view":
             handleView(arguments);
             break;
+        case "list":
+            // The guide ignores extra arguments for commands that take no parameters.
+            clientUi.showClients(clientManager.getClients());
+            break;
         default:
             throw new CommandException("Unsupported action: " + command.getAction() + ".");
         }

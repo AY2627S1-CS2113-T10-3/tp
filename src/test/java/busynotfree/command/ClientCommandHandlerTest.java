@@ -163,6 +163,34 @@ class ClientCommandHandlerTest {
     }
 
     @Test
+    public void execute_listClients_displaysNumberedIdsAndNamesInCreationOrder() {
+        manager.addClient("Acme Studio");
+        manager.addClient("Bright Ideas");
+        manager.addNote("C001", "Only visible with client.view");
+
+        assertFalse(handler.execute("client.list"));
+
+        assertEquals(List.of("1. C001 | Acme Studio", "2. C002 | Bright Ideas"), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_listWithoutClients_displaysEmptyMessage() {
+        assertFalse(handler.execute("client.list"));
+
+        assertEquals(List.of("No clients found."), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_listWithExtraArguments_ignoresArgumentsAsGuideSpecifies() {
+        assertFalse(handler.execute("client.list ignored arguments"));
+
+        assertEquals(List.of("No clients found."), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
     public void execute_paddedInputAndFreeText_preservesSlashesAndInternalSpaces() {
         handler.execute(" \tclient.add\tname/ Acme  UI/UX Studio \t ");
         handler.execute(" \tclient.note\tC001\ttext/ Review  src/main at https://example.com \t ");
