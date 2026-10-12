@@ -36,6 +36,9 @@ public final class ClientCommandHandler {
         case "note":
             handleNote(arguments);
             break;
+        case "view":
+            handleView(arguments);
+            break;
         default:
             throw new CommandException("Unsupported action: " + command.getAction() + ".");
         }
@@ -65,4 +68,15 @@ public final class ClientCommandHandler {
         clientUi.showNoteAdded(client);
     }
 
+    /** Requires exactly one positional ID for a client view. */
+    private void handleView(String arguments) {
+        if (arguments.isBlank()) {
+            throw new CommandException("A client ID must not be blank.");
+        }
+        String[] parts = arguments.trim().split("\\s+");
+        if (parts.length != 1) {
+            throw new CommandException("Provide exactly one client ID.");
+        }
+        clientUi.showClient(clientManager.getClient(parts[0]));
+    }
 }

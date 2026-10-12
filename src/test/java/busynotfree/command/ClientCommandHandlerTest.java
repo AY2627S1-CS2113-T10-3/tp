@@ -23,6 +23,7 @@ import busynotfree.ui.Ui;
 class ClientCommandHandlerTest {
     private static final String ADD_FORMAT = "Format: client.add name/CLIENT_NAME";
     private static final String NOTE_FORMAT = "Format: client.note CLIENT_ID text/NOTE";
+    private static final String VIEW_FORMAT = "Format: client.view CLIENT_ID";
 
     private final ClientManager manager = new ClientManager();
     private final ProjectManager projectManager = new ProjectManager(manager);
@@ -111,6 +112,67 @@ class ClientCommandHandlerTest {
             }));
         }
         return tests;
+    }
+
+    @Test
+    public void execute_viewClientWithoutNotes_displaysDetailsAndEmptyMessage() {
+        manager.addClient("Acme Studio");
+
+        assertFalse(handler.execute("client.view C001"));
+
+        assertEquals(List.of("C001 | Acme Studio", "Notes: No notes found."), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_viewClientWithNotes_displaysAllNotesInOrder() {
+        manager.addClient("Acme Studio");
+        manager.addNote("C001", "Prefers weekly updates");
+        manager.addNote("C001", "Follow up on Friday");
+
+        assertFalse(handler.execute("client.view C001"));
+
+        assertEquals(List.of("C001 | Acme Studio", "Notes: Prefers weekly updates",
+                "Notes: Follow up on Friday"), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    /** Checks missing, unknown, wrong-case and extra positional IDs. */
+    @TestFactory
+    public List<DynamicTest> execute_invalidViewArguments_reportsErrorAndUsage() {
+        List<String> inputs = List.of("client.view", "client.view C999", "client.view P001",
+                "client.view c001", "client.view C1", "client.view C001 C002");
+        List<String> errors = List.of("A client ID must not be blank.", "Client C999 does not exist.",
+                "Client P001 does not exist.", "Client c001 does not exist.", "Client C1 does not exist.",
+                "Provide exactly one client ID.");
+        List<DynamicTest> tests = new ArrayList<>();
+        for (int i = 0; i < inputs.size(); i++) {
+            String input = inputs.get(i);
+            String error = errors.get(i);
+            tests.add(dynamicTest(input, () -> {
+                ClientCommandHandlerTest fixture = new ClientCommandHandlerTest();
+                Client client = fixture.manager.addClient("Acme");
+                assertFalse(fixture.handler.execute(input));
+                assertEquals(List.of(error), fixture.ui.errors);
+                assertEquals(List.of(VIEW_FORMAT), fixture.ui.messages);
+                assertEquals(List.of(client), fixture.manager.getClients());
+                assertTrue(client.getNotes().isEmpty());
+            }));
+        }
+        return tests;
+    }
+
+    @Test
+    public void execute_paddedInputAndFreeText_preservesSlashesAndInternalSpaces() {
+        handler.execute(" \tclient.add\tname/ Acme  UI/UX Studio \t ");
+        handler.execute(" \tclient.note\tC001\ttext/ Review  src/main at https://example.com \t ");
+        handler.execute(" \tclient.view\tC001 \t ");
+
+        assertEquals("Acme  UI/UX Studio", manager.getClient("C001").getName());
+        assertEquals(List.of("Review  src/main at https://example.com"), manager.getClient("C001").getNotes());
+        assertEquals(List.of("Added client C001: Acme  UI/UX Studio.", "Note added to client C001.",
+                "C001 | Acme  UI/UX Studio", "Notes: Review  src/main at https://example.com"), ui.messages);
+        assertTrue(ui.errors.isEmpty());
     }
 
     @Test
