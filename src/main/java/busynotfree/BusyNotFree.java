@@ -4,7 +4,7 @@ import java.util.Scanner;
 
 import busynotfree.command.CommandHandler;
 import busynotfree.command.CommandParser;
-import busynotfree.model.PlaceholderClientLookup;
+import busynotfree.model.ClientManager;
 import busynotfree.model.ProjectManager;
 import busynotfree.ui.Ui;
 
@@ -28,8 +28,9 @@ public class BusyNotFree {
      */
     public static void main(String[] args) {
         Ui ui = new Ui();
-        ProjectManager projectManager = new ProjectManager(new PlaceholderClientLookup());
-        CommandHandler commandHandler = new CommandHandler(new CommandParser(), ui, projectManager);
+        ClientManager clientManager = new ClientManager();
+        ProjectManager projectManager = new ProjectManager(clientManager);
+        CommandHandler commandHandler = new CommandHandler(new CommandParser(), ui, projectManager, clientManager);
         BusyNotFree busyNotFree = new BusyNotFree(ui, commandHandler);
         try (Scanner scanner = new Scanner(System.in)) {
             busyNotFree.run(scanner);

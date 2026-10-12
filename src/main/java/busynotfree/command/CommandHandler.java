@@ -4,6 +4,7 @@ import java.util.Map;
 
 import busynotfree.exception.BusyNotFreeException;
 import busynotfree.exception.CommandException;
+import busynotfree.model.ClientManager;
 import busynotfree.model.Event;
 import busynotfree.model.Project;
 import busynotfree.model.ProjectManager;
@@ -11,31 +12,47 @@ import busynotfree.model.Task;
 import busynotfree.ui.Ui;
 
 /**
- * Parses and routes BusyNotFree creation commands to the in-memory project manager.
+ * Parses and routes BusyNotFree commands to the in-memory client and project managers.
  * Adapted from the MimiMeow individual project's command-handler structure.
  */
 public class CommandHandler {
     private final CommandParser commandParser;
     private final Ui ui;
     private final ProjectManager projectManager;
+    private final ClientCommandHandler clientCommandHandler;
     private final ArgumentParser argumentParser = new ArgumentParser();
 
     /**
      * Creates a handler with the supplied parser and user interface.
+     * Uses an independent client manager; use the overload for shared client lookup.
      *
      * @param commandParser parser for the entity type, action and argument text
      * @param ui user interface for responses
      * @param projectManager manager for projects and their scheduled items
      */
     public CommandHandler(CommandParser commandParser, Ui ui, ProjectManager projectManager) {
+        this(commandParser, ui, projectManager, new ClientManager());
+    }
+
+    /**
+     * Creates a handler using the client manager shared with project creation.
+     *
+     * @param commandParser Parser for the entity type, action and argument text.
+     * @param ui User interface for responses.
+     * @param projectManager Manager for projects and their scheduled items.
+     * @param clientManager Client manager also supplied to the project manager as its lookup.
+     */
+    public CommandHandler(CommandParser commandParser, Ui ui, ProjectManager projectManager,
+            ClientManager clientManager) {
         this.commandParser = commandParser;
         this.ui = ui;
         this.projectManager = projectManager;
+        this.clientCommandHandler = new ClientCommandHandler(clientManager, ui);
     }
 
     /**
      * Parses and routes one command, displaying errors without stopping the caller.
-     * Failed add commands also display their expected argument format.
+     * Failed client and add commands also display their expected argument format.
      *
      * @param userInput non-null raw user input
      * @return true if the user enters exit; false otherwise
@@ -53,16 +70,29 @@ public class CommandHandler {
             }
         } catch (BusyNotFreeException exception) {
             ui.showError(exception.getMessage());
-            if (command != null && command.getAction().equals("add")) {
-                ui.showAddCommandUsage(command.getEntityType());
+            if (command != null) {
+                showCommandUsage(command);
             }
         }
         ui.showSeparator();
         return shouldExit;
     }
 
-    /** Routes the supported add action to its target-specific handler. */
+    /** Selects a usage hint without changing the error handling for other targets. */
+    private void showCommandUsage(ParsedCommand command) {
+        if (command.getEntityType().equals("client")) {
+            clientCommandHandler.showCommandUsage(command.getAction());
+        } else if (command.getAction().equals("add")) {
+            ui.showAddCommandUsage(command.getEntityType());
+        }
+    }
+
+    /** Delegates client operations and routes the existing creation commands. */
     private void routeCommand(ParsedCommand command) {
+        if (command.getEntityType().equals("client")) {
+            clientCommandHandler.execute(command);
+            return;
+        }
         if (!command.getAction().equals("add")) {
             throw new CommandException("Unsupported action: " + command.getAction() + ".");
         }
