@@ -197,10 +197,79 @@ class CommandHandlerTest {
 
     @Test
     public void execute_unsupportedAction_reportsError() {
+        assertFalse(handler.execute("project.unknown P001"));
+
+        assertEquals(List.of("Unsupported action: unknown."), ui.errors);
+        assertTrue(ui.messages.isEmpty());
+    }
+
+    @Test
+    public void execute_projectDelete_removesActivitiesAndPreservesOtherProjects() {
+        LocalDate date = LocalDate.of(2026, 11, 30);
+        Project project = projectManager.addProject("C001", "Website redesign", date);
+        Project other = projectManager.addProject("C001", "App", date);
+        projectManager.addTask("P001", "Wireframe", date);
+        projectManager.addEvent("P001", "Meeting", date);
+        projectManager.addTask("P002", "Prototype", date);
+
         assertFalse(handler.execute("project.delete P001"));
 
-        assertEquals(List.of("Unsupported action: delete."), ui.errors);
-        assertTrue(ui.messages.isEmpty());
+        assertEquals(List.of("Website redesign has been deleted",
+                "2 associated activities removed."), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+        assertEquals(List.of(other), projectManager.getProjects());
+        assertTrue(project.getTasks().isEmpty());
+        assertTrue(project.getEvents().isEmpty());
+        assertEquals(1, other.getItemCount());
+        assertThrows(ProjectException.class, () -> projectManager.getProject("P001"));
+        assertEquals("P003", projectManager.addProject("C001", "New project", date).getProjectId());
+        assertEquals("T003", projectManager.addTask("P002", "Another task", date).getId());
+        assertEquals("E002", projectManager.addEvent("P002", "Another event", date).getId());
+    }
+
+    @Test
+    public void execute_projectDeleteWithoutActivities_reportsZero() {
+        projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+
+        assertFalse(handler.execute("project.delete P001"));
+
+        assertEquals(List.of("Website has been deleted",
+                "0 associated activities removed."), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+        assertTrue(projectManager.getProjects().isEmpty());
+    }
+
+    @Test
+    public void execute_projectDeleteOneActivity_reportsSingular() {
+        LocalDate date = LocalDate.of(2026, 11, 30);
+        projectManager.addProject("C001", "Website", date);
+        projectManager.addTask("P001", "Wireframe", date);
+
+        assertFalse(handler.execute("project.delete P001"));
+
+        assertEquals(List.of("Website has been deleted",
+                "1 associated activity removed."), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectDeleteInvalidArguments_preservesProjectAndActivities() {
+        LocalDate date = LocalDate.of(2026, 11, 30);
+        Project project = projectManager.addProject("C001", "Website", date);
+        projectManager.addTask("P001", "Wireframe", date);
+
+        assertFalse(handler.execute("project.delete"));
+        assertFalse(handler.execute("project.delete P001 P002"));
+        assertFalse(handler.execute("project.delete P999"));
+
+        assertEquals(List.of("A project ID must not be blank.",
+                "Provide exactly one project ID.",
+                "Project P999 does not exist."), ui.errors);
+        assertEquals(List.of("Format: project.delete PROJECT_ID",
+                "Format: project.delete PROJECT_ID",
+                "Format: project.delete PROJECT_ID"), ui.messages);
+        assertEquals(List.of(project), projectManager.getProjects());
+        assertEquals(1, project.getItemCount());
     }
 
     @Test

@@ -102,6 +102,21 @@ public final class ProjectManager {
     }
 
     /**
+     * Deletes an existing project and all its activities.
+     * Leaves ID counters unchanged so deleted IDs are not reused.
+     *
+     * @param projectId ID of the project to delete
+     * @return total number of tasks and events removed
+     * @throws ProjectException if the ID is blank or the project does not exist
+     */
+    public int deleteProject(String projectId) {
+        Project project = getProject(projectId);
+        int removedCount = project.removeAllActivities();
+        projects.remove(project.getProjectId());
+        return removedCount;
+    }
+
+    /**
      * Looks up a project without creating a missing parent.
      *
      * @param projectId project ID to look up
