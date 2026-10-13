@@ -8,6 +8,7 @@ import busynotfree.model.ClientManager;
 import busynotfree.model.Event;
 import busynotfree.model.Project;
 import busynotfree.model.ProjectManager;
+import busynotfree.model.ProjectStatus;
 import busynotfree.model.Task;
 import busynotfree.ui.Ui;
 
@@ -82,15 +83,21 @@ public class CommandHandler {
     private void showCommandUsage(ParsedCommand command) {
         if (command.getEntityType().equals("client")) {
             clientCommandHandler.showCommandUsage(command.getAction());
+        } else if (command.getEntityType().equals("project") && command.getAction().equals("status")) {
+            ui.showProjectStatusUsage();
         } else if (command.getAction().equals("add")) {
             ui.showAddCommandUsage(command.getEntityType());
         }
     }
 
-    /** Delegates client operations and routes the existing creation commands. */
+    /** Delegates client operations and routes project, task and event commands. */
     private void routeCommand(ParsedCommand command) {
         if (command.getEntityType().equals("client")) {
             clientCommandHandler.execute(command);
+            return;
+        }
+        if (command.getEntityType().equals("project") && command.getAction().equals("status")) {
+            handleProjectStatus(command.getArgumentText());
             return;
         }
         if (!command.getAction().equals("add")) {
@@ -134,5 +141,32 @@ public class CommandHandler {
         Event event = projectManager.addEvent(values.get("project"), values.get("name"),
                 argumentParser.parseDate(values.get("date")));
         ui.showEventAdded(event);
+    }
+
+    /** Parses a project ID and status before changing the project's status. */
+    private void handleProjectStatus(String arguments) {
+        String[] parts = arguments.trim().split("\\s+");
+        if (parts.length != 2) {
+            throw new CommandException("Use project.status PROJECT_ID STATUS.");
+        }
+        ProjectStatus status = parseProjectStatus(parts[1]);
+        Project project = projectManager.changeProjectStatus(parts[0], status);
+        ui.showProjectStatusChanged(project);
+    }
+
+    /** Converts one documented lowercase status value into its project status. */
+    private ProjectStatus parseProjectStatus(String status) {
+        switch (status) {
+        case "active":
+            return ProjectStatus.ACTIVE;
+        case "paused":
+            return ProjectStatus.PAUSED;
+        case "completed":
+            return ProjectStatus.COMPLETED;
+        case "cancelled":
+            return ProjectStatus.CANCELLED;
+        default:
+            throw new CommandException("Invalid Project Status.");
+        }
     }
 }

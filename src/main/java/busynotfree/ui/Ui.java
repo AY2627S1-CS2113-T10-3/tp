@@ -15,7 +15,7 @@ public class Ui {
         showSeparator();
         showMessage("Welcome to BusyNotFree!");
         showMessage("Commands: client.add, client.note, client.view, client.list, "
-                + "project.add, task.add, event.add, exit");
+                + "project.add, project.status, task.add, event.add, exit");
         showMessage("Data is kept in memory only and is not saved on exit.");
         showSeparator();
     }
@@ -61,6 +61,11 @@ public class Ui {
         showMessage("Added event " + event.getId() + " to project " + event.getProject().getProjectId() + ".");
     }
 
+    /** Displays confirmation after a project's status is changed. */
+    public void showProjectStatusChanged(Project project) {
+        showMessage("Project " + project.getProjectId() + " status changed to " + project.getStatus() + ".");
+    }
+
     /**
      * Displays the expected format for a supported add command after an error.
      * Unrecognised entity types have no add-command hint.
@@ -81,6 +86,11 @@ public class Ui {
         default:
             break;
         }
+    }
+
+    /** Displays the expected format for changing a project's status. */
+    public void showProjectStatusUsage() {
+        showMessage("Format: project.status PROJECT_ID STATUS");
     }
 
     /**

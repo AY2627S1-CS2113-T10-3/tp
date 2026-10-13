@@ -88,6 +88,20 @@ public final class ProjectManager {
     }
 
     /**
+     * Changes the status of an existing project.
+     *
+     * @param projectId project ID to update
+     * @param status new project status
+     * @return the updated project
+     * @throws ProjectException if the project ID is blank, the project does not exist or the status is null
+     */
+    public Project changeProjectStatus(String projectId, ProjectStatus status) {
+        Project project = getProject(projectId);
+        project.changeStatus(status);
+        return project;
+    }
+
+    /**
      * Looks up a project without creating a missing parent.
      *
      * @param projectId project ID to look up

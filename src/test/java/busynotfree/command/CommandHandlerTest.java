@@ -19,6 +19,7 @@ import busynotfree.exception.TaskException;
 import busynotfree.model.PlaceholderClientLookup;
 import busynotfree.model.Project;
 import busynotfree.model.ProjectManager;
+import busynotfree.model.ProjectStatus;
 import busynotfree.ui.Ui;
 
 /**
@@ -27,6 +28,7 @@ import busynotfree.ui.Ui;
 class CommandHandlerTest {
     private static final String PROJECT_FORMAT =
             "Format: project.add client/CLIENT_ID name/PROJECT_NAME due/YYYY-MM-DD";
+    private static final String PROJECT_STATUS_FORMAT = "Format: project.status PROJECT_ID STATUS";
     private static final String TASK_FORMAT = "Format: task.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD";
     private static final String EVENT_FORMAT = "Format: event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD";
 
@@ -83,6 +85,54 @@ class CommandHandlerTest {
         assertEquals("Stakeholder meeting", projectManager.getProject("P001").getEvents().getFirst().getDescription());
         assertEquals(LocalDate.of(2026, 10, 20), projectManager.getProject("P001").getEvents().getFirst().getDate());
         assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectStatus_updatesProjectAndDisplaysStatus() {
+        projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
+
+        assertFalse(handler.execute("project.status P001 paused"));
+
+        assertEquals(List.of("Project P001 status changed to PAUSED."), ui.messages);
+        assertEquals(ProjectStatus.PAUSED, projectManager.getProject("P001").getStatus());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectStatus_supportsAllDocumentedStatuses() {
+        projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
+
+        for (String status : List.of("active", "paused", "completed", "cancelled")) {
+            assertFalse(handler.execute("project.status P001 " + status));
+        }
+
+        assertEquals(List.of("Project P001 status changed to ACTIVE.",
+                "Project P001 status changed to PAUSED.",
+                "Project P001 status changed to COMPLETED.",
+                "Project P001 status changed to CANCELLED."), ui.messages);
+        assertEquals(ProjectStatus.CANCELLED, projectManager.getProject("P001").getStatus());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_invalidStatus_preservesStatusAndReportsError() {
+        projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
+
+        assertFalse(handler.execute("project.status P001 archived"));
+
+        assertEquals(List.of("Invalid Project Status."), ui.errors);
+        assertEquals(List.of(PROJECT_STATUS_FORMAT), ui.messages);
+        assertEquals(ProjectStatus.ACTIVE, projectManager.getProject("P001").getStatus());
+    }
+
+    @Test
+    public void execute_missingStatusProject_reportsErrorWithoutMutation() {
+        assertFalse(handler.execute("project.status"));
+        assertFalse(handler.execute("project.status P999 paused"));
+
+        assertEquals(List.of("Use project.status PROJECT_ID STATUS.", "Project P999 does not exist."), ui.errors);
+        assertEquals(List.of(PROJECT_STATUS_FORMAT, PROJECT_STATUS_FORMAT), ui.messages);
+        assertTrue(projectManager.getProjects().isEmpty());
     }
 
     @Test
