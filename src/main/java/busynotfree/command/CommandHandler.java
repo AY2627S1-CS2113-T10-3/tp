@@ -4,6 +4,8 @@ import java.util.Map;
 
 import busynotfree.exception.BusyNotFreeException;
 import busynotfree.exception.CommandException;
+import busynotfree.exception.ProjectException;
+import busynotfree.model.Client;
 import busynotfree.model.ClientManager;
 import busynotfree.model.Event;
 import busynotfree.model.Project;
@@ -20,6 +22,7 @@ public class CommandHandler {
     private final CommandParser commandParser;
     private final Ui ui;
     private final ProjectManager projectManager;
+    private final ClientManager clientManager;
     private final ClientCommandHandler clientCommandHandler;
     private final ArgumentParser argumentParser = new ArgumentParser();
 
@@ -48,6 +51,7 @@ public class CommandHandler {
         this.commandParser = commandParser;
         this.ui = ui;
         this.projectManager = projectManager;
+        this.clientManager = clientManager;
         this.clientCommandHandler = new ClientCommandHandler(clientManager, ui);
     }
 
@@ -63,7 +67,7 @@ public class CommandHandler {
         boolean shouldExit = false;
         ParsedCommand command = null;
         try {
-            if (userInput.trim().equals("exit")) {
+            if (userInput.trim().split("\\s+", 2)[0].equals("exit")) {
                 shouldExit = true;
             } else if (userInput.trim().equals("help")) {
                 ui.showHelp();
@@ -89,6 +93,8 @@ public class CommandHandler {
             ui.showProjectStatusUsage();
         } else if (command.getEntityType().equals("project") && command.getAction().equals("delete")) {
             ui.showProjectDeleteUsage();
+        } else if (command.getEntityType().equals("project") && command.getAction().equals("view")) {
+            ui.showProjectViewUsage();
         } else if (command.getAction().equals("add")) {
             ui.showAddCommandUsage(command.getEntityType());
         }
@@ -106,6 +112,10 @@ public class CommandHandler {
         }
         if (command.getEntityType().equals("project") && command.getAction().equals("list")) {
             handleProjectList();
+            return;
+        }
+        if (command.getEntityType().equals("project") && command.getAction().equals("view")) {
+            handleProjectView(command.getArgumentText());
             return;
         }
         if (command.getEntityType().equals("project") && command.getAction().equals("delete")) {
@@ -184,6 +194,40 @@ public class CommandHandler {
     /** Displays all projects in their creation order and ignores extra arguments. */
     private void handleProjectList() {
         ui.showProjects(projectManager.getProjects());
+    }
+
+    /** Displays one project or every project with its client and scheduled items. */
+    private void handleProjectView(String arguments) {
+        String projectId = arguments.trim();
+        if (projectId.isEmpty() || projectId.equals("all")) {
+            if (projectManager.getProjects().isEmpty()) {
+                ui.showMessage("No projects found.");
+                return;
+            }
+            boolean hasPrintedAnyProject = false;
+            for (Project project : projectManager.getProjects()) {
+                if (hasPrintedAnyProject) {
+                    ui.showMessage("");
+                }
+                showProjectSummary(project);
+                hasPrintedAnyProject = true;
+            }
+            return;
+        }
+        if (projectId.split("\\s+").length != 1) {
+            throw new CommandException("Provide exactly one project ID, or use all.");
+        }
+        try {
+            showProjectSummary(projectManager.getProject(projectId));
+        } catch (ProjectException exception) {
+            throw new ProjectException("Project " + projectId + " was not found.");
+        }
+    }
+
+    /** Resolves the project's client before asking the UI to format its summary. */
+    private void showProjectSummary(Project project) {
+        Client client = clientManager.getClient(project.getClientId());
+        ui.showProjectSummary(project, client);
     }
 
     /** Converts one documented lowercase status value into its project status. */

@@ -143,6 +143,31 @@ public final class ProjectManager {
         return List.copyOf(projects.values());
     }
 
+    /** Returns the next project number for saving the ID sequence. */
+    public int getNextProjectNumber() {
+        return nextProjectNumber;
+    }
+
+    /** Returns the next task number for saving the ID sequence. */
+    public int getNextTaskNumber() {
+        return nextTaskNumber;
+    }
+
+    /** Returns the next event number for saving the ID sequence. */
+    public int getNextEventNumber() {
+        return nextEventNumber;
+    }
+
+    /** Advances ID sequences while restoring saved projects and scheduled items. */
+    public void advanceNextNumbers(int projectNumber, int taskNumber, int eventNumber) {
+        if (projectNumber < nextProjectNumber || taskNumber < nextTaskNumber || eventNumber < nextEventNumber) {
+            throw new ProjectException("Saved project or activity IDs are out of order.");
+        }
+        nextProjectNumber = projectNumber;
+        nextTaskNumber = taskNumber;
+        nextEventNumber = eventNumber;
+    }
+
     /** Pads each type-specific ID to at least three digits, allowing IDs beyond 999. */
     private String formatId(String prefix, int number) {
         return String.format(Locale.ROOT, "%s%03d", prefix, number);
