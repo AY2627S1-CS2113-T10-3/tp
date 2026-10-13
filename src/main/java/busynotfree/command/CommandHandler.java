@@ -65,6 +65,8 @@ public class CommandHandler {
         try {
             if (userInput.trim().equals("exit")) {
                 shouldExit = true;
+            } else if (userInput.trim().equals("help")) {
+                ui.showHelp();
             } else {
                 command = commandParser.parse(userInput);
                 routeCommand(command);

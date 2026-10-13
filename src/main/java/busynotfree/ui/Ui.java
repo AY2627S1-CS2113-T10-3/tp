@@ -17,9 +17,26 @@ public class Ui {
         showSeparator();
         showMessage("Welcome to BusyNotFree!");
         showMessage("Commands: client.add, client.note, client.view, client.list, "
-                + "project.add, project.status, project.list, project.delete, task.add, event.add, exit");
+                + "project.add, project.status, project.list, project.delete, task.add, event.add, help, exit");
         showMessage("Data is kept in memory only and is not saved on exit.");
         showSeparator();
+    }
+
+    /** Displays command names and descriptions with aligned columns. */
+    public void showHelp() {
+        showMessage("Available commands:");
+        showMessage("client.add     |   Add a client");
+        showMessage("client.note    |   Add a client note");
+        showMessage("client.view    |   View a client");
+        showMessage("project.add    |   Add a project");
+        showMessage("project.delete |   Delete a project");
+        showMessage("project.status |   Update a project status");
+        showMessage("project.list   |   List all projects");
+        showMessage("project.view   |   View a project summary");
+        showMessage("task.add       |   Add a task");
+        showMessage("event.add      |   Add an event");
+        showMessage("help           |   View help");
+        showMessage("exit           |   Save data and exit");
     }
 
     /**
