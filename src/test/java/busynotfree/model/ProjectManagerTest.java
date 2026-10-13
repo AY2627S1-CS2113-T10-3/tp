@@ -227,4 +227,30 @@ class ProjectManagerTest {
         assertEquals("T002", manager.addTask("P001", "Second task", date).getId());
         assertEquals("E002", manager.addEvent("P001", "Second event", date).getId());
     }
+
+    @Test
+    public void changeProjectStatus_existingProject_updatesAndReturnsProject() {
+        Project project = manager.addProject("C001", "Website", date);
+
+        Project updatedProject = manager.changeProjectStatus("P001", ProjectStatus.PAUSED);
+
+        assertSame(project, updatedProject);
+        assertEquals(ProjectStatus.PAUSED, project.getStatus());
+    }
+
+    @Test
+    public void changeProjectStatus_missingProject_rejectsWithoutMutation() {
+        assertThrows(ProjectException.class, () -> manager.changeProjectStatus("P999", ProjectStatus.PAUSED));
+
+        assertTrue(manager.getProjects().isEmpty());
+    }
+
+    @Test
+    public void changeProjectStatus_nullStatus_preservesExistingStatus() {
+        Project project = manager.addProject("C001", "Website", date);
+
+        assertThrows(ProjectException.class, () -> manager.changeProjectStatus("P001", null));
+
+        assertEquals(ProjectStatus.ACTIVE, project.getStatus());
+    }
 }
