@@ -100,6 +100,10 @@ public class CommandHandler {
             handleProjectStatus(command.getArgumentText());
             return;
         }
+        if (command.getEntityType().equals("project") && command.getAction().equals("list")) {
+            handleProjectList();
+            return;
+        }
         if (!command.getAction().equals("add")) {
             throw new CommandException("Unsupported action: " + command.getAction() + ".");
         }
@@ -152,6 +156,11 @@ public class CommandHandler {
         ProjectStatus status = parseProjectStatus(parts[1]);
         Project project = projectManager.changeProjectStatus(parts[0], status);
         ui.showProjectStatusChanged(project);
+    }
+
+    /** Displays all projects in their creation order and ignores extra arguments. */
+    private void handleProjectList() {
+        ui.showProjects(projectManager.getProjects());
     }
 
     /** Converts one documented lowercase status value into its project status. */

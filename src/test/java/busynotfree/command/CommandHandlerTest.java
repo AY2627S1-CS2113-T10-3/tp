@@ -115,6 +115,27 @@ class CommandHandlerTest {
     }
 
     @Test
+    public void execute_projectList_displaysProjectsInCreationOrder() {
+        projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
+        projectManager.addProject("C002", "Logo design", LocalDate.of(2026, 12, 15));
+        projectManager.changeProjectStatus("P001", ProjectStatus.PAUSED);
+
+        assertFalse(handler.execute("project.list ignored arguments"));
+
+        assertEquals(List.of("1. P001|Website redesign|PAUSED|Due 2026-11-30",
+                "2. P002|Logo design|ACTIVE|Due 2026-12-15"), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_emptyProjectList_displaysEmptyMessage() {
+        assertFalse(handler.execute("project.list"));
+
+        assertEquals(List.of("No projects found."), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
     public void execute_invalidStatus_preservesStatusAndReportsError() {
         projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
 

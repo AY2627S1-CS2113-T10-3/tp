@@ -1,5 +1,7 @@
 package busynotfree.ui;
 
+import java.util.List;
+
 import busynotfree.model.Event;
 import busynotfree.model.Project;
 import busynotfree.model.Task;
@@ -15,7 +17,7 @@ public class Ui {
         showSeparator();
         showMessage("Welcome to BusyNotFree!");
         showMessage("Commands: client.add, client.note, client.view, client.list, "
-                + "project.add, project.status, task.add, event.add, exit");
+                + "project.add, project.status, project.list, task.add, event.add, exit");
         showMessage("Data is kept in memory only and is not saved on exit.");
         showSeparator();
     }
@@ -64,6 +66,19 @@ public class Ui {
     /** Displays confirmation after a project's status is changed. */
     public void showProjectStatusChanged(Project project) {
         showMessage("Project " + project.getProjectId() + " status changed to " + project.getStatus() + ".");
+    }
+
+    /** Displays projects in creation order, or a message when the list is empty. */
+    public void showProjects(List<Project> projects) {
+        if (projects.isEmpty()) {
+            showMessage("No projects found.");
+            return;
+        }
+        for (int i = 0; i < projects.size(); i++) {
+            Project project = projects.get(i);
+            showMessage((i + 1) + ". " + project.getProjectId() + "|" + project.getName()
+                    + "|" + project.getStatus() + "|Due " + project.getDeadline());
+        }
     }
 
     /**
