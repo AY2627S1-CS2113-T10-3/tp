@@ -53,7 +53,7 @@ public class CommandHandler {
 
     /**
      * Parses and routes one command, displaying errors without stopping the caller.
-     * Failed client and add commands also display their expected argument format.
+     * Failed client, add, project status and project delete commands display usage hints.
      *
      * @param userInput non-null raw user input
      * @return true if the user enters exit; false otherwise
@@ -65,6 +65,8 @@ public class CommandHandler {
         try {
             if (userInput.trim().equals("exit")) {
                 shouldExit = true;
+            } else if (userInput.trim().equals("help")) {
+                ui.showHelp();
             } else {
                 command = commandParser.parse(userInput);
                 routeCommand(command);
@@ -85,6 +87,8 @@ public class CommandHandler {
             clientCommandHandler.showCommandUsage(command.getAction());
         } else if (command.getEntityType().equals("project") && command.getAction().equals("status")) {
             ui.showProjectStatusUsage();
+        } else if (command.getEntityType().equals("project") && command.getAction().equals("delete")) {
+            ui.showProjectDeleteUsage();
         } else if (command.getAction().equals("add")) {
             ui.showAddCommandUsage(command.getEntityType());
         }
@@ -102,6 +106,10 @@ public class CommandHandler {
         }
         if (command.getEntityType().equals("project") && command.getAction().equals("list")) {
             handleProjectList();
+            return;
+        }
+        if (command.getEntityType().equals("project") && command.getAction().equals("delete")) {
+            handleProjectDelete(command.getArgumentText());
             return;
         }
         if (!command.getAction().equals("add")) {
@@ -156,6 +164,21 @@ public class CommandHandler {
         ProjectStatus status = parseProjectStatus(parts[1]);
         Project project = projectManager.changeProjectStatus(parts[0], status);
         ui.showProjectStatusChanged(project);
+    }
+
+    /** Requires one positional project ID before deleting the project and its activities. */
+    private void handleProjectDelete(String arguments) {
+        if (arguments.isBlank()) {
+            throw new CommandException("A project ID must not be blank.");
+        }
+        String[] parts = arguments.trim().split("\\s+");
+        if (parts.length != 1) {
+            throw new CommandException("Provide exactly one project ID.");
+        }
+
+        Project project = projectManager.getProject(parts[0]);
+        int removedCount = projectManager.deleteProject(parts[0]);
+        ui.showProjectDeleted(project.getName(), removedCount);
     }
 
     /** Displays all projects in their creation order and ignores extra arguments. */

@@ -17,9 +17,26 @@ public class Ui {
         showSeparator();
         showMessage("Welcome to BusyNotFree!");
         showMessage("Commands: client.add, client.note, client.view, client.list, "
-                + "project.add, project.status, project.list, task.add, event.add, exit");
+                + "project.add, project.status, project.list, project.delete, task.add, event.add, help, exit");
         showMessage("Data is kept in memory only and is not saved on exit.");
         showSeparator();
+    }
+
+    /** Displays command names and descriptions with aligned columns. */
+    public void showHelp() {
+        showMessage("Available commands:");
+        showMessage("client.add     |   Add a client");
+        showMessage("client.note    |   Add a client note");
+        showMessage("client.view    |   View a client");
+        showMessage("project.add    |   Add a project");
+        showMessage("project.delete |   Delete a project");
+        showMessage("project.status |   Update a project status");
+        showMessage("project.list   |   List all projects");
+        showMessage("project.view   |   View a project summary");
+        showMessage("task.add       |   Add a task");
+        showMessage("event.add      |   Add an event");
+        showMessage("help           |   View help");
+        showMessage("exit           |   Save data and exit");
     }
 
     /**
@@ -61,6 +78,23 @@ public class Ui {
      */
     public void showEventAdded(Event event) {
         showMessage("Added event " + event.getId() + " to project " + event.getProject().getProjectId() + ".");
+    }
+
+    /**
+     * Displays the deleted project's name and the number of activities removed.
+     *
+     * @param projectName name of the deleted project
+     * @param removedCount total number of tasks and events removed
+     */
+    public void showProjectDeleted(String projectName, int removedCount) {
+        showMessage(projectName + " has been deleted");
+        showMessage(removedCount + " associated "
+                + (removedCount == 1 ? "activity" : "activities") + " removed.");
+    }
+
+    /** Displays the expected format for deleting a project. */
+    public void showProjectDeleteUsage() {
+        showMessage("Format: project.delete PROJECT_ID");
     }
 
     /** Displays confirmation after a project's status is changed. */
