@@ -1,6 +1,9 @@
 package busynotfree.command;
 
+import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import busynotfree.exception.BusyNotFreeException;
 import busynotfree.exception.CommandException;
@@ -19,6 +22,9 @@ import busynotfree.ui.Ui;
  * Adapted from the MimiMeow individual project's command-handler structure.
  */
 public class CommandHandler {
+    /** Records project view diagnostics when fine logging is enabled. */
+    private static final Logger LOGGER = Logger.getLogger(CommandHandler.class.getName());
+
     private final CommandParser commandParser;
     private final Ui ui;
     private final ProjectManager projectManager;
@@ -200,12 +206,14 @@ public class CommandHandler {
     private void handleProjectView(String arguments) {
         String projectId = arguments.trim();
         if (projectId.isEmpty() || projectId.equals("all")) {
-            if (projectManager.getProjects().isEmpty()) {
+            List<Project> projects = projectManager.getProjects();
+            LOGGER.log(Level.FINE, "project.view requested all projects; count: {0}", projects.size());
+            if (projects.isEmpty()) {
                 ui.showMessage("No projects found.");
                 return;
             }
             boolean hasPrintedAnyProject = false;
-            for (Project project : projectManager.getProjects()) {
+            for (Project project : projects) {
                 if (hasPrintedAnyProject) {
                     ui.showMessage("");
                 }
@@ -215,11 +223,14 @@ public class CommandHandler {
             return;
         }
         if (projectId.split("\\s+").length != 1) {
+            LOGGER.fine("project.view rejected multiple project IDs");
             throw new CommandException("Provide exactly one project ID, or use all.");
         }
+        LOGGER.log(Level.FINE, "project.view requested project {0}", projectId);
         try {
             showProjectSummary(projectManager.getProject(projectId));
         } catch (ProjectException exception) {
+            LOGGER.log(Level.FINE, "project.view could not find project {0}", projectId);
             throw new ProjectException("Project " + projectId + " was not found.");
         }
     }
