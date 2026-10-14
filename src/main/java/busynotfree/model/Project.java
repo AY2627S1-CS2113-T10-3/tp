@@ -143,6 +143,10 @@ public final class Project {
         int removedCount = getItemCount();
         tasks.clear();
         events.clear();
+
+        assert tasks.isEmpty() : "All project tasks must be removed";
+        assert events.isEmpty() : "All project events must be removed";
+
         return removedCount;
     }
 

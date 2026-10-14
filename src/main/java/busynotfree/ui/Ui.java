@@ -88,6 +88,8 @@ public class Ui {
      * @param removedCount total number of tasks and events removed
      */
     public void showProjectDeleted(String projectName, int removedCount) {
+        assert removedCount >= 0 : "Removed activity count must not be negative";
+
         showMessage(projectName + " has been deleted");
         showMessage(removedCount + " associated "
                 + (removedCount == 1 ? "activity" : "activities") + " removed.");
