@@ -111,8 +111,15 @@ public final class ProjectManager {
      */
     public int deleteProject(String projectId) {
         Project project = getProject(projectId);
+        int expectedCount = project.getItemCount();
         int removedCount = project.removeAllActivities();
         projects.remove(project.getProjectId());
+
+        assert removedCount == expectedCount
+                : "Removed activity count must match the original count";
+        assert !projects.containsKey(project.getProjectId())
+                : "Deleted project must no longer be registered";
+
         return removedCount;
     }
 
