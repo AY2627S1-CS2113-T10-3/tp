@@ -24,7 +24,10 @@ public final class ClientManager implements ClientLookup {
      * @throws ClientException If the name is null or blank.
      */
     public Client addClient(String name) {
+        // These checks detect internal ID-allocation bugs, not invalid user input.
+        assert nextClientNumber > 0 : "The next client number must remain positive.";
         String clientId = String.format(Locale.ROOT, "C%03d", nextClientNumber);
+        assert !clients.containsKey(clientId) : "A generated client ID must not replace an existing client.";
         Client client = new Client(clientId, name);
         clients.put(clientId, client);
         nextClientNumber++;
@@ -46,6 +49,7 @@ public final class ClientManager implements ClientLookup {
         if (client == null) {
             throw new ClientException("Client " + clientId.trim() + " does not exist.");
         }
+        assert clientId.trim().equals(client.getClientId()) : "Client lookup returned a different client.";
         return client;
     }
 

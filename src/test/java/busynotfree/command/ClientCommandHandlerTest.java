@@ -2,6 +2,7 @@ package busynotfree.command;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
@@ -29,6 +30,17 @@ class ClientCommandHandlerTest {
     private final ProjectManager projectManager = new ProjectManager(manager);
     private final RecordingUi ui = new RecordingUi();
     private final CommandHandler handler = new CommandHandler(new CommandParser(), ui, projectManager, manager);
+
+    @Test
+    public void execute_nonClientCommand_detectsIncorrectInternalRouting() {
+        ClientCommandHandler clientHandler = new ClientCommandHandler(manager, ui);
+        ParsedCommand command = new ParsedCommand("project", "add", "name/Acme Studio");
+
+        assertThrows(AssertionError.class, () -> clientHandler.execute(command));
+        assertTrue(manager.getClients().isEmpty());
+        assertTrue(ui.messages.isEmpty());
+        assertTrue(ui.errors.isEmpty());
+    }
 
     @Test
     public void execute_addClient_displaysAssignedIdAndName() {

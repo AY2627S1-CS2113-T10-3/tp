@@ -28,6 +28,7 @@ public final class ClientCommandHandler {
      * @throws CommandException If the action or arguments are invalid.
      */
     public void execute(ParsedCommand command) {
+        assert "client".equals(command.getEntityType()) : "Client handler received a non-client command.";
         String arguments = command.getArgumentText();
         switch (command.getAction()) {
         case "add":
