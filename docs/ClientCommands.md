@@ -74,8 +74,9 @@ it creates a separate client manager. Callers that need real client validation
 should use the four-argument constructor with a shared manager, as in
 `BusyNotFree.main`.
 
-Clients and notes are held in memory only. Persistence is outside these four
-commands' scope; `exit` does not save this data.
+Clients and notes are kept in memory while the app runs. On `exit`, the app saves
+them with the project data to `data/busynotfree.properties` and loads them on
+the next run from the same working directory.
 
 Use Java 25 to run the complete JUnit and Checkstyle checks:
 
