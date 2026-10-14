@@ -228,16 +228,19 @@ public class CommandHandler {
         }
         LOGGER.log(Level.FINE, "project.view requested project {0}", projectId);
         try {
-            showProjectSummary(projectManager.getProject(projectId));
+            Project project = projectManager.getProject(projectId);
+            assert projectId.equals(project.getProjectId()) : "Project lookup returned a different project.";
+            showProjectSummary(project);
         } catch (ProjectException exception) {
             LOGGER.log(Level.FINE, "project.view could not find project {0}", projectId);
             throw new ProjectException("Project " + projectId + " was not found.");
         }
     }
 
-    /** Resolves the project's client before asking the UI to format its summary. */
+    /** Resolves the project's client and checks lookup consistency before formatting its summary. */
     private void showProjectSummary(Project project) {
         Client client = clientManager.getClient(project.getClientId());
+        assert project.getClientId().equals(client.getClientId()) : "Client lookup returned a different client.";
         ui.showProjectSummary(project, client);
     }
 
