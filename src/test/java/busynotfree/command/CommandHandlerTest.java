@@ -46,10 +46,10 @@ class CommandHandlerTest {
     }
 
     @Test
-    public void execute_exitWithArguments_reportsError() {
-        assertFalse(handler.execute("exit unexpected"));
+    public void execute_exitWithArguments_ignoresArguments() {
+        assertTrue(handler.execute("exit unexpected"));
 
-        assertEquals(List.of("Use target.action, such as project.add."), ui.errors);
+        assertTrue(ui.errors.isEmpty());
     }
 
     @Test

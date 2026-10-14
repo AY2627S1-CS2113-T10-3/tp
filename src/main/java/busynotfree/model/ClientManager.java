@@ -72,6 +72,19 @@ public final class ClientManager implements ClientLookup {
         return List.copyOf(clients.values());
     }
 
+    /** Returns the next client number so storage can preserve IDs across runs. */
+    public int getNextClientNumber() {
+        return nextClientNumber;
+    }
+
+    /** Advances the next client number while restoring a saved data file. */
+    public void advanceNextClientNumber(int number) {
+        if (number < nextClientNumber) {
+            throw new ClientException("Saved client IDs are out of order.");
+        }
+        nextClientNumber = number;
+    }
+
     @Override
     public boolean exists(String clientId) {
         return clientId != null && clients.containsKey(clientId.trim());
