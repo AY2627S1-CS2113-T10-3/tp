@@ -1,66 +1,42 @@
-# BusyNotFree project template
+# BusyNotFree
 
-This is a project template for a greenfield Java project. It's named after the Java mascot _Duke_. Given below are instructions on how to use it.
+BusyNotFree is a command-line app for keeping track of clients, their projects, and each project's dated tasks and events. It was built for the CS2113 team project.
 
-## Setting up in Intellij
+## Run the app
 
-Prerequisites: JDK 25 (use the exact version), update Intellij to the most recent version.
+You need Java 25. From the repository root, build the runnable JAR:
 
-1. **Ensure Intellij JDK 25 is defined as an SDK**, as described [here](https://www.jetbrains.com/help/idea/sdk.html#set-up-jdk) -- this step is not needed if you have used JDK 25 in a previous Intellij project.
-1. **Import the project _as a Gradle project_**, as described [here](https://se-education.org/guides/tutorials/intellijImportGradleProject.html).
-1. **Verify the setup**: After the importing is complete, locate the `src/main/java/seedu/duke/Duke.java` file, right-click it, and choose `Run Duke.main()`. If the setup is correct, you should see something like the below:
-   ```
-   > Task :compileJava
-   > Task :processResources NO-SOURCE
-   > Task :classes
-   
-   > Task :Duke.main()
-   Hello from
-    ____        _
-   |  _ \ _   _| | _____ 
-   | | | | | | | |/ / _ \
-   | |_| | |_| |   <  __/
-   |____/ \__,_|_|\_\___|
-   
-   What is your name?
-   ```
-   Type some word and press enter to let the execution proceed to the end.
+```powershell
+.\gradlew.bat shadowJar
+java -jar build/libs/BusyNotFree.jar
+```
 
-**Warning:** Keep the `src\main\java` folder as the root folder for Java files (i.e., don't rename those folders or move Java files to another folder outside of this folder path), as this is the default location some tools (e.g., Gradle) expect to find Java files.
+On macOS or Linux, use `./gradlew shadowJar` for the build step. Alternatively, import the repository as a Gradle project in IntelliJ IDEA and run `busynotfree.BusyNotFree.main()`.
 
-## Build automation using Gradle
+Enter one command per line. For example:
 
-* This project uses Gradle for build automation and dependency management. It includes a basic build script as well (i.e. the `build.gradle` file).
-* If you are new to Gradle, refer to the [Gradle Tutorial at se-education.org/guides](https://se-education.org/guides/tutorials/gradle.html).
+```text
+client.add name/Acme Studio
+project.add client/C001 name/Website redesign due/2026-11-30
+task.add project/P001 name/Create homepage wireframe date/2026-10-15
+project.view P001
+exit
+```
 
-## Testing
+BusyNotFree assigns IDs such as `C001`, `P001`, `T001`, and `E001`. Use the IDs printed by the app in later commands. Dates use `YYYY-MM-DD`.
 
-### I/O redirection tests
+`exit` saves clients, notes, projects, tasks, and events to `data/busynotfree.properties` relative to the directory where you run the app. The next run from that directory loads the file. Keep that file if you want to keep your data; do not edit it by hand.
 
-* To run _I/O redirection_ tests (aka _Text UI tests_), navigate to the `text-ui-test` and run the `runtest(.bat/.sh)` script.
+See the [User Guide](docs/UserGuide.md) for every command and more examples.
 
-### JUnit tests
+## Develop and test
 
-* A skeleton JUnit test (`src/test/java/seedu/duke/DukeTest.java`) is provided with this project template. 
-* If you are new to JUnit, refer to the [JUnit Tutorial at se-education.org/guides](https://se-education.org/guides/tutorials/junit.html).
+Use JDK 25 when importing the Gradle project or running these commands:
 
-## Checkstyle
+```powershell
+.\gradlew.bat test checkstyleMain checkstyleTest shadowJar
+```
 
-* A sample CheckStyle rule configuration is provided in this project.
-* If you are new to Checkstyle, refer to the [Checkstyle Tutorial at se-education.org/guides](https://se-education.org/guides/tutorials/checkstyle.html).
+On macOS or Linux, replace `.\gradlew.bat` with `./gradlew`. The runnable JAR is created at `build/libs/BusyNotFree.jar`.
 
-## CI using GitHub Actions
-
-The project uses [GitHub actions](https://github.com/features/actions) for CI. When you push a commit to this repo or PR against it, GitHub actions will run automatically to build and verify the code as updated by the commit/PR.
-
-## Documentation
-
-`/docs` folder contains a skeleton version of the project documentation.
-
-Steps for publishing documentation to the public: 
-1. If you are using this project template for an individual project, go your fork on GitHub.<br>
-   If you are using this project template for a team project, go to the team fork on GitHub.
-1. Click on the `settings` tab.
-1. Scroll down to the `GitHub Pages` section.
-1. Set the `source` as `master branch /docs folder`.
-1. Optionally, use the `choose a theme` button to choose a theme for your documentation.
+Project documentation: [User Guide](docs/UserGuide.md) · [Developer Guide](docs/DeveloperGuide.md) · [About Us](docs/AboutUs.md).
