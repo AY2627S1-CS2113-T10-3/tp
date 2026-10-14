@@ -25,7 +25,8 @@ class BusyNotFreeClientTest {
         ClientManager clients = new ClientManager();
         ProjectManager projects = new ProjectManager(clients);
         BusyNotFree application = new BusyNotFree(ui,
-                new CommandHandler(new CommandParser(), ui, projects, clients));
+                new CommandHandler(new CommandParser(), ui, projects, clients), () -> {
+                });
         List<String> commands = List.of("client.list", "client.add name/", "client.add name/Acme Studio",
                 "client.view C001", "client.note C001 text/", "client.note C999 text/Missing client",
                 "client.note C001 text/Prefers weekly updates", "client.note C001 text/Follow up Friday",
@@ -50,7 +51,7 @@ class BusyNotFreeClientTest {
         assertTrue(ui.messages.contains("1. C001 | Acme Studio"));
         assertTrue(ui.messages.contains("2. C002 | Bright Ideas"));
         assertEquals(commands.size() - 1, ui.messages.stream().filter("Enter a command:"::equals).count());
-        assertEquals("Goodbye!", ui.messages.getLast());
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
     }
 
     /** Captures responses without replacing the process's standard output. */

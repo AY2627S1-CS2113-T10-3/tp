@@ -2,6 +2,7 @@ package busynotfree.ui;
 
 import java.util.List;
 
+import busynotfree.model.Client;
 import busynotfree.model.Event;
 import busynotfree.model.Project;
 import busynotfree.model.Task;
@@ -17,8 +18,8 @@ public class Ui {
         showSeparator();
         showMessage("Welcome to BusyNotFree!");
         showMessage("Commands: client.add, client.note, client.view, client.list, "
-                + "project.add, project.status, project.list, project.delete, task.add, event.add, help, exit");
-        showMessage("Data is kept in memory only and is not saved on exit.");
+                + "project.add, project.status, project.list, project.view, project.delete, "
+                + "task.add, event.add, help, exit");
         showSeparator();
     }
 
@@ -47,10 +48,10 @@ public class Ui {
     }
 
     /**
-     * Displays a farewell without claiming that data has been saved.
+     * Confirms that application data was saved before exiting.
      */
     public void showGoodbye() {
-        showMessage("Goodbye!");
+        showMessage("Data saved. Goodbye!");
     }
 
     /**
@@ -113,6 +114,35 @@ public class Ui {
             showMessage((i + 1) + ". " + project.getProjectId() + "|" + project.getName()
                     + "|" + project.getStatus() + "|Due " + project.getDeadline());
         }
+    }
+
+    /** Displays one project and separates its tasks from its events. */
+    public void showProjectSummary(Project project, Client client) {
+        showMessage("Project: " + project.getProjectId() + " - " + project.getName());
+        showMessage("Client: " + client.getClientId() + " - " + client.getName());
+        showMessage("Status: " + project.getStatus());
+        showMessage("Deadline: " + project.getDeadline());
+        showMessage("Tasks:");
+        if (project.getTasks().isEmpty()) {
+            showMessage("No tasks found.");
+        } else {
+            for (Task task : project.getTasks()) {
+                showMessage(task.toString());
+            }
+        }
+        showMessage("Events:");
+        if (project.getEvents().isEmpty()) {
+            showMessage("No events found.");
+        } else {
+            for (Event event : project.getEvents()) {
+                showMessage(event.toString());
+            }
+        }
+    }
+
+    /** Displays the accepted forms of the project view command. */
+    public void showProjectViewUsage() {
+        showMessage("Format: project.view [PROJECT_ID|all]");
     }
 
     /**
