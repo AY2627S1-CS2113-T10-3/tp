@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 import busynotfree.exception.EventException;
 import busynotfree.exception.ProjectException;
@@ -17,6 +18,9 @@ import busynotfree.exception.TaskException;
  * This manager does not load or save data between application runs.
  */
 public final class ProjectManager {
+    /** Diagnostic creation logs are quiet by default and omit client names and item descriptions. */
+    private static final Logger LOGGER = Logger.getLogger(ProjectManager.class.getName());
+
     private final ClientLookup clientLookup;
     private final Map<String, Project> projects = new LinkedHashMap<>();
     private int nextProjectNumber = 1;
@@ -44,10 +48,12 @@ public final class ProjectManager {
     public Project addProject(String clientId, String name, LocalDate deadline) {
         Project project = new Project(formatId("P", nextProjectNumber), clientId, name, deadline);
         if (!clientLookup.exists(project.getClientId())) {
+            LOGGER.fine("Project creation rejected because the client does not exist.");
             throw new ProjectException("Client " + project.getClientId() + " does not exist.");
         }
         projects.put(project.getProjectId(), project);
         nextProjectNumber++;
+        LOGGER.fine(() -> "Created project " + project.getProjectId() + ".");
         return project;
     }
 
@@ -66,6 +72,7 @@ public final class ProjectManager {
         Task task = new Task(formatId("T", nextTaskNumber), project, description, date);
         project.addTask(task);
         nextTaskNumber++;
+        LOGGER.fine(() -> "Added task " + task.getId() + " to project " + project.getProjectId() + ".");
         return task;
     }
 
@@ -84,6 +91,7 @@ public final class ProjectManager {
         Event event = new Event(formatId("E", nextEventNumber), project, description, date);
         project.addEvent(event);
         nextEventNumber++;
+        LOGGER.fine(() -> "Added event " + event.getId() + " to project " + project.getProjectId() + ".");
         return event;
     }
 
@@ -100,6 +108,7 @@ public final class ProjectManager {
         }
         Project project = projects.get(projectId.trim());
         if (project == null) {
+            LOGGER.fine("Project lookup failed because the project does not exist.");
             throw new ProjectException("Project " + projectId.trim() + " does not exist.");
         }
         return project;
