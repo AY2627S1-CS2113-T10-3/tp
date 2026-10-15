@@ -115,6 +115,18 @@ class CommandHandlerTest {
     }
 
     @Test
+    public void execute_projectStatus_ignoresStatusCapitalisation() {
+        projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
+
+        for (String status : List.of("ACTIVE", "Paused", "cOmPlEtEd", "cancelled")) {
+            assertFalse(handler.execute("project.status P001 " + status));
+        }
+
+        assertEquals(ProjectStatus.CANCELLED, projectManager.getProject("P001").getStatus());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
     public void execute_projectList_displaysProjectsInCreationOrder() {
         projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
         projectManager.addProject("C002", "Logo design", LocalDate.of(2026, 12, 15));
