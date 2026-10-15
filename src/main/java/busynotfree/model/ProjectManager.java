@@ -97,7 +97,9 @@ public final class ProjectManager {
      */
     public Project changeProjectStatus(String projectId, ProjectStatus status) {
         Project project = getProject(projectId);
+        assert project != null;
         project.changeStatus(status);
+        assert project.getStatus() == status;
         return project;
     }
 

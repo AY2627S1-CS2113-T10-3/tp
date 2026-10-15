@@ -1,6 +1,7 @@
 package busynotfree.command;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -177,8 +178,11 @@ public class CommandHandler {
         if (parts.length != 2) {
             throw new CommandException("Use project.status PROJECT_ID STATUS.");
         }
+        assert parts.length == 2;
         ProjectStatus status = parseProjectStatus(parts[1]);
+        assert status != null;
         Project project = projectManager.changeProjectStatus(parts[0], status);
+        assert project.getStatus() == status;
         ui.showProjectStatusChanged(project);
     }
 
@@ -199,7 +203,10 @@ public class CommandHandler {
 
     /** Displays all projects in their creation order and ignores extra arguments. */
     private void handleProjectList() {
-        ui.showProjects(projectManager.getProjects());
+        List<Project> projects = projectManager.getProjects();
+        assert projects != null;
+        assert projects.stream().allMatch(project -> project != null);
+        ui.showProjects(projects);
     }
 
     /** Displays one project or every project with its client and scheduled items. */
@@ -244,9 +251,9 @@ public class CommandHandler {
         ui.showProjectSummary(project, client);
     }
 
-    /** Converts one documented lowercase status value into its project status. */
+    /** Converts a status value into its project status without considering capitalisation. */
     private ProjectStatus parseProjectStatus(String status) {
-        switch (status) {
+        switch (status.toLowerCase(Locale.ROOT)) {
         case "active":
             return ProjectStatus.ACTIVE;
         case "paused":

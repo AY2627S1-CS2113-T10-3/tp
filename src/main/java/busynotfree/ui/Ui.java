@@ -102,11 +102,13 @@ public class Ui {
 
     /** Displays confirmation after a project's status is changed. */
     public void showProjectStatusChanged(Project project) {
+        assert project != null;
         showMessage("Project " + project.getProjectId() + " status changed to " + project.getStatus() + ".");
     }
 
     /** Displays projects in creation order, or a message when the list is empty. */
     public void showProjects(List<Project> projects) {
+        assert projects != null;
         if (projects.isEmpty()) {
             showMessage("No projects found.");
             return;
