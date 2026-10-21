@@ -96,6 +96,44 @@ public final class ProjectManager {
     }
 
     /**
+     * Changes the status of an existing project.
+     *
+     * @param projectId project ID to update
+     * @param status new project status
+     * @return the updated project
+     * @throws ProjectException if the project ID is blank, the project does not exist or the status is null
+     */
+    public Project changeProjectStatus(String projectId, ProjectStatus status) {
+        Project project = getProject(projectId);
+        assert project != null;
+        project.changeStatus(status);
+        assert project.getStatus() == status;
+        return project;
+    }
+
+    /**
+     * Deletes an existing project and all its activities.
+     * Leaves ID counters unchanged so deleted IDs are not reused.
+     *
+     * @param projectId ID of the project to delete
+     * @return total number of tasks and events removed
+     * @throws ProjectException if the ID is blank or the project does not exist
+     */
+    public int deleteProject(String projectId) {
+        Project project = getProject(projectId);
+        int expectedCount = project.getItemCount();
+        int removedCount = project.removeAllActivities();
+        projects.remove(project.getProjectId());
+
+        assert removedCount == expectedCount
+                : "Removed activity count must match the original count";
+        assert !projects.containsKey(project.getProjectId())
+                : "Deleted project must no longer be registered";
+
+        return removedCount;
+    }
+
+    /**
      * Looks up a project without creating a missing parent.
      *
      * @param projectId project ID to look up
@@ -121,6 +159,31 @@ public final class ProjectManager {
      */
     public List<Project> getProjects() {
         return List.copyOf(projects.values());
+    }
+
+    /** Returns the next project number for saving the ID sequence. */
+    public int getNextProjectNumber() {
+        return nextProjectNumber;
+    }
+
+    /** Returns the next task number for saving the ID sequence. */
+    public int getNextTaskNumber() {
+        return nextTaskNumber;
+    }
+
+    /** Returns the next event number for saving the ID sequence. */
+    public int getNextEventNumber() {
+        return nextEventNumber;
+    }
+
+    /** Advances ID sequences while restoring saved projects and scheduled items. */
+    public void advanceNextNumbers(int projectNumber, int taskNumber, int eventNumber) {
+        if (projectNumber < nextProjectNumber || taskNumber < nextTaskNumber || eventNumber < nextEventNumber) {
+            throw new ProjectException("Saved project or activity IDs are out of order.");
+        }
+        nextProjectNumber = projectNumber;
+        nextTaskNumber = taskNumber;
+        nextEventNumber = eventNumber;
     }
 
     /** Pads each type-specific ID to at least three digits, allowing IDs beyond 999. */

@@ -3,9 +3,11 @@ package busynotfree;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +24,8 @@ class BusyNotFreeTest {
     private final RecordingUi ui = new RecordingUi();
     private final ProjectManager projectManager = new ProjectManager(new PlaceholderClientLookup());
     private final BusyNotFree busyNotFree = new BusyNotFree(ui,
-            new CommandHandler(new CommandParser(), ui, projectManager));
+            new CommandHandler(new CommandParser(), ui, projectManager), () -> {
+            });
 
     @Test
     public void run_creationCommands_displaysEachResponse() {
@@ -44,7 +47,7 @@ class BusyNotFreeTest {
 
         assertEquals(3, ui.errors.size());
         assertTrue(ui.messages.contains("Created project P001 for client C001."));
-        assertEquals("Goodbye!", ui.messages.getLast());
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
     }
 
     @Test
@@ -66,7 +69,7 @@ class BusyNotFreeTest {
         assertTrue(ui.messages.contains("Added task T001 to project P001."));
         assertTrue(ui.messages.contains("Added event E001 to project P001."));
         assertEquals(2, projectManager.getProject("P001").getItemCount());
-        assertEquals("Goodbye!", ui.messages.getLast());
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
     }
 
     @Test
@@ -74,8 +77,29 @@ class BusyNotFreeTest {
         runWithInput("exit\nproject.add\n");
 
         assertTrue(projectManager.getProjects().isEmpty());
-        assertEquals("Goodbye!", ui.messages.getLast());
-        assertEquals(1, ui.messages.stream().filter("Goodbye!"::equals).count());
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+        assertEquals(1, ui.messages.stream().filter("Data saved. Goodbye!"::equals).count());
+    }
+
+    @Test
+    public void run_failedSave_keepsRunningUntilSaveSucceeds() {
+        AtomicInteger saveAttempts = new AtomicInteger();
+        BusyNotFree application = new BusyNotFree(ui,
+                new CommandHandler(new CommandParser(), ui, projectManager), () -> {
+                    if (saveAttempts.incrementAndGet() == 1) {
+                        throw new IOException("Disk unavailable");
+                    }
+                });
+
+        try (Scanner scanner = new Scanner("exit now\nproject.add client/C001 name/Website "
+                + "due/2026-11-30\nexit\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(2, saveAttempts.get());
+        assertEquals(List.of("Critical ERROR!!! Unable to save data: Disk unavailable"), ui.errors);
+        assertEquals("Website", projectManager.getProject("P001").getName());
+        assertEquals(1, ui.messages.stream().filter("Data saved. Goodbye!"::equals).count());
     }
 
     @Test
@@ -83,7 +107,7 @@ class BusyNotFreeTest {
         runWithInput("project.add client/C001 name/Website due/2026-11-30\n");
 
         assertTrue(ui.messages.contains("Created project P001 for client C001."));
-        assertEquals("Goodbye!", ui.messages.getLast());
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -92,9 +116,9 @@ class BusyNotFreeTest {
         runWithInput("");
 
         assertTrue(ui.messages.contains("Welcome to BusyNotFree!"));
-        assertTrue(ui.messages.contains("Client lookup is a placeholder: supplied client IDs are assumed to exist."));
-        assertTrue(ui.messages.contains("Data is kept in memory only and is not saved on exit."));
-        assertEquals("Goodbye!", ui.messages.getLast());
+        assertTrue(ui.messages.stream().anyMatch(message -> message.contains("client.add, client.note")));
+        assertTrue(ui.messages.stream().anyMatch(message -> message.contains("project.view")));
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -125,7 +149,7 @@ class BusyNotFreeTest {
                 projectManager.getProject("P001").getTasks().getLast().getDescription());
         assertEquals("Review UI/UX mockup", projectManager.getProject("P001").getEvents().getLast().getDescription());
         assertEquals(commands.size(), ui.messages.stream().filter("Enter a command:"::equals).count());
-        assertEquals("Goodbye!", ui.messages.getLast());
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
     }
 
     @Test
@@ -135,8 +159,8 @@ class BusyNotFreeTest {
         assertEquals(List.of("Missing required prefix: date/."), ui.errors);
         assertTrue(projectManager.getProjects().isEmpty());
         assertEquals(2, ui.messages.stream().filter("Enter a command:"::equals).count());
-        assertEquals(1, ui.messages.stream().filter("Goodbye!"::equals).count());
-        assertEquals("Goodbye!", ui.messages.getLast());
+        assertEquals(1, ui.messages.stream().filter("Data saved. Goodbye!"::equals).count());
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
     }
 
     /** Supplies simulated input while closing only the test's scanner. */

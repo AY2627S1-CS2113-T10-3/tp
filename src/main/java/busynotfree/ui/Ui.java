@@ -1,5 +1,8 @@
 package busynotfree.ui;
 
+import java.util.List;
+
+import busynotfree.model.Client;
 import busynotfree.model.Event;
 import busynotfree.model.Project;
 import busynotfree.model.Task;
@@ -14,10 +17,27 @@ public class Ui {
     public void showWelcome() {
         showSeparator();
         showMessage("Welcome to BusyNotFree!");
-        showMessage("Commands: project.add, task.add, event.add, exit");
-        showMessage("Client lookup is a placeholder: supplied client IDs are assumed to exist.");
-        showMessage("Data is kept in memory only and is not saved on exit.");
+        showMessage("Commands: client.add, client.note, client.view, client.list, "
+                + "project.add, project.status, project.list, project.view, project.delete, "
+                + "task.add, event.add, help, exit");
         showSeparator();
+    }
+
+    /** Displays command names and descriptions with aligned columns. */
+    public void showHelp() {
+        showMessage("Available commands:");
+        showMessage("client.add     |   Add a client");
+        showMessage("client.note    |   Add a client note");
+        showMessage("client.view    |   View a client");
+        showMessage("project.add    |   Add a project");
+        showMessage("project.delete |   Delete a project");
+        showMessage("project.status |   Update a project status");
+        showMessage("project.list   |   List all projects");
+        showMessage("project.view   |   View a project summary");
+        showMessage("task.add       |   Add a task");
+        showMessage("event.add      |   Add an event");
+        showMessage("help           |   View help");
+        showMessage("exit           |   Save data and exit");
     }
 
     /**
@@ -28,10 +48,10 @@ public class Ui {
     }
 
     /**
-     * Displays a farewell without claiming that data has been saved.
+     * Confirms that application data was saved before exiting.
      */
     public void showGoodbye() {
-        showMessage("Goodbye!");
+        showMessage("Data saved. Goodbye!");
     }
 
     /**
@@ -62,6 +82,74 @@ public class Ui {
     }
 
     /**
+     * Displays the deleted project's name and the number of activities removed.
+     *
+     * @param projectName name of the deleted project
+     * @param removedCount total number of tasks and events removed
+     */
+    public void showProjectDeleted(String projectName, int removedCount) {
+        assert removedCount >= 0 : "Removed activity count must not be negative";
+
+        showMessage(projectName + " has been deleted");
+        showMessage(removedCount + " associated "
+                + (removedCount == 1 ? "activity" : "activities") + " removed.");
+    }
+
+    /** Displays the expected format for deleting a project. */
+    public void showProjectDeleteUsage() {
+        showMessage("Format: project.delete PROJECT_ID");
+    }
+
+    /** Displays confirmation after a project's status is changed. */
+    public void showProjectStatusChanged(Project project) {
+        assert project != null;
+        showMessage("Project " + project.getProjectId() + " status changed to " + project.getStatus() + ".");
+    }
+
+    /** Displays projects in creation order, or a message when the list is empty. */
+    public void showProjects(List<Project> projects) {
+        assert projects != null;
+        if (projects.isEmpty()) {
+            showMessage("No projects found.");
+            return;
+        }
+        for (int i = 0; i < projects.size(); i++) {
+            Project project = projects.get(i);
+            showMessage((i + 1) + ". " + project.getProjectId() + "|" + project.getName()
+                    + "|" + project.getStatus() + "|Due " + project.getDeadline());
+        }
+    }
+
+    /** Displays one project and separates its tasks from its events. */
+    public void showProjectSummary(Project project, Client client) {
+        showMessage("Project: " + project.getProjectId() + " - " + project.getName());
+        showMessage("Client: " + client.getClientId() + " - " + client.getName());
+        showMessage("Status: " + project.getStatus());
+        showMessage("Deadline: " + project.getDeadline());
+        showMessage("Tasks:");
+        if (project.getTasks().isEmpty()) {
+            showMessage("No tasks found.");
+        } else {
+            for (Task task : project.getTasks()) {
+                showMessage(task.toString());
+            }
+        }
+        showMessage("Events:");
+        if (project.getEvents().isEmpty()) {
+            showMessage("No events found.");
+        } else {
+            for (Event event : project.getEvents()) {
+                showMessage(event.toString());
+            }
+        }
+    }
+
+    /** Displays the accepted forms of the project view command. */
+    public void showProjectViewUsage() {
+        showMessage("Format: project.view [PROJECT_ID|all]");
+    }
+
+    /**
      * Displays the expected format for a supported add command after an error.
      * Unrecognised entity types have no add-command hint.
      *
@@ -81,6 +169,11 @@ public class Ui {
         default:
             break;
         }
+    }
+
+    /** Displays the expected format for changing a project's status. */
+    public void showProjectStatusUsage() {
+        showMessage("Format: project.status PROJECT_ID STATUS");
     }
 
     /**

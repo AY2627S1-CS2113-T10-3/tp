@@ -134,6 +134,22 @@ public final class Project {
         return tasks.size() + events.size();
     }
 
+    /**
+     * Removes all tasks and events owned by this project.
+     *
+     * @return total number of activities removed
+     */
+    int removeAllActivities() {
+        int removedCount = getItemCount();
+        tasks.clear();
+        events.clear();
+
+        assert tasks.isEmpty() : "All project tasks must be removed";
+        assert events.isEmpty() : "All project events must be removed";
+
+        return removedCount;
+    }
+
     /** Checks ownership and ID uniqueness using the task or event exception supplied by the caller. */
     private void validateNewItem(ScheduledItem item, List<? extends ScheduledItem> existingItems,
             Function<String, ? extends BusyNotFreeException> exceptionFactory) {

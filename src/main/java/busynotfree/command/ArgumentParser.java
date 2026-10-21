@@ -22,7 +22,7 @@ public final class ArgumentParser {
     /**
      * Extracts each required prefix once, allowing any order and spaces within values.
      * Prefixes must start at the beginning of the input or after whitespace.
-     * Only recognised prefixes delimit arguments; other slash-containing text remains part of a value.
+     * Recognised and required prefixes delimit arguments; other slash-containing text remains part of a value.
      * Recognised prefixes are reserved and cannot appear literally after whitespace within a value.
      *
      * @param argumentText argument text after the command word
@@ -38,7 +38,7 @@ public final class ArgumentParser {
         int valueStart = 0;
         while (matcher.find()) {
             String matchedPrefix = matcher.group(1);
-            if (!RECOGNISED_PREFIXES.contains(matchedPrefix)) {
+            if (!RECOGNISED_PREFIXES.contains(matchedPrefix) && !allowedPrefixes.contains(matchedPrefix)) {
                 continue;
             }
             if (previousPrefix == null) {
