@@ -82,4 +82,20 @@ class TaskTest {
         assertEquals(date, task.getDate());
         assertEquals("[T001] Create wireframe - 2026-10-15 [COMPLETED]", task.toString());
     }
+
+    @Test
+    public void markIncomplete_reopensCompletedTaskAndPreservesDetails() {
+        Task task = new Task("T001", project, "Create wireframe", date);
+        task.markCompleted();
+
+        task.markIncomplete();
+        task.markIncomplete();
+
+        assertFalse(task.isCompleted());
+        assertEquals("T001", task.getId());
+        assertSame(project, task.getProject());
+        assertEquals("Create wireframe", task.getDescription());
+        assertEquals(date, task.getDate());
+        assertEquals("[T001] Create wireframe - 2026-10-15", task.toString());
+    }
 }

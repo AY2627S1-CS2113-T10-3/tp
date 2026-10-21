@@ -104,6 +104,8 @@ public class CommandHandler {
             ui.showProjectViewUsage();
         } else if (command.getEntityType().equals("task") && command.getAction().equals("mark")) {
             ui.showTaskMarkUsage();
+        } else if (command.getEntityType().equals("task") && command.getAction().equals("unmark")) {
+            ui.showTaskUnmarkUsage();
         } else if (command.getAction().equals("add")) {
             ui.showAddCommandUsage(command.getEntityType());
         }
@@ -133,6 +135,10 @@ public class CommandHandler {
         }
         if (command.getEntityType().equals("task") && command.getAction().equals("mark")) {
             handleTaskMark(command.getArgumentText());
+            return;
+        }
+        if (command.getEntityType().equals("task") && command.getAction().equals("unmark")) {
+            handleTaskUnmark(command.getArgumentText());
             return;
         }
         if (!command.getAction().equals("add")) {
@@ -177,6 +183,15 @@ public class CommandHandler {
         }
         Task task = projectManager.markTaskComplete(arguments.trim());
         ui.showTaskMarked(task);
+    }
+
+    /** Requires one task ID before reopening the matching task. */
+    private void handleTaskUnmark(String arguments) {
+        if (arguments.isBlank() || arguments.trim().split("\\s+").length != 1) {
+            throw new CommandException("Provide exactly one task ID.");
+        }
+        Task task = projectManager.markTaskIncomplete(arguments.trim());
+        ui.showTaskUnmarked(task);
     }
 
     /** Parses event arguments and reports the event added to its owning project. */

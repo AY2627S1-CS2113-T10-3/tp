@@ -159,6 +159,17 @@ task.mark T001
 Task T001 marked as completed.
 ```
 
+### Reopen a task: `task.unmark`
+
+Format: `task.unmark TASK_ID`
+
+Marks an existing task incomplete again, for example when a client requests more work. The task keeps its ID, project, description, and date. In `project.view`, its `[COMPLETED]` label disappears. An unknown task ID produces an error.
+
+```text
+task.unmark T001
+Task T001 reopened.
+```
+
 ### Add an event: `event.add`
 
 Format: `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD`
@@ -208,6 +219,7 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | Delete project | `project.delete PROJECT_ID` |
 | Add task | `task.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Mark task complete | `task.mark TASK_ID` |
+| Reopen task | `task.unmark TASK_ID` |
 | Add event | `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Help | `help` |
 | Save and exit | `exit` |

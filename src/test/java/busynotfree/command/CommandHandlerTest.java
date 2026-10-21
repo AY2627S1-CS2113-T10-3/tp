@@ -95,6 +95,25 @@ class CommandHandlerTest {
     }
 
     @Test
+    public void execute_taskUnmark_reopensTaskAndReportsInvalidIds() {
+        projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 15));
+        projectManager.markTaskComplete("T001");
+
+        assertFalse(handler.execute("task.unmark T001"));
+        assertFalse(handler.execute("task.unmark T999"));
+        assertFalse(handler.execute("task.unmark T001 extra"));
+        assertFalse(handler.execute("task.unmark"));
+
+        assertFalse(projectManager.getTask("T001").isCompleted());
+        assertEquals(List.of("Task T001 reopened.",
+                "Format: task.unmark TASK_ID", "Format: task.unmark TASK_ID",
+                "Format: task.unmark TASK_ID"), ui.messages);
+        assertEquals(List.of("Task T999 was not found.",
+                "Provide exactly one task ID.", "Provide exactly one task ID."), ui.errors);
+    }
+
+    @Test
     public void execute_eventAdd_attachesEventToProject() {
         projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
         assertFalse(handler.execute("event.add project/P001 name/Stakeholder meeting date/2026-10-20"));

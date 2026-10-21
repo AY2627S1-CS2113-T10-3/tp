@@ -92,6 +92,13 @@ public final class ProjectManager {
         return task;
     }
 
+    /** Reopens an existing task and returns it for the command response. */
+    public Task markTaskIncomplete(String taskId) {
+        Task task = getTask(taskId);
+        task.markIncomplete();
+        return task;
+    }
+
     /**
      * Creates and attaches an event to an existing project.
      *

@@ -33,6 +33,11 @@ public final class Task extends ScheduledItem {
         completed = true;
     }
 
+    /** Reopens this task without changing its identifying or scheduled details. */
+    public void markIncomplete() {
+        completed = false;
+    }
+
     /** Returns the task type for polymorphic messages. */
     @Override
     public String getType() {

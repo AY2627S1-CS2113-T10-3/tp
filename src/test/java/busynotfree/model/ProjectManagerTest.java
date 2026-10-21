@@ -134,6 +134,26 @@ class ProjectManagerTest {
     }
 
     @Test
+    public void markTaskIncomplete_reopensOnlyMatchingTask() {
+        manager.addProject("C001", "Website", date);
+        manager.addProject("C001", "App", date);
+        Task first = manager.addTask("P001", "Wireframe", date);
+        Task second = manager.addTask("P002", "Prototype", date);
+        manager.markTaskComplete("T001");
+        manager.markTaskComplete("T002");
+
+        assertSame(second, manager.markTaskIncomplete(" T002 "));
+
+        assertTrue(first.isCompleted());
+        assertFalse(second.isCompleted());
+        assertThrows(TaskException.class, () -> manager.markTaskIncomplete("T999"));
+        assertThrows(TaskException.class, () -> manager.markTaskIncomplete("E001"));
+        assertThrows(TaskException.class, () -> manager.markTaskIncomplete(" "));
+        assertTrue(first.isCompleted());
+        assertFalse(second.isCompleted());
+    }
+
+    @Test
     public void getProjects_returnsUnmodifiableSnapshot() {
         Project first = manager.addProject("C001", "Website", date);
         List<Project> snapshot = manager.getProjects();
