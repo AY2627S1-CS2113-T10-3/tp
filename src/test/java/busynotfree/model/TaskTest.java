@@ -64,7 +64,7 @@ class TaskTest {
         ScheduledItem item = new Task("T001", project, "Create wireframe", date);
 
         assertEquals("task", item.getType());
-        assertEquals("[T001] Create wireframe - 2026-10-15", item.toString());
+        assertEquals("[T001] Create wireframe - 2026-10-15 [In Progress]", item.toString());
     }
 
     @Test
@@ -96,6 +96,6 @@ class TaskTest {
         assertSame(project, task.getProject());
         assertEquals("Create wireframe", task.getDescription());
         assertEquals(date, task.getDate());
-        assertEquals("[T001] Create wireframe - 2026-10-15", task.toString());
+        assertEquals("[T001] Create wireframe - 2026-10-15 [In Progress]", task.toString());
     }
 }

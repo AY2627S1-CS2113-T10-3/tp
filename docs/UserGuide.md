@@ -103,14 +103,14 @@ Client: C001 - Acme Studio
 Status: ACTIVE
 Deadline: 2026-11-30
 Tasks:
-[T001] Create homepage wireframe - 2026-10-15
+[T001] Create homepage wireframe - 2026-10-15 [In Progress]
 Events:
 [E001] Stakeholder meeting - 2026-10-20
 ```
 
 An empty section says `No tasks found.` or `No events found.` If there are no projects, viewing all says `No projects found.` A missing ID produces `Project PROJECT_ID was not found.` with the requested ID in place of `PROJECT_ID`.
 
-Tasks marked complete show `[COMPLETED]` after their date.
+Each task shows `[In Progress]` after its date until it is marked complete, when it shows `[COMPLETED]`.
 
 ### Change a project's status: `project.status`
 
@@ -163,11 +163,11 @@ Task T001 marked as completed.
 
 Format: `task.unmark TASK_ID`
 
-Marks an existing task incomplete again, for example when a client requests more work. The task keeps its ID, project, description, and date. In `project.view`, its `[COMPLETED]` label disappears. An unknown task ID produces an error.
+Marks an existing task incomplete again, for example when a client requests more work. The task keeps its ID, project, description, and date. In `project.view`, its `[COMPLETED]` label changes to `[In Progress]`. An unknown task ID produces an error.
 
 ```text
 task.unmark T001
-Task T001 reopened.
+Task T001 reopened. Status: [In Progress]
 ```
 
 ### Add an event: `event.add`

@@ -34,7 +34,7 @@ class ProjectViewTest {
 
         assertEquals(List.of("Project: P001 - Website redesign", "Client: C001 - Acme Studio",
                 "Status: PAUSED", "Deadline: 2026-11-30", "Tasks:",
-                "[T001] Create homepage wireframe - 2026-10-15", "Events:",
+                "[T001] Create homepage wireframe - 2026-10-15 [In Progress]", "Events:",
                 "[E001] Stakeholder meeting - 2026-10-20"), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
@@ -66,7 +66,7 @@ class ProjectViewTest {
     }
 
     @Test
-    public void execute_projectViewAfterTaskUnmark_removesCompletedLabel() {
+    public void execute_projectViewAfterTaskUnmark_showsInProgressLabel() {
         clients.addClient("Acme Studio");
         projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
         projects.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 15));
@@ -76,7 +76,7 @@ class ProjectViewTest {
 
         handler.execute("project.view P001");
 
-        assertTrue(ui.messages.contains("[T001] Wireframe - 2026-10-15"));
+        assertTrue(ui.messages.contains("[T001] Wireframe - 2026-10-15 [In Progress]"));
         assertFalse(ui.messages.stream().anyMatch(line -> line.contains("[COMPLETED]")));
         assertTrue(ui.errors.isEmpty());
     }

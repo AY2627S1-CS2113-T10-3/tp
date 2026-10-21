@@ -44,9 +44,9 @@ public final class Task extends ScheduledItem {
         return "task";
     }
 
-    /** Shows the completion state only after the task has been finished. */
+    /** Shows whether this task is complete or still in progress. */
     @Override
     public String toString() {
-        return super.toString() + (completed ? " [COMPLETED]" : "");
+        return super.toString() + (completed ? " [COMPLETED]" : " [In Progress]");
     }
 }

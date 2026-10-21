@@ -86,7 +86,7 @@ public class Ui {
 
     /** Confirms that a task was reopened. */
     public void showTaskUnmarked(Task task) {
-        showMessage("Task " + task.getId() + " reopened.");
+        showMessage("Task " + task.getId() + " reopened. Status: [In Progress]");
     }
 
     /** Displays the expected format for reopening a task. */

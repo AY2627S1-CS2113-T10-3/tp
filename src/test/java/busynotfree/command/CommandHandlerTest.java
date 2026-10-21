@@ -106,7 +106,7 @@ class CommandHandlerTest {
         assertFalse(handler.execute("task.unmark"));
 
         assertFalse(projectManager.getTask("T001").isCompleted());
-        assertEquals(List.of("Task T001 reopened.",
+        assertEquals(List.of("Task T001 reopened. Status: [In Progress]",
                 "Format: task.unmark TASK_ID", "Format: task.unmark TASK_ID",
                 "Format: task.unmark TASK_ID"), ui.messages);
         assertEquals(List.of("Task T999 was not found.",
