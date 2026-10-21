@@ -19,7 +19,7 @@ public class Ui {
         showMessage("Welcome to BusyNotFree!");
         showMessage("Commands: client.add, client.note, client.view, client.list, "
                 + "project.add, project.status, project.list, project.view, project.delete, "
-                + "task.add, event.add, help, exit");
+                + "task.add, task.mark, event.add, help, exit");
         showSeparator();
     }
 
@@ -35,6 +35,7 @@ public class Ui {
         showMessage("project.list   |   List all projects");
         showMessage("project.view   |   View a project summary");
         showMessage("task.add       |   Add a task");
+        showMessage("task.mark      |   Mark a task complete");
         showMessage("event.add      |   Add an event");
         showMessage("help           |   View help");
         showMessage("exit           |   Save data and exit");
@@ -70,6 +71,16 @@ public class Ui {
      */
     public void showTaskAdded(Task task) {
         showMessage("Added task " + task.getId() + " to project " + task.getProject().getProjectId() + ".");
+    }
+
+    /** Confirms that a task was marked complete. */
+    public void showTaskMarked(Task task) {
+        showMessage("Task " + task.getId() + " marked as completed.");
+    }
+
+    /** Displays the expected format for marking a task complete. */
+    public void showTaskMarkUsage() {
+        showMessage("Format: task.mark TASK_ID");
     }
 
     /**

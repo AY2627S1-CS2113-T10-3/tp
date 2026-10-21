@@ -110,6 +110,8 @@ Events:
 
 An empty section says `No tasks found.` or `No events found.` If there are no projects, viewing all says `No projects found.` A missing ID produces `Project PROJECT_ID was not found.` with the requested ID in place of `PROJECT_ID`.
 
+Tasks marked complete show `[COMPLETED]` after their date.
+
 ### Change a project's status: `project.status`
 
 Format: `project.status PROJECT_ID STATUS`
@@ -146,6 +148,17 @@ task.add project/P001 name/Create homepage wireframe date/2026-10-15
 Added task T001 to project P001.
 ```
 
+### Mark a task complete: `task.mark`
+
+Format: `task.mark TASK_ID`
+
+Marks an existing task complete. Use the task ID shown by `task.add`; the task keeps its project, description, and date. `project.view` then shows `[COMPLETED]` beside it. An unknown task ID produces an error.
+
+```text
+task.mark T001
+Task T001 marked as completed.
+```
+
 ### Add an event: `event.add`
 
 Format: `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD`
@@ -169,7 +182,7 @@ Shows a list of available commands and short descriptions.
 
 Format: `exit`
 
-Saves all clients, notes, projects, tasks, and events, then closes the app:
+Saves clients, notes, projects, tasks, and events, then closes the app. Task completion is not yet included in the save file:
 
 ```text
 exit
@@ -194,6 +207,7 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | Change project status | `project.status PROJECT_ID STATUS` |
 | Delete project | `project.delete PROJECT_ID` |
 | Add task | `task.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
+| Mark task complete | `task.mark TASK_ID` |
 | Add event | `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Help | `help` |
 | Save and exit | `exit` |

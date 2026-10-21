@@ -1,8 +1,10 @@
 package busynotfree.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
 
@@ -63,5 +65,21 @@ class TaskTest {
 
         assertEquals("task", item.getType());
         assertEquals("[T001] Create wireframe - 2026-10-15", item.toString());
+    }
+
+    @Test
+    public void markCompleted_preservesTaskDetailsAndShowsCompletion() {
+        Task task = new Task("T001", project, "Create wireframe", date);
+        assertFalse(task.isCompleted());
+
+        task.markCompleted();
+        task.markCompleted();
+
+        assertTrue(task.isCompleted());
+        assertEquals("T001", task.getId());
+        assertSame(project, task.getProject());
+        assertEquals("Create wireframe", task.getDescription());
+        assertEquals(date, task.getDate());
+        assertEquals("[T001] Create wireframe - 2026-10-15 [COMPLETED]", task.toString());
     }
 }

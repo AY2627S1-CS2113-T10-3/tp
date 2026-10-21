@@ -69,6 +69,29 @@ public final class ProjectManager {
         return task;
     }
 
+    /** Finds a task by its application-wide ID, regardless of its project. */
+    public Task getTask(String taskId) {
+        if (taskId == null || taskId.isBlank()) {
+            throw new TaskException("A task ID must not be blank.");
+        }
+        String requestedId = taskId.trim();
+        for (Project project : projects.values()) {
+            for (Task task : project.getTasks()) {
+                if (task.getId().equals(requestedId)) {
+                    return task;
+                }
+            }
+        }
+        throw new TaskException("Task " + requestedId + " was not found.");
+    }
+
+    /** Marks an existing task complete and returns it for the command response. */
+    public Task markTaskComplete(String taskId) {
+        Task task = getTask(taskId);
+        task.markCompleted();
+        return task;
+    }
+
     /**
      * Creates and attaches an event to an existing project.
      *

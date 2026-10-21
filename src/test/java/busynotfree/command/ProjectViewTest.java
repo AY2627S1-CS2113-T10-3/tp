@@ -52,6 +52,20 @@ class ProjectViewTest {
     }
 
     @Test
+    public void execute_projectViewAfterTaskMark_showsCompletedTask() {
+        clients.addClient("Acme Studio");
+        projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projects.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 15));
+        handler.execute("task.mark T001");
+        ui.messages.clear();
+
+        handler.execute("project.view P001");
+
+        assertTrue(ui.messages.contains("[T001] Wireframe - 2026-10-15 [COMPLETED]"));
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
     public void execute_projectViewAllAndNoId_displaySameSummaries() {
         clients.addClient("Acme Studio");
         projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
