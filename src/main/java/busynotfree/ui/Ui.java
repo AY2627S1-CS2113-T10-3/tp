@@ -61,7 +61,7 @@ public class Ui {
     /**
      * Displays confirmation after a project is successfully registered.
      *
-     * @param project project that was created
+     * @param project Project that was created.
      */
     public void showProjectAdded(Project project) {
         showMessage("Created project " + project.getProjectId() + " for client " + project.getClientId() + ".");
@@ -70,7 +70,7 @@ public class Ui {
     /**
      * Displays confirmation after a task is successfully attached to its project.
      *
-     * @param task task that was added
+     * @param task Task that was added.
      */
     public void showTaskAdded(Task task) {
         showMessage("Added task " + task.getId() + " to project " + task.getProject().getProjectId() + ".");
@@ -99,7 +99,7 @@ public class Ui {
     /**
      * Displays the edited task's updated details, including its completion state.
      *
-     * @param task task that was edited
+     * @param task Task that was edited.
      */
     public void showTaskEdited(Task task) {
         showMessage("Updated task in project " + task.getProject().getProjectId() + ": " + task);
@@ -113,7 +113,7 @@ public class Ui {
     /**
      * Displays confirmation after an event is successfully attached to its project.
      *
-     * @param event event that was added
+     * @param event Event that was added.
      */
     public void showEventAdded(Event event) {
         showMessage("Added event " + event.getId() + " to project " + event.getProject().getProjectId() + ".");
@@ -122,7 +122,7 @@ public class Ui {
     /**
      * Displays the edited event's updated details.
      *
-     * @param event event that was edited
+     * @param event Event that was edited.
      */
     public void showEventEdited(Event event) {
         showMessage("Updated event in project " + event.getProject().getProjectId() + ": " + event);
@@ -203,9 +203,9 @@ public class Ui {
 
     /**
      * Displays the expected format for a supported add command after an error.
-     * Unrecognised entity types have no add-command hint.
+     * Unrecognized entity types have no add-command hint.
      *
-     * @param entityType project, task or event
+     * @param entityType Project, task or event.
      */
     public void showAddCommandUsage(String entityType) {
         switch (entityType) {
@@ -238,7 +238,7 @@ public class Ui {
     /**
      * Displays a command response.
      *
-     * @param message response to display
+     * @param message Response to display.
      */
     public void showMessage(String message) {
         System.out.println(message);
@@ -247,7 +247,7 @@ public class Ui {
     /**
      * Displays a user-facing error.
      *
-     * @param message error to display
+     * @param message Error to display.
      */
     public void showError(String message) {
         System.out.println("Error: " + message);

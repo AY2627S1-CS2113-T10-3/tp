@@ -40,7 +40,7 @@ class ProjectManagerLoggingTest {
         logger.addHandler(recordingHandler);
     }
 
-    /** Restores the logger configuration so later tests retain their original logging behaviour. */
+    /** Restores the logger configuration so later tests retain their original logging behavior. */
     @AfterEach
     public void tearDown() {
         logger.removeHandler(recordingHandler);

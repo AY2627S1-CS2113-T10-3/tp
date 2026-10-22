@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import busynotfree.exception.EventException;
 
 /**
- * Tests event data, validation and behaviour through the shared scheduled-item type.
+ * Tests event data, validation and behavior through the shared scheduled-item type.
  */
 class EventTest {
     private final Project project = new Project("P001", "C001", "Website redesign", LocalDate.of(2026, 11, 30));

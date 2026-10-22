@@ -38,9 +38,9 @@ public class CommandHandler {
      * Creates a handler with the supplied parser and user interface.
      * Uses an independent client manager; use the overload for shared client lookup.
      *
-     * @param commandParser parser for the entity type, action and argument text
-     * @param ui user interface for responses
-     * @param projectManager manager for projects and their scheduled items
+     * @param commandParser Parser for the entity type, action and argument text.
+     * @param ui User interface for responses.
+     * @param projectManager Manager for projects and their scheduled items.
      */
     public CommandHandler(CommandParser commandParser, Ui ui, ProjectManager projectManager) {
         this(commandParser, ui, projectManager, new ClientManager());
@@ -67,8 +67,8 @@ public class CommandHandler {
      * Parses and routes one command, displaying errors without stopping the caller.
      * Failed client, add, edit, task mark and project status, view and delete commands display usage hints.
      *
-     * @param userInput non-null raw user input
-     * @return true if the user enters exit; false otherwise
+     * @param userInput Non-null raw user input.
+     * @return True if the user enters exit; false otherwise.
      */
     public boolean execute(String userInput) {
         ui.showSeparator();
@@ -223,12 +223,12 @@ public class CommandHandler {
 
     /**
      * Separates the positional item ID from the name/ and date/ arguments of an edit command.
-     * Other recognised prefixes, such as project/, are rejected so an edit cannot move an item.
+     * Other recognized prefixes, such as project/, are rejected so an edit cannot move an item.
      *
-     * @param arguments argument text after task.edit or event.edit
-     * @param itemType task or event, used in the error message
-     * @return the item ID, new description and validated new date
-     * @throws CommandException if the ID is missing, an argument is invalid or the date is malformed
+     * @param arguments Argument text after task.edit or event.edit.
+     * @param itemType Task or event, used in the error message.
+     * @return The item ID, new description and validated new date.
+     * @throws CommandException If the ID is missing, an argument is invalid or the date is malformed.
      */
     private EditArguments parseEditArguments(String arguments, String itemType) {
         String[] parts = arguments.trim().split("\\s+", 2);

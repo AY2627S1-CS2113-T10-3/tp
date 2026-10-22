@@ -15,7 +15,8 @@ import busynotfree.exception.TaskException;
 /**
  * Keeps projects in memory and assigns independent project, task and event IDs.
  * Counters advance only after successful additions and are shared across projects.
- * This manager does not load or save data between application runs.
+ * {@code DataStorage} saves and restores the projects and counters,
+ * so deleted IDs are not reused after a restart.
  */
 public final class ProjectManager {
     /** Diagnostic creation logs are quiet by default and omit client names and item descriptions. */
@@ -30,7 +31,7 @@ public final class ProjectManager {
     /**
      * Creates an empty manager using the supplied client-existence check.
      *
-     * @param clientLookup client lookup, temporarily supplied by a placeholder
+     * @param clientLookup Client-existence check, normally the application's {@code ClientManager}.
      */
     public ProjectManager(ClientLookup clientLookup) {
         this.clientLookup = Objects.requireNonNull(clientLookup);
@@ -39,11 +40,11 @@ public final class ProjectManager {
     /**
      * Creates a project for a client accepted by the configured lookup.
      *
-     * @param clientId owning client's ID
-     * @param name non-blank project name
-     * @param deadline project deadline
-     * @return the newly registered project
-     * @throws ProjectException if required data is missing or the client does not exist
+     * @param clientId Owning client's ID.
+     * @param name Non-blank project name.
+     * @param deadline Project deadline.
+     * @return The newly registered project.
+     * @throws ProjectException If required data is missing or the client does not exist.
      */
     public Project addProject(String clientId, String name, LocalDate deadline) {
         Project project = new Project(formatId("P", nextProjectNumber), clientId, name, deadline);
@@ -63,12 +64,12 @@ public final class ProjectManager {
     /**
      * Creates and attaches a task to an existing project.
      *
-     * @param projectId owning project's ID
-     * @param description non-blank description of the work
-     * @param date task date
-     * @return the newly attached task
-     * @throws ProjectException if the project ID is blank or the project does not exist
-     * @throws TaskException if required task data is missing or the task cannot be attached
+     * @param projectId Owning project's ID.
+     * @param description Non-blank description of the work.
+     * @param date Task date.
+     * @return The newly attached task.
+     * @throws ProjectException If the project ID is blank or the project does not exist.
+     * @throws TaskException If required task data is missing or the task cannot be attached.
      */
     public Task addTask(String projectId, String description, LocalDate date) {
         Project project = getProject(projectId);
@@ -114,11 +115,11 @@ public final class ProjectManager {
      * Updates an existing task's description and date.
      * Leaves ID counters unchanged because no new task is created.
      *
-     * @param taskId application-wide ID of the task to edit
-     * @param description new non-blank description of the work
-     * @param date new task date
-     * @return the edited task, with its ID, project and completion state preserved
-     * @throws TaskException if the task does not exist or the new details are invalid
+     * @param taskId Application-wide ID of the task to edit.
+     * @param description New non-blank description of the work.
+     * @param date New task date.
+     * @return The edited task, with its ID, project and completion state preserved.
+     * @throws TaskException If the task does not exist or the new details are invalid.
      */
     public Task editTask(String taskId, String description, LocalDate date) {
         Task task = getTask(taskId);
@@ -150,11 +151,11 @@ public final class ProjectManager {
      * Updates an existing event's description and date.
      * Leaves ID counters unchanged because no new event is created.
      *
-     * @param eventId application-wide ID of the event to edit
-     * @param description new non-blank description of the event
-     * @param date new event date
-     * @return the edited event, with its ID and project preserved
-     * @throws EventException if the event does not exist or the new details are invalid
+     * @param eventId Application-wide ID of the event to edit.
+     * @param description New non-blank description of the event.
+     * @param date New event date.
+     * @return The edited event, with its ID and project preserved.
+     * @throws EventException If the event does not exist or the new details are invalid.
      */
     public Event editEvent(String eventId, String description, LocalDate date) {
         Event event = getEvent(eventId);
@@ -167,12 +168,12 @@ public final class ProjectManager {
     /**
      * Creates and attaches an event to an existing project.
      *
-     * @param projectId owning project's ID
-     * @param description non-blank description of the event
-     * @param date event date
-     * @return the newly attached event
-     * @throws ProjectException if the project ID is blank or the project does not exist
-     * @throws EventException if required event data is missing or the event cannot be attached
+     * @param projectId Owning project's ID.
+     * @param description Non-blank description of the event.
+     * @param date Event date.
+     * @return The newly attached event.
+     * @throws ProjectException If the project ID is blank or the project does not exist.
+     * @throws EventException If required event data is missing or the event cannot be attached.
      */
     public Event addEvent(String projectId, String description, LocalDate date) {
         Project project = getProject(projectId);
@@ -225,9 +226,9 @@ public final class ProjectManager {
     /**
      * Looks up a project without creating a missing parent.
      *
-     * @param projectId project ID to look up
-     * @return the existing project
-     * @throws ProjectException if the ID is blank or does not identify an existing project
+     * @param projectId Project ID to look up.
+     * @return The existing project.
+     * @throws ProjectException If the ID is blank or does not identify an existing project.
      */
     public Project getProject(String projectId) {
         if (projectId == null || projectId.isBlank()) {
@@ -244,7 +245,7 @@ public final class ProjectManager {
     /**
      * Returns an unmodifiable snapshot of projects in creation order.
      *
-     * @return the projects currently registered in memory
+     * @return The projects currently registered in memory.
      */
     public List<Project> getProjects() {
         return List.copyOf(projects.values());

@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import busynotfree.exception.TaskException;
 
 /**
- * Tests task data, validation and behaviour through the shared scheduled-item type.
+ * Tests task data, validation and behavior through the shared scheduled-item type.
  */
 class TaskTest {
     private final Project project = new Project("P001", "C001", "Website redesign", LocalDate.of(2026, 11, 30));

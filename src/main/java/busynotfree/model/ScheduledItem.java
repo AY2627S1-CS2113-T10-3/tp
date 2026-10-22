@@ -19,12 +19,12 @@ public abstract class ScheduledItem {
     /**
      * Creates a dated item with an externally assigned ID and owning project.
      *
-     * @param id type-specific ID assigned by the application's model
-     * @param project project that owns this item
-     * @param description non-blank description
-     * @param date calendar date of the item
-     * @param exceptionFactory creates the subclass's exception from a validation message
-     * @throws BusyNotFreeException if required data is missing, using the supplied exception type
+     * @param id Type-specific ID assigned by the application's model.
+     * @param project Project that owns this item.
+     * @param description Non-blank description.
+     * @param date Calendar date of the item.
+     * @param exceptionFactory Creates the subclass's exception from a validation message.
+     * @throws BusyNotFreeException If required data is missing, using the supplied exception type.
      */
     protected ScheduledItem(String id, Project project, String description, LocalDate date,
             Function<String, ? extends BusyNotFreeException> exceptionFactory) {
@@ -45,10 +45,10 @@ public abstract class ScheduledItem {
      * Replaces the description and date together, leaving both unchanged if either is invalid.
      * The ID and owning project are final, so an edit cannot renumber or move the item.
      *
-     * @param description new non-blank description
-     * @param date new calendar date
-     * @param exceptionFactory creates the subclass's exception from a validation message
-     * @throws BusyNotFreeException if either value is missing, using the supplied exception type
+     * @param description New non-blank description.
+     * @param date New calendar date.
+     * @param exceptionFactory Creates the subclass's exception from a validation message.
+     * @throws BusyNotFreeException If either value is missing, using the supplied exception type.
      */
     protected final void updateDetails(String description, LocalDate date,
             Function<String, ? extends BusyNotFreeException> exceptionFactory) {
@@ -87,7 +87,7 @@ public abstract class ScheduledItem {
     /**
      * Returns the item type for messages without requiring a subclass cast.
      *
-     * @return task or event
+     * @return Task or event.
      */
     public abstract String getType();
 

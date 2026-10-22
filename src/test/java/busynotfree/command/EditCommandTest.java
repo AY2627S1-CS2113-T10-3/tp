@@ -126,7 +126,7 @@ class EditCommandTest {
             String id = idOf(itemType, 1);
             String missingId = "Provide the " + itemType + " ID before name/ and date/.";
             String otherTypeId = itemType.equals("task") ? "E001" : "T001";
-            String notFound = capitalise(itemType) + " %s was not found.";
+            String notFound = capitalize(itemType) + " %s was not found.";
             List<String> arguments = List.of("", "name/Revised date/2026-12-01", id,
                     id + " date/2026-12-01", id + " name/Revised",
                     id + " name/ date/2026-12-01", id + " name/Revised date/ \t ",
@@ -199,8 +199,8 @@ class EditCommandTest {
         return String.format(Locale.ROOT, "%s%03d", itemType.equals("task") ? "T" : "E", number);
     }
 
-    /** Converts task or event into the capitalised form used in lookup errors. */
-    private static String capitalise(String text) {
+    /** Converts task or event into the capitalized form used in lookup errors. */
+    private static String capitalize(String text) {
         return Character.toUpperCase(text.charAt(0)) + text.substring(1);
     }
 

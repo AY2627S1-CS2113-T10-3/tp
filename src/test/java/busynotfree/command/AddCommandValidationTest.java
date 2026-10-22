@@ -72,7 +72,7 @@ class AddCommandValidationTest {
         return tests;
     }
 
-    /** Checks recognised prefixes that do not belong to the current command. */
+    /** Checks recognized prefixes that do not belong to the current command. */
     @TestFactory
     public List<DynamicTest> execute_inappropriatePrefixes_reportsErrorWithoutMutation() {
         List<DynamicTest> tests = new ArrayList<>();
@@ -155,7 +155,7 @@ class AddCommandValidationTest {
         return tests;
     }
 
-    /** Checks the documented reservation of recognised prefix names within values. */
+    /** Checks the documented reservation of recognized prefix names within values. */
     @TestFactory
     public List<DynamicTest> execute_reservedPrefixInName_reportsRepeatedPrefix() {
         List<DynamicTest> tests = new ArrayList<>();

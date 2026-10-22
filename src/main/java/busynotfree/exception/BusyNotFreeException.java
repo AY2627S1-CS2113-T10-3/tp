@@ -11,7 +11,7 @@ public abstract class BusyNotFreeException extends RuntimeException {
     /**
      * Creates an application exception with a user-facing message.
      *
-     * @param message explanation of the failure
+     * @param message Explanation of the failure.
      */
     protected BusyNotFreeException(String message) {
         super(message);
@@ -20,8 +20,8 @@ public abstract class BusyNotFreeException extends RuntimeException {
     /**
      * Creates an application exception while retaining its original cause.
      *
-     * @param message explanation of the failure
-     * @param cause original exception that caused the failure
+     * @param message Explanation of the failure.
+     * @param cause Original exception that caused the failure.
      */
     protected BusyNotFreeException(String message, Throwable cause) {
         super(message, cause);

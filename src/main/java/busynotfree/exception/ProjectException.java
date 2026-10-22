@@ -9,7 +9,7 @@ public final class ProjectException extends BusyNotFreeException {
     /**
      * Creates an exception with a user-facing message.
      *
-     * @param message explanation of the failure
+     * @param message Explanation of the failure.
      */
     public ProjectException(String message) {
         super(message);
@@ -18,8 +18,8 @@ public final class ProjectException extends BusyNotFreeException {
     /**
      * Creates an exception while retaining its original cause.
      *
-     * @param message explanation of the failure
-     * @param cause original exception that caused the failure
+     * @param message Explanation of the failure.
+     * @param cause Original exception that caused the failure.
      */
     public ProjectException(String message, Throwable cause) {
         super(message, cause);

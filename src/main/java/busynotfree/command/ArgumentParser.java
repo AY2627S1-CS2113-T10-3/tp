@@ -13,23 +13,25 @@ import java.util.regex.Pattern;
 import busynotfree.exception.CommandException;
 
 /**
- * Parses required prefix/value arguments and strict calendar dates for add commands.
+ * Parses required prefix/value arguments and strict calendar dates.
+ * Used by the add and edit commands for projects, tasks and events, and by client commands.
  */
 public final class ArgumentParser {
     /** Reserved argument names across commands, including those disallowed by the current command. */
-    private static final Set<String> RECOGNISED_PREFIXES = Set.of("client", "project", "name", "due", "date");
+    private static final Set<String> RECOGNIZED_PREFIXES = Set.of("client", "project", "name", "due", "date");
     private static final Pattern PREFIX_PATTERN = Pattern.compile("(?<!\\S)([A-Za-z][A-Za-z0-9]*)/");
 
     /**
      * Extracts each required prefix once, allowing any order and spaces within values.
      * Prefixes must start at the beginning of the input or after whitespace.
-     * Recognised and required prefixes delimit arguments; other slash-containing text remains part of a value.
-     * Recognised prefixes are reserved and cannot appear literally after whitespace within a value.
+     * Recognized and required prefixes delimit arguments;
+     * other slash-containing text remains part of a value.
+     * Recognized prefixes are reserved and cannot appear literally after whitespace within a value.
      *
-     * @param argumentText argument text after the command word
-     * @param requiredPrefixes allowed prefixes, without trailing slashes
-     * @return an unmodifiable map of prefixes to trimmed, non-blank values
-     * @throws CommandException if an argument is missing, repeated, blank or unexpected
+     * @param argumentText Argument text after the command word.
+     * @param requiredPrefixes Allowed prefixes, without trailing slashes.
+     * @return An unmodifiable map of prefixes to trimmed, non-blank values.
+     * @throws CommandException If an argument is missing, repeated, blank or unexpected.
      */
     public Map<String, String> parse(String argumentText, String... requiredPrefixes) {
         assert requiredPrefixes.length > 0 : "A command must require at least one prefix.";
@@ -40,7 +42,7 @@ public final class ArgumentParser {
         int valueStart = 0;
         while (matcher.find()) {
             String matchedPrefix = matcher.group(1);
-            if (!RECOGNISED_PREFIXES.contains(matchedPrefix) && !allowedPrefixes.contains(matchedPrefix)) {
+            if (!RECOGNIZED_PREFIXES.contains(matchedPrefix) && !allowedPrefixes.contains(matchedPrefix)) {
                 continue;
             }
             if (previousPrefix == null) {
@@ -60,16 +62,17 @@ public final class ArgumentParser {
             putArgument(arguments, previousPrefix, argumentText.substring(valueStart));
         }
         validateRequiredArguments(arguments, allowedPrefixes);
-        assert arguments.size() == allowedPrefixes.size() : "Each required prefix must have exactly one value.";
+        assert arguments.size() == allowedPrefixes.size()
+                : "Each required prefix must have exactly one value.";
         return Map.copyOf(arguments);
     }
 
     /**
      * Parses an exact YYYY-MM-DD date without correcting impossible calendar dates.
      *
-     * @param dateText date supplied by the user
-     * @return the validated calendar date
-     * @throws CommandException if the format or calendar date is invalid
+     * @param dateText Date supplied by the user.
+     * @return The validated calendar date.
+     * @throws CommandException If the format or calendar date is invalid.
      */
     public LocalDate parseDate(String dateText) {
         Objects.requireNonNull(dateText, "Date text must come from a parsed date argument.");
