@@ -1,6 +1,7 @@
 package busynotfree.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -112,6 +113,44 @@ class ProjectManagerTest {
         assertThrows(ProjectException.class, () -> manager.getProject(null));
         assertThrows(ProjectException.class, () -> manager.getProject(" "));
         assertThrows(ProjectException.class, () -> manager.getProject("P999"));
+    }
+
+    @Test
+    public void markTaskComplete_findsTaskAcrossProjectsWithoutChangingOtherTasks() {
+        manager.addProject("C001", "Website", date);
+        manager.addProject("C001", "App", date);
+        Task first = manager.addTask("P001", "Wireframe", date);
+        Task second = manager.addTask("P002", "Prototype", date);
+
+        assertSame(second, manager.markTaskComplete(" T002 "));
+
+        assertTrue(second.isCompleted());
+        assertFalse(first.isCompleted());
+        assertSame(second, manager.getTask("T002"));
+        assertThrows(TaskException.class, () -> manager.markTaskComplete("T999"));
+        assertThrows(TaskException.class, () -> manager.markTaskComplete("E001"));
+        assertThrows(TaskException.class, () -> manager.markTaskComplete(" "));
+        assertTrue(second.isCompleted());
+    }
+
+    @Test
+    public void markTaskIncomplete_reopensOnlyMatchingTask() {
+        manager.addProject("C001", "Website", date);
+        manager.addProject("C001", "App", date);
+        Task first = manager.addTask("P001", "Wireframe", date);
+        Task second = manager.addTask("P002", "Prototype", date);
+        manager.markTaskComplete("T001");
+        manager.markTaskComplete("T002");
+
+        assertSame(second, manager.markTaskIncomplete(" T002 "));
+
+        assertTrue(first.isCompleted());
+        assertFalse(second.isCompleted());
+        assertThrows(TaskException.class, () -> manager.markTaskIncomplete("T999"));
+        assertThrows(TaskException.class, () -> manager.markTaskIncomplete("E001"));
+        assertThrows(TaskException.class, () -> manager.markTaskIncomplete(" "));
+        assertTrue(first.isCompleted());
+        assertFalse(second.isCompleted());
     }
 
     @Test

@@ -8,6 +8,8 @@ import busynotfree.exception.TaskException;
  * Represents a dated internal task belonging to one project.
  */
 public final class Task extends ScheduledItem {
+    private boolean completed;
+
     /**
      * Creates an internal task without automatically adding it to its project.
      *
@@ -21,9 +23,30 @@ public final class Task extends ScheduledItem {
         super(taskId, project, description, date, TaskException::new);
     }
 
+    /** Returns whether this task has been marked complete. */
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    /** Marks this task complete without changing its identifying or scheduled details. */
+    public void markCompleted() {
+        completed = true;
+    }
+
+    /** Reopens this task without changing its identifying or scheduled details. */
+    public void markIncomplete() {
+        completed = false;
+    }
+
     /** Returns the task type for polymorphic messages. */
     @Override
     public String getType() {
         return "task";
+    }
+
+    /** Shows whether this task is complete or still in progress. */
+    @Override
+    public String toString() {
+        return super.toString() + (completed ? " [COMPLETED]" : " [In Progress]");
     }
 }
