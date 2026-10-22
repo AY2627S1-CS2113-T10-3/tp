@@ -64,4 +64,31 @@ class EventTest {
         assertEquals("event", item.getType());
         assertEquals("[E001] Stakeholder meeting - 2026-10-20", item.toString());
     }
+
+    @Test
+    public void edit_validDetails_updatesDetailsAndPreservesIdAndProject() {
+        Event event = new Event("E001", project, "Stakeholder meeting", date);
+        LocalDate newDate = LocalDate.of(2026, 12, 2);
+
+        event.edit("  Rescheduled  meeting  ", newDate);
+
+        assertEquals("Rescheduled  meeting", event.getDescription());
+        assertEquals(newDate, event.getDate());
+        assertEquals("E001", event.getId());
+        assertSame(project, event.getProject());
+        assertEquals("[E001] Rescheduled  meeting - 2026-12-02", event.toString());
+    }
+
+    @Test
+    public void edit_invalidDetails_throwsAndLeavesEventUnchanged() {
+        Event event = new Event("E001", project, "Stakeholder meeting", date);
+        LocalDate newDate = LocalDate.of(2026, 12, 2);
+
+        assertThrows(EventException.class, () -> event.edit(" \t ", newDate));
+        assertThrows(EventException.class, () -> event.edit(null, newDate));
+        assertThrows(EventException.class, () -> event.edit("Rescheduled meeting", null));
+
+        assertEquals("Stakeholder meeting", event.getDescription());
+        assertEquals(date, event.getDate());
+    }
 }

@@ -98,4 +98,34 @@ class TaskTest {
         assertEquals(date, task.getDate());
         assertEquals("[T001] Create wireframe - 2026-10-15 [In Progress]", task.toString());
     }
+
+    @Test
+    public void edit_validDetails_updatesDetailsAndPreservesIdProjectAndCompletion() {
+        Task task = new Task("T001", project, "Create wireframe", date);
+        task.markCompleted();
+        LocalDate newDate = LocalDate.of(2026, 12, 1);
+
+        task.edit("  Revise  UI/UX wireframe  ", newDate);
+
+        assertEquals("Revise  UI/UX wireframe", task.getDescription());
+        assertEquals(newDate, task.getDate());
+        assertEquals("T001", task.getId());
+        assertSame(project, task.getProject());
+        assertTrue(task.isCompleted());
+        assertEquals("[T001] Revise  UI/UX wireframe - 2026-12-01 [COMPLETED]", task.toString());
+    }
+
+    @Test
+    public void edit_invalidDetails_throwsAndLeavesTaskUnchanged() {
+        Task task = new Task("T001", project, "Create wireframe", date);
+        LocalDate newDate = LocalDate.of(2026, 12, 1);
+
+        assertThrows(TaskException.class, () -> task.edit(" \t ", newDate));
+        assertThrows(TaskException.class, () -> task.edit(null, newDate));
+        assertThrows(TaskException.class, () -> task.edit("Revise wireframe", null));
+
+        assertEquals("Create wireframe", task.getDescription());
+        assertEquals(date, task.getDate());
+        assertFalse(task.isCompleted());
+    }
 }
