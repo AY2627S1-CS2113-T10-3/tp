@@ -1,0 +1,56 @@
+@startuml
+' Execution of: project.add client/C001 name/Website due/2026-11-30
+hide footbox
+
+actor User
+participant ":CommandHandler" as CH
+participant ":CommandParser" as CP
+participant ":ArgumentParser" as AP
+participant ":ProjectManager" as PM
+participant ":ClientLookup" as CL
+participant ":Ui" as UI
+
+User -> CH : execute("project.add client/C001\nname/Website due/2026-11-30")
+activate CH
+
+CH -> CP : parse(userInput)
+activate CP
+CP --> CH : command
+deactivate CP
+
+CH -> AP : parse(argumentText, "client", "name", "due")
+activate AP
+AP --> CH : values
+deactivate AP
+
+CH -> AP : parseDate("2026-11-30")
+activate AP
+AP --> CH : deadline
+deactivate AP
+
+CH -> PM : addProject("C001", "Website", deadline)
+activate PM
+
+create "p:Project" as P
+PM -> P : new Project("P001", "C001", "Website", deadline)
+activate P
+P --> PM
+deactivate P
+
+PM -> CL : exists("C001")
+activate CL
+CL --> PM : true
+deactivate CL
+
+PM -> PM : store p, nextProjectNumber++
+PM --> CH : p
+deactivate PM
+
+CH -> UI : showProjectAdded(p)
+activate UI
+UI --> CH
+deactivate UI
+
+CH --> User : false
+deactivate CH
+@enduml
