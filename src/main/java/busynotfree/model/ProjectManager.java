@@ -107,6 +107,56 @@ public final class ProjectManager {
     }
 
     /**
+     * Updates an existing task's description and date.
+     * Leaves ID counters unchanged because no new task is created.
+     *
+     * @param taskId application-wide ID of the task to edit
+     * @param description new non-blank description of the work
+     * @param date new task date
+     * @return the edited task, with its ID, project and completion state preserved
+     * @throws TaskException if the task does not exist or the new details are invalid
+     */
+    public Task editTask(String taskId, String description, LocalDate date) {
+        Task task = getTask(taskId);
+        task.edit(description, date);
+        LOGGER.fine(() -> "Edited task " + task.getId() + ".");
+        return task;
+    }
+
+    /** Finds an event by its application-wide ID, regardless of its project. */
+    public Event getEvent(String eventId) {
+        if (eventId == null || eventId.isBlank()) {
+            throw new EventException("An event ID must not be blank.");
+        }
+        String requestedId = eventId.trim();
+        for (Project project : projects.values()) {
+            for (Event event : project.getEvents()) {
+                if (event.getId().equals(requestedId)) {
+                    return event;
+                }
+            }
+        }
+        throw new EventException("Event " + requestedId + " was not found.");
+    }
+
+    /**
+     * Updates an existing event's description and date.
+     * Leaves ID counters unchanged because no new event is created.
+     *
+     * @param eventId application-wide ID of the event to edit
+     * @param description new non-blank description of the event
+     * @param date new event date
+     * @return the edited event, with its ID and project preserved
+     * @throws EventException if the event does not exist or the new details are invalid
+     */
+    public Event editEvent(String eventId, String description, LocalDate date) {
+        Event event = getEvent(eventId);
+        event.edit(description, date);
+        LOGGER.fine(() -> "Edited event " + event.getId() + ".");
+        return event;
+    }
+
+    /**
      * Creates and attaches an event to an existing project.
      *
      * @param projectId owning project's ID

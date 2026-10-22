@@ -19,7 +19,7 @@ public class Ui {
         showMessage("Welcome to BusyNotFree!");
         showMessage("Commands: client.add, client.note, client.view, client.list, "
                 + "project.add, project.status, project.list, project.view, project.delete, "
-                + "task.add, task.mark, task.unmark, event.add, help, exit");
+                + "task.add, task.mark, task.unmark, task.edit, event.add, event.edit, help, exit");
         showSeparator();
     }
 
@@ -37,7 +37,9 @@ public class Ui {
         showMessage("task.add       |   Add a task");
         showMessage("task.mark      |   Mark a task complete");
         showMessage("task.unmark    |   Reopen a task");
+        showMessage("task.edit      |   Edit a task");
         showMessage("event.add      |   Add an event");
+        showMessage("event.edit     |   Edit an event");
         showMessage("help           |   View help");
         showMessage("exit           |   Save data and exit");
     }
@@ -95,12 +97,40 @@ public class Ui {
     }
 
     /**
+     * Displays the edited task's updated details, including its completion state.
+     *
+     * @param task task that was edited
+     */
+    public void showTaskEdited(Task task) {
+        showMessage("Updated task in project " + task.getProject().getProjectId() + ": " + task);
+    }
+
+    /** Displays the expected format for editing a task. */
+    public void showTaskEditUsage() {
+        showMessage("Format: task.edit TASK_ID name/DESCRIPTION date/YYYY-MM-DD");
+    }
+
+    /**
      * Displays confirmation after an event is successfully attached to its project.
      *
      * @param event event that was added
      */
     public void showEventAdded(Event event) {
         showMessage("Added event " + event.getId() + " to project " + event.getProject().getProjectId() + ".");
+    }
+
+    /**
+     * Displays the edited event's updated details.
+     *
+     * @param event event that was edited
+     */
+    public void showEventEdited(Event event) {
+        showMessage("Updated event in project " + event.getProject().getProjectId() + ": " + event);
+    }
+
+    /** Displays the expected format for editing an event. */
+    public void showEventEditUsage() {
+        showMessage("Format: event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD");
     }
 
     /**

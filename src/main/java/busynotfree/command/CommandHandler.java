@@ -1,5 +1,6 @@
 package busynotfree.command;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -64,7 +65,7 @@ public class CommandHandler {
 
     /**
      * Parses and routes one command, displaying errors without stopping the caller.
-     * Failed client, add, project status and project delete commands display usage hints.
+     * Failed client, add, edit, task mark and project status, view and delete commands display usage hints.
      *
      * @param userInput non-null raw user input
      * @return true if the user enters exit; false otherwise
@@ -106,6 +107,10 @@ public class CommandHandler {
             ui.showTaskMarkUsage();
         } else if (command.getEntityType().equals("task") && command.getAction().equals("unmark")) {
             ui.showTaskUnmarkUsage();
+        } else if (command.getEntityType().equals("task") && command.getAction().equals("edit")) {
+            ui.showTaskEditUsage();
+        } else if (command.getEntityType().equals("event") && command.getAction().equals("edit")) {
+            ui.showEventEditUsage();
         } else if (command.getAction().equals("add")) {
             ui.showAddCommandUsage(command.getEntityType());
         }
@@ -139,6 +144,14 @@ public class CommandHandler {
         }
         if (command.getEntityType().equals("task") && command.getAction().equals("unmark")) {
             handleTaskUnmark(command.getArgumentText());
+            return;
+        }
+        if (command.getEntityType().equals("task") && command.getAction().equals("edit")) {
+            handleTaskEdit(command.getArgumentText());
+            return;
+        }
+        if (command.getEntityType().equals("event") && command.getAction().equals("edit")) {
+            handleEventEdit(command.getArgumentText());
             return;
         }
         if (!command.getAction().equals("add")) {
@@ -192,6 +205,45 @@ public class CommandHandler {
         }
         Task task = projectManager.markTaskIncomplete(arguments.trim());
         ui.showTaskUnmarked(task);
+    }
+
+    /** Parses every argument before editing, so invalid input cannot partially change the task. */
+    private void handleTaskEdit(String arguments) {
+        EditArguments values = parseEditArguments(arguments, "task");
+        Task task = projectManager.editTask(values.itemId(), values.description(), values.date());
+        ui.showTaskEdited(task);
+    }
+
+    /** Parses every argument before editing, so invalid input cannot partially change the event. */
+    private void handleEventEdit(String arguments) {
+        EditArguments values = parseEditArguments(arguments, "event");
+        Event event = projectManager.editEvent(values.itemId(), values.description(), values.date());
+        ui.showEventEdited(event);
+    }
+
+    /**
+     * Separates the positional item ID from the name/ and date/ arguments of an edit command.
+     * Other recognised prefixes, such as project/, are rejected so an edit cannot move an item.
+     *
+     * @param arguments argument text after task.edit or event.edit
+     * @param itemType task or event, used in the error message
+     * @return the item ID, new description and validated new date
+     * @throws CommandException if the ID is missing, an argument is invalid or the date is malformed
+     */
+    private EditArguments parseEditArguments(String arguments, String itemType) {
+        String[] parts = arguments.trim().split("\\s+", 2);
+        String itemId = parts[0];
+        if (itemId.isBlank() || itemId.contains("/")) {
+            throw new CommandException("Provide the " + itemType + " ID before name/ and date/.");
+        }
+        String prefixedArguments = parts.length > 1 ? parts[1] : "";
+        Map<String, String> values = argumentParser.parse(prefixedArguments, "name", "date");
+        LocalDate date = argumentParser.parseDate(values.get("date"));
+        return new EditArguments(itemId, values.get("name"), date);
+    }
+
+    /** Holds the validated values of an edit command before the model is changed. */
+    private record EditArguments(String itemId, String description, LocalDate date) {
     }
 
     /** Parses event arguments and reports the event added to its owning project. */

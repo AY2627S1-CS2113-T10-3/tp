@@ -170,6 +170,19 @@ task.unmark T001
 Task T001 reopened. Status: [In Progress]
 ```
 
+### Edit a task: `task.edit`
+
+Format: `task.edit TASK_ID name/DESCRIPTION date/YYYY-MM-DD`
+
+Replaces an existing task's description and date, for example when a client changes their requirements. Both `name/` and `date/` are required, in any order. The task keeps its ID, project, and completion status. To move work to another project, add a new task there instead; `project/` is not accepted.
+
+```text
+task.edit T001 name/Create mobile homepage wireframe date/2026-10-22
+Updated task in project P001: [T001] Create mobile homepage wireframe - 2026-10-22 [In Progress]
+```
+
+If the task ID is unknown, a value is blank, or the date is invalid, the app shows an error and the format, and the task is not changed.
+
 ### Add an event: `event.add`
 
 Format: `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD`
@@ -180,6 +193,19 @@ Adds a dated event to an existing project. Event IDs use `E`, for example `E001`
 event.add project/P001 name/Stakeholder meeting date/2026-10-20
 Added event E001 to project P001.
 ```
+
+### Edit an event: `event.edit`
+
+Format: `event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD`
+
+Replaces an existing event's description and date, for example when a meeting is rescheduled. Both `name/` and `date/` are required, in any order. The event keeps its ID and project.
+
+```text
+event.edit E001 name/Stakeholder meeting (rescheduled) date/2026-10-27
+Updated event in project P001: [E001] Stakeholder meeting (rescheduled) - 2026-10-27
+```
+
+If the event ID is unknown, a value is blank, or the date is invalid, the app shows an error and the format, and the event is not changed.
 
 ## Help and saving
 
@@ -220,6 +246,8 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | Add task | `task.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Mark task complete | `task.mark TASK_ID` |
 | Reopen task | `task.unmark TASK_ID` |
+| Edit task | `task.edit TASK_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Add event | `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
+| Edit event | `event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Help | `help` |
 | Save and exit | `exit` |

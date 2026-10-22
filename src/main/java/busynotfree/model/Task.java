@@ -38,6 +38,18 @@ public final class Task extends ScheduledItem {
         completed = false;
     }
 
+    /**
+     * Updates this task's description and date while preserving its ID, project and completion state.
+     * Package-private so that edits go through the project manager's ID lookup.
+     *
+     * @param description new non-blank description of the work
+     * @param date new calendar date of the task
+     * @throws TaskException if either value is missing; the task is then left unchanged
+     */
+    void edit(String description, LocalDate date) {
+        updateDetails(description, date, TaskException::new);
+    }
+
     /** Returns the task type for polymorphic messages. */
     @Override
     public String getType() {

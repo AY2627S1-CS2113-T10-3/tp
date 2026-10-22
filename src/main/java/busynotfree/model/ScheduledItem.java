@@ -6,14 +6,15 @@ import java.util.function.Function;
 import busynotfree.exception.BusyNotFreeException;
 
 /**
- * Stores the immutable data shared by a project's dated tasks and events.
+ * Stores the data shared by a project's dated tasks and events.
+ * The ID and owning project are fixed, while the description and date can be edited together.
  * This abstract implementation type does not introduce an Activity entity or ID.
  */
 public abstract class ScheduledItem {
     private final String id;
     private final Project project;
-    private final String description;
-    private final LocalDate date;
+    private String description;
+    private LocalDate date;
 
     /**
      * Creates a dated item with an externally assigned ID and owning project.
@@ -33,16 +34,38 @@ public abstract class ScheduledItem {
         if (project == null) {
             throw exceptionFactory.apply("An item must belong to a project.");
         }
+        validateDetails(description, date, exceptionFactory);
+        this.id = id.trim();
+        this.project = project;
+        this.description = description.trim();
+        this.date = date;
+    }
+
+    /**
+     * Replaces the description and date together, leaving both unchanged if either is invalid.
+     * The ID and owning project are final, so an edit cannot renumber or move the item.
+     *
+     * @param description new non-blank description
+     * @param date new calendar date
+     * @param exceptionFactory creates the subclass's exception from a validation message
+     * @throws BusyNotFreeException if either value is missing, using the supplied exception type
+     */
+    protected final void updateDetails(String description, LocalDate date,
+            Function<String, ? extends BusyNotFreeException> exceptionFactory) {
+        validateDetails(description, date, exceptionFactory);
+        this.description = description.trim();
+        this.date = date;
+    }
+
+    /** Checks the editable fields so creation and editing apply the same rules. */
+    private static void validateDetails(String description, LocalDate date,
+            Function<String, ? extends BusyNotFreeException> exceptionFactory) {
         if (description == null || description.isBlank()) {
             throw exceptionFactory.apply("An item description must not be blank.");
         }
         if (date == null) {
             throw exceptionFactory.apply("An item date is required.");
         }
-        this.id = id.trim();
-        this.project = project;
-        this.description = description.trim();
-        this.date = date;
     }
 
     public String getId() {
