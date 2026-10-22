@@ -343,7 +343,7 @@ class ProjectManagerTest {
         assertThrows(EventException.class, () -> manager.getEvent(null));
         assertThrows(EventException.class, () -> manager.getEvent(" "));
         EventException exception = assertThrows(EventException.class, () -> manager.getEvent("E999"));
-        assertEquals("Event E999 was not found.", exception.getMessage());
+        assertEquals("Event E999 was not found. Use project.view to see event IDs.", exception.getMessage());
         assertThrows(EventException.class, () -> manager.getEvent("T001"));
     }
 

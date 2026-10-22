@@ -52,7 +52,8 @@ The sequence diagram below shows how `project.add client/C001 name/Website due/2
 public Project addProject(String clientId, String name, LocalDate deadline) {
     Project project = new Project(formatId("P", nextProjectNumber), clientId, name, deadline);
     if (!clientLookup.exists(project.getClientId())) {
-        throw new ProjectException("Client " + project.getClientId() + " does not exist.");
+        throw new ProjectException("Client " + project.getClientId()
+                + " does not exist. Use client.list to see client IDs.");
     }
     projects.put(project.getProjectId(), project);
     nextProjectNumber++;

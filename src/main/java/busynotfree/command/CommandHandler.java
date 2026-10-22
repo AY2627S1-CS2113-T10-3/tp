@@ -173,12 +173,18 @@ public class CommandHandler {
         }
     }
 
-    /** Parses project arguments and reports the newly created project. */
+    /** Parses project arguments and reports the newly created project with its client's name. */
     private void handleProjectAdd(String arguments) {
         Map<String, String> values = argumentParser.parse(arguments, "client", "name", "due");
         Project project = projectManager.addProject(values.get("client"), values.get("name"),
                 argumentParser.parseDate(values.get("due")));
-        ui.showProjectAdded(project);
+        if (clientManager.exists(project.getClientId())) {
+            ui.showProjectAdded(project, clientManager.getClient(project.getClientId()));
+        } else {
+            // Reachable only when the project manager checks clients through a different lookup,
+            // as with the three-argument constructor; the project is already created, so do not fail here.
+            ui.showProjectAdded(project);
+        }
     }
 
     /** Parses task arguments and reports the task added to its owning project. */

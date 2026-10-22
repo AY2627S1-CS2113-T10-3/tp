@@ -215,7 +215,7 @@ class AddCommandValidationTest {
             assertEquals(name, created.getName());
             assertEquals(date, created.getDeadline());
             assertEquals(0, fixture.project.getItemCount());
-            assertEquals(List.of("Created project P002 for client C002."), fixture.ui.messages);
+            assertEquals(List.of("Created project P002 \"" + name + "\" for client C002."), fixture.ui.messages);
             break;
         case "task":
             assertEquals(List.of(fixture.project), fixture.manager.getProjects());
@@ -225,7 +225,8 @@ class AddCommandValidationTest {
             assertSame(fixture.project, fixture.project.getTasks().getFirst().getProject());
             assertEquals(name, fixture.project.getTasks().getFirst().getDescription());
             assertEquals(date, fixture.project.getTasks().getFirst().getDate());
-            assertEquals(List.of("Added task T001 to project P001."), fixture.ui.messages);
+            assertEquals(List.of("Added task T001 \"" + name + "\" to project P001 \"Existing project\"."),
+                    fixture.ui.messages);
             break;
         case "event":
             assertEquals(List.of(fixture.project), fixture.manager.getProjects());
@@ -235,7 +236,8 @@ class AddCommandValidationTest {
             assertSame(fixture.project, fixture.project.getEvents().getFirst().getProject());
             assertEquals(name, fixture.project.getEvents().getFirst().getDescription());
             assertEquals(date, fixture.project.getEvents().getFirst().getDate());
-            assertEquals(List.of("Added event E001 to project P001."), fixture.ui.messages);
+            assertEquals(List.of("Added event E001 \"" + name + "\" to project P001 \"Existing project\"."),
+                    fixture.ui.messages);
             break;
         default:
             throw new AssertionError("Unsupported test entity: " + entity);

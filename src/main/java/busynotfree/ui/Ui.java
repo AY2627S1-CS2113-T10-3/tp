@@ -59,12 +59,26 @@ public class Ui {
     }
 
     /**
-     * Displays confirmation after a project is successfully registered.
+     * Displays confirmation after a project is successfully registered, naming its client
+     * so the user can confirm the right client ID was used.
+     *
+     * @param project Project that was created.
+     * @param client Client who owns the project.
+     */
+    public void showProjectAdded(Project project, Client client) {
+        showMessage("Created project " + describeProject(project) + " for client " + client.getClientId()
+                + " \"" + client.getName() + "\".");
+    }
+
+    /**
+     * Displays confirmation after a project is successfully registered,
+     * when its client's name is unavailable.
      *
      * @param project Project that was created.
      */
     public void showProjectAdded(Project project) {
-        showMessage("Created project " + project.getProjectId() + " for client " + project.getClientId() + ".");
+        showMessage("Created project " + describeProject(project) + " for client "
+                + project.getClientId() + ".");
     }
 
     /**
@@ -73,7 +87,8 @@ public class Ui {
      * @param task Task that was added.
      */
     public void showTaskAdded(Task task) {
-        showMessage("Added task " + task.getId() + " to project " + task.getProject().getProjectId() + ".");
+        showMessage("Added task " + task.getId() + " \"" + task.getDescription() + "\" to project "
+                + describeProject(task.getProject()) + ".");
     }
 
     /** Confirms that a task was marked complete. */
@@ -102,7 +117,7 @@ public class Ui {
      * @param task Task that was edited.
      */
     public void showTaskEdited(Task task) {
-        showMessage("Updated task in project " + task.getProject().getProjectId() + ": " + task);
+        showMessage("Updated task in project " + describeProject(task.getProject()) + ": " + task);
     }
 
     /** Displays the expected format for editing a task. */
@@ -116,7 +131,8 @@ public class Ui {
      * @param event Event that was added.
      */
     public void showEventAdded(Event event) {
-        showMessage("Added event " + event.getId() + " to project " + event.getProject().getProjectId() + ".");
+        showMessage("Added event " + event.getId() + " \"" + event.getDescription() + "\" to project "
+                + describeProject(event.getProject()) + ".");
     }
 
     /**
@@ -125,12 +141,17 @@ public class Ui {
      * @param event Event that was edited.
      */
     public void showEventEdited(Event event) {
-        showMessage("Updated event in project " + event.getProject().getProjectId() + ": " + event);
+        showMessage("Updated event in project " + describeProject(event.getProject()) + ": " + event);
     }
 
     /** Displays the expected format for editing an event. */
     public void showEventEditUsage() {
         showMessage("Format: event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD");
+    }
+
+    /** Formats a project as its ID followed by its quoted name, such as P001 "Website redesign". */
+    private String describeProject(Project project) {
+        return project.getProjectId() + " \"" + project.getName() + "\"";
     }
 
     /**

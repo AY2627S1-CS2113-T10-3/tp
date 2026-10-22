@@ -57,7 +57,7 @@ class CommandHandlerTest {
         boolean shouldExit = handler.execute("project.add client/C001 name/Website redesign due/2026-11-30");
 
         assertFalse(shouldExit);
-        assertEquals(List.of("Created project P001 for client C001."), ui.messages);
+        assertEquals(List.of("Created project P001 \"Website redesign\" for client C001."), ui.messages);
         Project project = projectManager.getProject("P001");
         assertEquals("Website redesign", project.getName());
         assertEquals(LocalDate.of(2026, 11, 30), project.getDeadline());
@@ -70,7 +70,8 @@ class CommandHandlerTest {
         projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
         assertFalse(handler.execute("task.add project/P001 name/Create wireframe date/2026-10-15"));
 
-        assertEquals(List.of("Added task T001 to project P001."), ui.messages);
+        assertEquals(List.of("Added task T001 \"Create wireframe\" to project P001 \"Website redesign\"."),
+                ui.messages);
         assertEquals("Create wireframe", projectManager.getProject("P001").getTasks().getFirst().getDescription());
         assertEquals(LocalDate.of(2026, 10, 15), projectManager.getProject("P001").getTasks().getFirst().getDate());
         assertTrue(ui.errors.isEmpty());
@@ -118,7 +119,8 @@ class CommandHandlerTest {
         projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
         assertFalse(handler.execute("event.add project/P001 name/Stakeholder meeting date/2026-10-20"));
 
-        assertEquals(List.of("Added event E001 to project P001."), ui.messages);
+        assertEquals(List.of("Added event E001 \"Stakeholder meeting\" to project P001 \"Website redesign\"."),
+                ui.messages);
         assertEquals("Stakeholder meeting", projectManager.getProject("P001").getEvents().getFirst().getDescription());
         assertEquals(LocalDate.of(2026, 10, 20), projectManager.getProject("P001").getEvents().getFirst().getDate());
         assertTrue(ui.errors.isEmpty());
@@ -200,7 +202,8 @@ class CommandHandlerTest {
         assertFalse(handler.execute("project.status"));
         assertFalse(handler.execute("project.status P999 paused"));
 
-        assertEquals(List.of("Use project.status PROJECT_ID STATUS.", "Project P999 does not exist."), ui.errors);
+        assertEquals(List.of("Use project.status PROJECT_ID STATUS.",
+                "Project P999 does not exist. Use project.list to see project IDs."), ui.errors);
         assertEquals(List.of(PROJECT_STATUS_FORMAT, PROJECT_STATUS_FORMAT), ui.messages);
         assertTrue(projectManager.getProjects().isEmpty());
     }
@@ -209,7 +212,7 @@ class CommandHandlerTest {
     public void execute_projectAddWithSlashInName_createsProject() {
         assertFalse(handler.execute("project.add client/C001 name/Create UI/UX redesign due/2026-11-30"));
 
-        assertEquals(List.of("Created project P001 for client C001."), ui.messages);
+        assertEquals(List.of("Created project P001 \"Create UI/UX redesign\" for client C001."), ui.messages);
         assertEquals("Create UI/UX redesign", projectManager.getProject("P001").getName());
         assertTrue(ui.errors.isEmpty());
     }
@@ -220,7 +223,7 @@ class CommandHandlerTest {
 
         assertFalse(handler.execute("task.add project/P001 name/Create UI/UX mockup date/2026-10-15"));
 
-        assertEquals(List.of("Added task T001 to project P001."), ui.messages);
+        assertEquals(List.of("Added task T001 \"Create UI/UX mockup\" to project P001 \"Website\"."), ui.messages);
         assertEquals("Create UI/UX mockup", project.getTasks().getFirst().getDescription());
         assertTrue(ui.errors.isEmpty());
     }
@@ -231,7 +234,7 @@ class CommandHandlerTest {
 
         assertFalse(handler.execute("event.add project/P001 date/2026-10-20 name/Review src/main changes"));
 
-        assertEquals(List.of("Added event E001 to project P001."), ui.messages);
+        assertEquals(List.of("Added event E001 \"Review src/main changes\" to project P001 \"Website\"."), ui.messages);
         assertEquals("Review src/main changes", project.getEvents().getFirst().getDescription());
         assertTrue(ui.errors.isEmpty());
     }
@@ -313,7 +316,7 @@ class CommandHandlerTest {
 
         assertEquals(List.of("A project ID must not be blank.",
                 "Provide exactly one project ID.",
-                "Project P999 does not exist."), ui.errors);
+                "Project P999 does not exist. Use project.list to see project IDs."), ui.errors);
         assertEquals(List.of("Format: project.delete PROJECT_ID",
                 "Format: project.delete PROJECT_ID",
                 "Format: project.delete PROJECT_ID"), ui.messages);
@@ -355,7 +358,7 @@ class CommandHandlerTest {
         assertEquals(List.of("Use a valid date in YYYY-MM-DD format."), ui.errors);
 
         handler.execute("project.add client/C001 name/Website due/2026-11-30");
-        assertEquals(List.of(PROJECT_FORMAT, "Created project P001 for client C001."), ui.messages);
+        assertEquals(List.of(PROJECT_FORMAT, "Created project P001 \"Website\" for client C001."), ui.messages);
     }
 
     @Test
@@ -363,7 +366,8 @@ class CommandHandlerTest {
         assertFalse(handler.execute("task.add project/P999 name/Wireframe date/2026-10-15"));
         assertFalse(handler.execute("event.add project/P999 name/Meeting date/2026-10-20"));
 
-        assertEquals(List.of("Project P999 does not exist.", "Project P999 does not exist."), ui.errors);
+        String missingProject = "Project P999 does not exist. Use project.list to see project IDs.";
+        assertEquals(List.of(missingProject, missingProject), ui.errors);
         assertEquals(List.of(TASK_FORMAT, EVENT_FORMAT), ui.messages);
         assertTrue(projectManager.getProjects().isEmpty());
     }
@@ -380,7 +384,8 @@ class CommandHandlerTest {
         handler.execute("task.add project/P001 name/Wireframe date/2026-10-15");
         handler.execute("event.add project/P001 name/Meeting date/2026-10-20");
         assertEquals(List.of(TASK_FORMAT, EVENT_FORMAT,
-                "Added task T001 to project P001.", "Added event E001 to project P001."), ui.messages);
+                "Added task T001 \"Wireframe\" to project P001 \"Website\".",
+                "Added event E001 \"Meeting\" to project P001 \"Website\"."), ui.messages);
     }
 
     @Test
@@ -405,7 +410,7 @@ class CommandHandlerTest {
     public void execute_reorderedPrefixes_createsProject() {
         handler.execute("project.add due/2026-11-30 name/Website redesign client/C001");
 
-        assertEquals(List.of("Created project P001 for client C001."), ui.messages);
+        assertEquals(List.of("Created project P001 \"Website redesign\" for client C001."), ui.messages);
         assertEquals("Website redesign", projectManager.getProject("P001").getName());
         assertTrue(ui.errors.isEmpty());
     }
@@ -417,7 +422,7 @@ class CommandHandlerTest {
 
         rejectingHandler.execute("project.add client/C999 name/Website due/2026-11-30");
 
-        assertEquals(List.of("Client C999 does not exist."), ui.errors);
+        assertEquals(List.of("Client C999 does not exist. Use client.list to see client IDs."), ui.errors);
         assertTrue(rejectingManager.getProjects().isEmpty());
         assertEquals(List.of(PROJECT_FORMAT), ui.messages);
     }

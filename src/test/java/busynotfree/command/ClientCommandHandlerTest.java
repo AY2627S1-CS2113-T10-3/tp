@@ -232,13 +232,13 @@ class ClientCommandHandlerTest {
         handler.execute("task.add project/P001 name/Wireframe date/2026-10-15");
         handler.execute("event.add project/P001 name/Meeting date/2026-10-20");
 
-        assertEquals(List.of("Client C001 does not exist."), ui.errors);
+        assertEquals(List.of("Client C001 does not exist. Use client.list to see client IDs."), ui.errors);
         assertEquals(1, projectManager.getProjects().size());
         assertEquals("C001", projectManager.getProject("P001").getClientId());
         assertEquals(2, projectManager.getProject("P001").getItemCount());
-        assertTrue(ui.messages.contains("Created project P001 for client C001."));
-        assertTrue(ui.messages.contains("Added task T001 to project P001."));
-        assertTrue(ui.messages.contains("Added event E001 to project P001."));
+        assertTrue(ui.messages.contains("Created project P001 \"Website\" for client C001 \"Acme Studio\"."));
+        assertTrue(ui.messages.contains("Added task T001 \"Wireframe\" to project P001 \"Website\"."));
+        assertTrue(ui.messages.contains("Added event E001 \"Meeting\" to project P001 \"Website\"."));
     }
 
     /** Captures output through the shared UI, including delegated client responses. */

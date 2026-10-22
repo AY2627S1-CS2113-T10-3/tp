@@ -50,7 +50,8 @@ public final class ProjectManager {
         Project project = new Project(formatId("P", nextProjectNumber), clientId, name, deadline);
         if (!clientLookup.exists(project.getClientId())) {
             LOGGER.fine("Project creation rejected because the client does not exist.");
-            throw new ProjectException("Client " + project.getClientId() + " does not exist.");
+            throw new ProjectException("Client " + project.getClientId()
+                    + " does not exist. Use client.list to see client IDs.");
         }
         // Detects an ID-allocation bug, such as a counter restored too low, rather than invalid user input.
         assert !projects.containsKey(project.getProjectId())
@@ -144,7 +145,8 @@ public final class ProjectManager {
             }
         }
         LOGGER.fine("Event lookup failed because the event does not exist.");
-        throw new EventException("Event " + requestedId + " was not found.");
+        throw new EventException("Event " + requestedId
+                + " was not found. Use project.view to see event IDs.");
     }
 
     /**
@@ -237,7 +239,8 @@ public final class ProjectManager {
         Project project = projects.get(projectId.trim());
         if (project == null) {
             LOGGER.fine("Project lookup failed because the project does not exist.");
-            throw new ProjectException("Project " + projectId.trim() + " does not exist.");
+            throw new ProjectException("Project " + projectId.trim()
+                    + " does not exist. Use project.list to see project IDs.");
         }
         return project;
     }

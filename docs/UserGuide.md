@@ -72,11 +72,11 @@ Lists client IDs and names in creation order. If there are none, the app shows `
 
 Format: `project.add client/CLIENT_ID name/PROJECT_NAME due/YYYY-MM-DD`
 
-The client must already exist. A new project receives an ID such as `P001` and starts with status `ACTIVE`.
+The client must already exist; use `client.list` to look up client IDs. A new project receives an ID such as `P001` and starts with status `ACTIVE`. The confirmation shows the project and client names, so you can check that the right client was used.
 
 ```text
 project.add client/C001 name/Website redesign due/2026-11-30
-Created project P001 for client C001.
+Created project P001 "Website redesign" for client C001 "Acme Studio".
 ```
 
 ### List projects: `project.list`
@@ -141,11 +141,11 @@ Website redesign has been deleted
 
 Format: `task.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD`
 
-Adds a dated task to an existing project. Task IDs use `T`, for example `T001`.
+Adds a dated task to an existing project; use `project.list` to look up project IDs. Task IDs use `T`, for example `T001`.
 
 ```text
 task.add project/P001 name/Create homepage wireframe date/2026-10-15
-Added task T001 to project P001.
+Added task T001 "Create homepage wireframe" to project P001 "Website redesign".
 ```
 
 ### Mark a task complete: `task.mark`
@@ -178,7 +178,7 @@ Replaces an existing task's description and date, for example when a client chan
 
 ```text
 task.edit T001 name/Create mobile homepage wireframe date/2026-10-22
-Updated task in project P001: [T001] Create mobile homepage wireframe - 2026-10-22 [In Progress]
+Updated task in project P001 "Website redesign": [T001] Create mobile homepage wireframe - 2026-10-22 [In Progress]
 ```
 
 If the task ID is unknown, a value is blank, or the date is invalid, the app shows an error and the format, and the task is not changed.
@@ -187,11 +187,11 @@ If the task ID is unknown, a value is blank, or the date is invalid, the app sho
 
 Format: `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD`
 
-Adds a dated event to an existing project. Event IDs use `E`, for example `E001`.
+Adds a dated event to an existing project; use `project.list` to look up project IDs. Event IDs use `E`, for example `E001`.
 
 ```text
 event.add project/P001 name/Stakeholder meeting date/2026-10-20
-Added event E001 to project P001.
+Added event E001 "Stakeholder meeting" to project P001 "Website redesign".
 ```
 
 ### Edit an event: `event.edit`
@@ -202,7 +202,7 @@ Replaces an existing event's description and date, for example when a meeting is
 
 ```text
 event.edit E001 name/Stakeholder meeting (rescheduled) date/2026-10-27
-Updated event in project P001: [E001] Stakeholder meeting (rescheduled) - 2026-10-27
+Updated event in project P001 "Website redesign": [E001] Stakeholder meeting (rescheduled) - 2026-10-27
 ```
 
 If the event ID is unknown, a value is blank, or the date is invalid, the app shows an error and the format, and the event is not changed.

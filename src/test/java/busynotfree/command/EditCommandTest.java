@@ -40,8 +40,8 @@ class EditCommandTest {
 
         assertFalse(fixture.handler.execute("task.edit T001 name/Revised wireframe date/2026-12-01"));
 
-        assertEquals(List.of("Updated task in project P001: [T001] Revised wireframe - 2026-12-01 [In Progress]"),
-                fixture.ui.messages);
+        assertEquals(List.of("Updated task in project P001 \"Website\": "
+                + "[T001] Revised wireframe - 2026-12-01 [In Progress]"), fixture.ui.messages);
         assertTrue(fixture.ui.errors.isEmpty());
         assertEquals("Revised wireframe", fixture.task.getDescription());
         assertEquals(NEW_DATE, fixture.task.getDate());
@@ -53,7 +53,7 @@ class EditCommandTest {
 
         assertFalse(fixture.handler.execute("event.edit E001 name/Rescheduled meeting date/2026-12-01"));
 
-        assertEquals(List.of("Updated event in project P001: [E001] Rescheduled meeting - 2026-12-01"),
+        assertEquals(List.of("Updated event in project P001 \"Website\": [E001] Rescheduled meeting - 2026-12-01"),
                 fixture.ui.messages);
         assertTrue(fixture.ui.errors.isEmpty());
         assertEquals("Rescheduled meeting", fixture.event.getDescription());
@@ -68,8 +68,8 @@ class EditCommandTest {
         fixture.handler.execute("task.edit T001 name/Final wireframe date/2026-12-01");
 
         assertTrue(fixture.task.isCompleted());
-        assertEquals(List.of("Updated task in project P001: [T001] Final wireframe - 2026-12-01 [COMPLETED]"),
-                fixture.ui.messages);
+        assertEquals(List.of("Updated task in project P001 \"Website\": "
+                + "[T001] Final wireframe - 2026-12-01 [COMPLETED]"), fixture.ui.messages);
     }
 
     /** Checks that valid input in any form edits the item while keeping its ID, project and position. */
@@ -126,7 +126,9 @@ class EditCommandTest {
             String id = idOf(itemType, 1);
             String missingId = "Provide the " + itemType + " ID before name/ and date/.";
             String otherTypeId = itemType.equals("task") ? "E001" : "T001";
-            String notFound = capitalize(itemType) + " %s was not found.";
+            // Only event lookups add a recovery hint; task lookups use the existing getTask message from #63.
+            String notFound = capitalize(itemType) + " %s was not found."
+                    + (itemType.equals("event") ? " Use project.view to see event IDs." : "");
             List<String> arguments = List.of("", "name/Revised date/2026-12-01", id,
                     id + " date/2026-12-01", id + " name/Revised",
                     id + " name/ date/2026-12-01", id + " name/Revised date/ \t ",
