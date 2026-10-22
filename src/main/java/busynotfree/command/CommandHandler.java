@@ -234,6 +234,7 @@ public class CommandHandler {
         String[] parts = arguments.trim().split("\\s+", 2);
         String itemId = parts[0];
         if (itemId.isBlank() || itemId.contains("/")) {
+            LOGGER.log(Level.FINE, "{0}.edit rejected because no item ID was given", itemType);
             throw new CommandException("Provide the " + itemType + " ID before name/ and date/.");
         }
         String prefixedArguments = parts.length > 1 ? parts[1] : "";

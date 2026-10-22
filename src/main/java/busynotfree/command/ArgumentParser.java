@@ -5,6 +5,7 @@ import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,6 +32,7 @@ public final class ArgumentParser {
      * @throws CommandException if an argument is missing, repeated, blank or unexpected
      */
     public Map<String, String> parse(String argumentText, String... requiredPrefixes) {
+        assert requiredPrefixes.length > 0 : "A command must require at least one prefix.";
         List<String> allowedPrefixes = List.of(requiredPrefixes);
         Map<String, String> arguments = new LinkedHashMap<>();
         Matcher matcher = PREFIX_PATTERN.matcher(argumentText);
@@ -58,6 +60,7 @@ public final class ArgumentParser {
             putArgument(arguments, previousPrefix, argumentText.substring(valueStart));
         }
         validateRequiredArguments(arguments, allowedPrefixes);
+        assert arguments.size() == allowedPrefixes.size() : "Each required prefix must have exactly one value.";
         return Map.copyOf(arguments);
     }
 
@@ -69,6 +72,7 @@ public final class ArgumentParser {
      * @throws CommandException if the format or calendar date is invalid
      */
     public LocalDate parseDate(String dateText) {
+        Objects.requireNonNull(dateText, "Date text must come from a parsed date argument.");
         if (!dateText.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}")) {
             throw new CommandException("Use a valid date in YYYY-MM-DD format.");
         }

@@ -51,6 +51,9 @@ public final class ProjectManager {
             LOGGER.fine("Project creation rejected because the client does not exist.");
             throw new ProjectException("Client " + project.getClientId() + " does not exist.");
         }
+        // Detects an ID-allocation bug, such as a counter restored too low, rather than invalid user input.
+        assert !projects.containsKey(project.getProjectId())
+                : "A new project ID must not replace an existing project.";
         projects.put(project.getProjectId(), project);
         nextProjectNumber++;
         LOGGER.fine(() -> "Created project " + project.getProjectId() + ".");
@@ -71,6 +74,7 @@ public final class ProjectManager {
         Project project = getProject(projectId);
         Task task = new Task(formatId("T", nextTaskNumber), project, description, date);
         project.addTask(task);
+        assert project.getTasks().getLast() == task : "A new task must be appended to its own project.";
         nextTaskNumber++;
         LOGGER.fine(() -> "Added task " + task.getId() + " to project " + project.getProjectId() + ".");
         return task;
@@ -118,7 +122,9 @@ public final class ProjectManager {
      */
     public Task editTask(String taskId, String description, LocalDate date) {
         Task task = getTask(taskId);
+        boolean wasCompleted = task.isCompleted();
         task.edit(description, date);
+        assert task.isCompleted() == wasCompleted : "Editing a task must not change its completion state.";
         LOGGER.fine(() -> "Edited task " + task.getId() + ".");
         return task;
     }
@@ -136,6 +142,7 @@ public final class ProjectManager {
                 }
             }
         }
+        LOGGER.fine("Event lookup failed because the event does not exist.");
         throw new EventException("Event " + requestedId + " was not found.");
     }
 
@@ -152,6 +159,7 @@ public final class ProjectManager {
     public Event editEvent(String eventId, String description, LocalDate date) {
         Event event = getEvent(eventId);
         event.edit(description, date);
+        assert event.getDate().equals(date) : "An edited event must hold its new date.";
         LOGGER.fine(() -> "Edited event " + event.getId() + ".");
         return event;
     }
@@ -170,6 +178,7 @@ public final class ProjectManager {
         Project project = getProject(projectId);
         Event event = new Event(formatId("E", nextEventNumber), project, description, date);
         project.addEvent(event);
+        assert project.getEvents().getLast() == event : "A new event must be appended to its own project.";
         nextEventNumber++;
         LOGGER.fine(() -> "Added event " + event.getId() + " to project " + project.getProjectId() + ".");
         return event;
