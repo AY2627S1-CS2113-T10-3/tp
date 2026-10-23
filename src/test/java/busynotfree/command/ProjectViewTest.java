@@ -82,6 +82,25 @@ class ProjectViewTest {
     }
 
     @Test
+    public void execute_projectViewAfterEdits_showsUpdatedActivities() {
+        clients.addClient("Acme Studio");
+        projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projects.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 15));
+        projects.addEvent("P001", "Meeting", LocalDate.of(2026, 10, 20));
+        handler.execute("task.mark T001");
+        handler.execute("task.edit T001 name/Revised wireframe date/2026-12-01");
+        handler.execute("event.edit E001 date/2026-12-02 name/Rescheduled meeting");
+        ui.messages.clear();
+
+        handler.execute("project.view P001");
+
+        assertTrue(ui.messages.contains("[T001] Revised wireframe - 2026-12-01 [COMPLETED]"));
+        assertTrue(ui.messages.contains("[E001] Rescheduled meeting - 2026-12-02"));
+        assertFalse(ui.messages.stream().anyMatch(line -> line.contains("] Wireframe") || line.contains("] Meeting")));
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
     public void execute_projectViewAllAndNoId_displaySameSummaries() {
         clients.addClient("Acme Studio");
         projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));

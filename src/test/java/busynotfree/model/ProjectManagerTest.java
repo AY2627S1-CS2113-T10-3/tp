@@ -292,4 +292,84 @@ class ProjectManagerTest {
 
         assertEquals(ProjectStatus.ACTIVE, project.getStatus());
     }
+
+    @Test
+    public void editTask_taskInOtherProject_updatesOnlyThatTaskWithoutConsumingIds() {
+        Project first = manager.addProject("C001", "Website", date);
+        Project second = manager.addProject("C001", "App", date);
+        Task untouched = manager.addTask("P001", "Wireframe", date);
+        Task target = manager.addTask("P002", "Prototype", date);
+        manager.markTaskComplete("T002");
+        LocalDate newDate = date.plusDays(7);
+
+        assertSame(target, manager.editTask(" T002 ", "Revised prototype", newDate));
+
+        assertEquals("Revised prototype", target.getDescription());
+        assertEquals(newDate, target.getDate());
+        assertEquals("T002", target.getId());
+        assertSame(second, target.getProject());
+        assertTrue(target.isCompleted());
+        assertEquals(List.of(target), second.getTasks());
+        assertEquals(List.of(untouched), first.getTasks());
+        assertEquals("Wireframe", untouched.getDescription());
+        assertEquals("T003", manager.addTask("P001", "Next task", date).getId());
+    }
+
+    @Test
+    public void editEvent_eventInOtherProject_updatesOnlyThatEventWithoutConsumingIds() {
+        Project first = manager.addProject("C001", "Website", date);
+        Project second = manager.addProject("C001", "App", date);
+        Event untouched = manager.addEvent("P001", "Kickoff", date);
+        Event target = manager.addEvent("P002", "Review", date);
+        LocalDate newDate = date.plusDays(7);
+
+        assertSame(target, manager.editEvent(" E002 ", "Rescheduled review", newDate));
+
+        assertEquals("Rescheduled review", target.getDescription());
+        assertEquals(newDate, target.getDate());
+        assertEquals("E002", target.getId());
+        assertSame(second, target.getProject());
+        assertEquals(List.of(target), second.getEvents());
+        assertEquals(List.of(untouched), first.getEvents());
+        assertEquals("Kickoff", untouched.getDescription());
+        assertEquals("E003", manager.addEvent("P001", "Next event", date).getId());
+    }
+
+    @Test
+    public void getEvent_blankOrUnknownId_throwsException() {
+        manager.addProject("C001", "Website", date);
+        manager.addTask("P001", "Wireframe", date);
+
+        assertThrows(EventException.class, () -> manager.getEvent(null));
+        assertThrows(EventException.class, () -> manager.getEvent(" "));
+        EventException exception = assertThrows(EventException.class, () -> manager.getEvent("E999"));
+        assertEquals("Event E999 was not found. Use project.view to see event IDs.", exception.getMessage());
+        assertThrows(EventException.class, () -> manager.getEvent("T001"));
+    }
+
+    @Test
+    public void editItems_missingIdsOrInvalidDetails_throwWithoutMutation() {
+        manager.addProject("C001", "Website", date);
+        Task task = manager.addTask("P001", "Wireframe", date);
+        Event event = manager.addEvent("P001", "Meeting", date);
+        LocalDate newDate = date.plusDays(7);
+
+        assertThrows(TaskException.class, () -> manager.editTask(null, "Work", newDate));
+        assertThrows(TaskException.class, () -> manager.editTask(" ", "Work", newDate));
+        assertThrows(TaskException.class, () -> manager.editTask("T999", "Work", newDate));
+        assertThrows(TaskException.class, () -> manager.editTask("E001", "Work", newDate));
+        assertThrows(TaskException.class, () -> manager.editTask("T001", " ", newDate));
+        assertThrows(TaskException.class, () -> manager.editTask("T001", "Work", null));
+        assertThrows(EventException.class, () -> manager.editEvent(null, "Meeting", newDate));
+        assertThrows(EventException.class, () -> manager.editEvent(" ", "Meeting", newDate));
+        assertThrows(EventException.class, () -> manager.editEvent("E999", "Meeting", newDate));
+        assertThrows(EventException.class, () -> manager.editEvent("T001", "Meeting", newDate));
+        assertThrows(EventException.class, () -> manager.editEvent("E001", " ", newDate));
+        assertThrows(EventException.class, () -> manager.editEvent("E001", "Meeting", null));
+
+        assertEquals("Wireframe", task.getDescription());
+        assertEquals(date, task.getDate());
+        assertEquals("Meeting", event.getDescription());
+        assertEquals(date, event.getDate());
+    }
 }

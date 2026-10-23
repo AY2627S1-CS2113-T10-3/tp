@@ -1,0 +1,56 @@
+@startuml
+' Execution of: task.add project/P001 name/Wireframe date/2026-10-15
+' event.add follows the same steps with addEvent, Event, Project#addEvent and E IDs.
+hide footbox
+
+actor User
+participant ":CommandHandler" as CH
+participant ":ArgumentParser" as AP
+participant ":ProjectManager" as PM
+participant "p:Project" as P
+participant ":Ui" as UI
+
+User -> CH : execute("task.add project/P001\nname/Wireframe date/2026-10-15")
+activate CH
+
+note right of CH : Command word parsing by\nCommandParser is omitted.
+
+CH -> AP : parse(argumentText, "project", "name", "date")
+activate AP
+AP --> CH : values
+deactivate AP
+
+CH -> AP : parseDate("2026-10-15")
+activate AP
+AP --> CH : date
+deactivate AP
+
+CH -> PM : addTask("P001", "Wireframe", date)
+activate PM
+
+PM -> PM : getProject("P001")
+
+create "t:Task" as T
+PM -> T : new Task("T001", p, "Wireframe", date)
+activate T
+T --> PM
+deactivate T
+
+PM -> P : addTask(t)
+activate P
+P -> P : validateNewItem(t, tasks, ...)
+P --> PM
+deactivate P
+
+PM -> PM : nextTaskNumber++
+PM --> CH : t
+deactivate PM
+
+CH -> UI : showTaskAdded(t)
+activate UI
+UI --> CH
+deactivate UI
+
+CH --> User : false
+deactivate CH
+@enduml
