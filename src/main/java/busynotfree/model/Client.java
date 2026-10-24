@@ -11,7 +11,7 @@ import busynotfree.exception.ClientException;
  */
 public final class Client {
     private final String clientId;
-    private final String name;
+    private String name;
     private final List<String> notes = new ArrayList<>();
 
     /**
@@ -25,11 +25,8 @@ public final class Client {
         if (clientId == null || clientId.isBlank()) {
             throw new ClientException("A client ID must not be blank.");
         }
-        if (name == null || name.isBlank()) {
-            throw new ClientException("A client name must not be blank.");
-        }
         this.clientId = clientId.trim();
-        this.name = name.trim();
+        setName(name);
     }
 
     public String getClientId() {
@@ -38,6 +35,14 @@ public final class Client {
 
     public String getName() {
         return name;
+    }
+
+    /** Updates only the name, rejecting null or blank values before changing the client. */
+    public void setName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new ClientException("A client name must not be blank.");
+        }
+        this.name = name.trim();
     }
 
     /**
