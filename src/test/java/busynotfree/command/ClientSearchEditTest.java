@@ -35,10 +35,11 @@ class ClientSearchEditTest {
         clients.addClient("ACME UI/UX");
 
         handler.execute("client.find  aCmE ");
-        assertEquals(List.of("1. C001 | Acme Studio", "2. C003 | ACME UI/UX"), ui.messages);
+        assertEquals(List.of("Found 2 matching clients.", "1. C001 | Acme Studio", "2. C003 | ACME UI/UX"),
+                ui.messages);
         ui.messages.clear();
         handler.execute("client.find acme ui/ux");
-        assertEquals(List.of("1. C003 | ACME UI/UX"), ui.messages);
+        assertEquals(List.of("Found 1 matching client.", "1. C003 | ACME UI/UX"), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -48,7 +49,8 @@ class ClientSearchEditTest {
         clients.addClient("Bright Ideas");
         handler.execute("client.find Acme");
 
-        assertEquals(List.of("No clients found.", "No clients found."), ui.messages);
+        assertEquals(List.of("Found 0 matching clients.", "No clients found.",
+                "Found 0 matching clients.", "No clients found."), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
 

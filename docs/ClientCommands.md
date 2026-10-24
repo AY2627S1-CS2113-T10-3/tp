@@ -69,9 +69,11 @@ error and the expected command format, then allow the user to try again.
 Format: `client.find NAME`
 
 Searches for a case-insensitive substring anywhere in a client's name. Multiword
-searches are allowed. Matches show numbered IDs and names in creation order,
-using the same format as `client.list`. No matches displays `No clients found.`
-Missing or whitespace-only search text is rejected.
+searches are allowed. A summary such as `Found 2 matching clients.` precedes the
+numbered IDs and names in creation order, using the same format as `client.list`.
+A single match displays `Found 1 matching client.` No matches displays
+`Found 0 matching clients.` followed by `No clients found.` Missing or
+whitespace-only search text is rejected.
 
 ## Edit a client's name
 

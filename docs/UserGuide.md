@@ -72,8 +72,10 @@ Format: `client.find NAME`
 
 Finds clients whose names contain `NAME`, ignoring case. For example,
 `client.find acme` matches `Acme Studio`. Multiword searches are allowed.
-Matching client IDs and names appear in creation order, using the same format
-as `client.list`. No matches displays `No clients found.` A search must not be blank.
+A summary such as `Found 2 matching clients.` appears before the matching client
+IDs and names in creation order, using the same format as `client.list`.
+A single match displays `Found 1 matching client.` No matches displays
+`Found 0 matching clients.` followed by `No clients found.` A search must not be blank.
 
 ### Edit a client's name: `client.edit`
 

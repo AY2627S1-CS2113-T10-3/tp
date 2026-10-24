@@ -41,7 +41,7 @@ public final class ClientCommandHandler {
             handleView(arguments);
             break;
         case "find":
-            clientUi.showClients(clientManager.findClients(arguments));
+            clientUi.showSearchResults(clientManager.findClients(arguments));
             break;
         case "edit":
             handleEdit(arguments);

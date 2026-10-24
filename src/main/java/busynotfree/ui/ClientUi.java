@@ -42,6 +42,12 @@ public final class ClientUi {
         }
     }
 
+    /** Displays the number of matches before the search results, including zero matches. */
+    public void showSearchResults(List<Client> clients) {
+        ui.showMessage("Found " + clients.size() + " matching client" + (clients.size() == 1 ? "." : "s."));
+        showClients(clients);
+    }
+
     /** Displays numbered client entries, or a message when the list is empty. */
     public void showClients(List<Client> clients) {
         if (clients.isEmpty()) {
