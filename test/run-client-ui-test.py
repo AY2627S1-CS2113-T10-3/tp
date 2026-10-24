@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timedelta, timezone
 
 
@@ -26,61 +27,8 @@ def main():
 
     inputs = (root / "test/client/INPUT.TXT").read_text(encoding="utf-8")
     expected = (root / "test/client/EXPECTED.TXT").read_text(encoding="utf-8")
-    plan_path = root / "test/ui-test-plan.md"
+    report_path = root / "build/reports/client-ui/session.md"
     timestamp = datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds")
-    plan = f"""# Client console UI test plan
-
-Working directory: `{root}`
-
-Required runtime: Java 25. Build once with:
-
-```powershell
-.\\gradlew.bat test checkstyleMain checkstyleTest shadowJar
-```
-
-Launch a fresh process with:
-
-```text
-java -jar build/libs/duke.jar
-```
-
-Repeat this session with Python 3 and Java 25:
-
-```text
-python test/run-client-ui-test.py
-```
-
-Preconditions: The JAR has been built from the branch under test. Each process
-starts with no clients or projects. Client data is kept in memory.
-
-Comparison policy: Compare complete stdout; normalize CRLF to LF only.
-Any other mismatch, nonempty stderr, nonzero exit code or 20-second timeout
-fails the session. Stop on the first failure. Do not alter the expected output.
-
-## CLIENT-UI-001
-
-Aim: Verify all four client commands through a fresh packaged application run.
-
-Inputs:
-
-```text
-{inputs}```
-
-Expected complete stdout:
-
-```text
-{expected}```
-
-Expected stderr: empty. Expected exit code: 0.
-
-## Latest test session
-
-Timestamp: {timestamp} (Asia/Singapore)
-
-CLIENT-UI-001: PENDING
-"""
-    # Save the fixed expectations before launching any process in the session.
-    plan_path.write_text(plan, encoding="utf-8")
     stdout = ""
     stderr = ""
     exit_code = "NOT LAUNCHED"
@@ -89,20 +37,31 @@ CLIENT-UI-001: PENDING
                                  encoding="utf-8", timeout=20)
         if version.returncode != 0 or not re.search(r'version "25(?:[.\"]|$)', version.stderr):
             raise RuntimeError("Java 25 is required.\n" + version.stdout + version.stderr)
-        process = subprocess.run([args.java, "-jar", str(root / "build/libs/duke.jar")],
-                                 input=inputs, capture_output=True, encoding="utf-8",
-                                 cwd=root, timeout=20)
-        stdout, stderr, exit_code = process.stdout, process.stderr, process.returncode
+        # Keep saved data isolated from the user's working directory and other runs.
+        with tempfile.TemporaryDirectory(prefix="busynotfree-client-ui-") as working_directory:
+            process = subprocess.run([args.java, "-jar", str(root / "build/libs/BusyNotFree.jar")],
+                                     input=inputs.encode("utf-8"), capture_output=True,
+                                     cwd=working_directory, timeout=20)
+        # Decode explicitly so Python does not normalize lone carriage returns.
+        stdout = process.stdout.decode("utf-8")
+        stderr = process.stderr.decode("utf-8")
+        exit_code = process.returncode
     except subprocess.TimeoutExpired as error:
         stdout = (error.stdout or b"").decode("utf-8", errors="replace")
         stderr = (error.stderr or b"").decode("utf-8", errors="replace")
         exit_code = "TIMEOUT"
-    except (OSError, RuntimeError) as error:
+    except (OSError, RuntimeError, UnicodeError) as error:
         stderr = str(error)
 
     passed = exit_code == 0 and not stderr and normalize_lines(stdout) == normalize_lines(expected)
     status = "PASS" if passed else "FAIL"
-    transcript = f"""Console input:
+    transcript = f"""# Client console UI test session
+
+Timestamp: {timestamp} (Asia/Singapore)
+
+CLIENT-UI-001: {status}
+
+Console input:
 
 ```text
 {inputs}```
@@ -121,10 +80,11 @@ Exit code: {exit_code}
 
 Result: {status}. CLIENT-UI-001: {status}. Remaining cases: none.
 """
-    plan_path.write_text(plan.replace("CLIENT-UI-001: PENDING", f"CLIENT-UI-001: {status}")
-                         + "\n" + transcript, encoding="utf-8")
-    print(transcript)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(transcript, encoding="utf-8", newline="\n")
+    print(f"CLIENT-UI-001: {status}. Session log: {report_path}")
     if not passed:
+        print(transcript)
         print("Expected stdout:\n" + expected)
     return 0 if passed else 1
 
