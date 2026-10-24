@@ -83,7 +83,8 @@ Format: `client.edit CLIENT_ID name/NEW_NAME`
 
 Renames an existing client, preserving its ID, notes and project links. For
 example, `client.edit C001 name/Acme Design` displays
-`Updated client C001: Acme Design.` The new name is saved when you exit.
+`Updated client C001 from "Acme Studio" to "Acme Design".`
+The new name is saved when you exit.
 Missing or unknown client IDs and blank names are rejected.
 
 ## Projects

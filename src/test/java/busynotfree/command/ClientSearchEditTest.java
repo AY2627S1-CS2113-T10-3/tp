@@ -63,7 +63,7 @@ class ClientSearchEditTest {
 
         handler.execute("client.edit C001 name/ Revised  UI/UX ");
 
-        assertEquals(List.of("Updated client C001: Revised  UI/UX."), ui.messages);
+        assertEquals(List.of("Updated client C001 from \"Acme\" to \"Revised  UI/UX\"."), ui.messages);
         assertTrue(ui.errors.isEmpty());
         assertSame(client, clients.getClient("C001"));
         assertEquals("Revised  UI/UX", client.getName());

@@ -79,8 +79,9 @@ whitespace-only search text is rejected.
 
 Format: `client.edit CLIENT_ID name/NEW_NAME`
 
-Renames an existing client and displays `Updated client C001: NEW_NAME.` for
-client `C001`. The ID, notes and project links are preserved, and the updated
+Renames an existing client and displays
+`Updated client C001 from "OLD_NAME" to "NEW_NAME".` for client `C001`.
+The ID, notes and project links are preserved, and the updated
 name is saved on exit. The new name must not be blank; missing or unknown IDs
 are rejected. Name arguments follow the prefix rules described above.
 

@@ -87,7 +87,9 @@ public final class ClientCommandHandler {
         }
         String nameArguments = parts.length > 1 ? parts[1] : "";
         Map<String, String> values = argumentParser.parse(nameArguments, "name");
-        clientUi.showClientEdited(clientManager.editClient(parts[0], values.get("name")));
+        String previousName = clientManager.getClient(parts[0]).getName();
+        Client client = clientManager.editClient(parts[0], values.get("name"));
+        clientUi.showClientEdited(client, previousName);
     }
 
     /** Requires exactly one positional ID for a client view. */

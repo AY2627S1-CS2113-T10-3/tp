@@ -19,9 +19,10 @@ public final class ClientUi {
         ui.showMessage("Added client " + client.getClientId() + ": " + client.getName() + ".");
     }
 
-    /** Confirms the client's updated name and unchanged ID. */
-    public void showClientEdited(Client client) {
-        ui.showMessage("Updated client " + client.getClientId() + ": " + client.getName() + ".");
+    /** Confirms the previous and updated names alongside the client's unchanged ID. */
+    public void showClientEdited(Client client, String previousName) {
+        ui.showMessage("Updated client " + client.getClientId() + " from \"" + previousName
+                + "\" to \"" + client.getName() + "\".");
     }
 
     /** Confirms that a note was attached to its client. */
