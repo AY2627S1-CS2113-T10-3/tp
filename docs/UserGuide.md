@@ -66,6 +66,24 @@ Format: `client.list`
 
 Lists client IDs and names in creation order. If there are none, the app shows `No clients found.` Extra words after this command are ignored.
 
+### Find clients by name: `client.find`
+
+Format: `client.find NAME`
+
+Finds clients whose names contain `NAME`, ignoring case. For example,
+`client.find acme` matches `Acme Studio`. Multiword searches are allowed.
+Matching client IDs and names appear in creation order, using the same format
+as `client.list`. No matches displays `No clients found.` A search must not be blank.
+
+### Edit a client's name: `client.edit`
+
+Format: `client.edit CLIENT_ID name/NEW_NAME`
+
+Renames an existing client, preserving its ID, notes and project links. For
+example, `client.edit C001 name/Acme Design` displays
+`Updated client C001: Acme Design.` The new name is saved when you exit.
+Missing or unknown client IDs and blank names are rejected.
+
 ## Projects
 
 ### Add a project: `project.add`
@@ -238,6 +256,8 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | Add client note | `client.note CLIENT_ID text/NOTE` |
 | View client | `client.view CLIENT_ID` |
 | List clients | `client.list` |
+| Find clients | `client.find NAME` |
+| Edit client name | `client.edit CLIENT_ID name/NEW_NAME` |
 | Add project | `project.add client/CLIENT_ID name/PROJECT_NAME due/YYYY-MM-DD` |
 | List projects | `project.list` |
 | View project(s) | `project.view [PROJECT_ID|all]` |
