@@ -19,6 +19,11 @@ public final class ClientUi {
         ui.showMessage("Added client " + client.getClientId() + ": " + client.getName() + ".");
     }
 
+    /** Confirms the client's updated name and unchanged ID. */
+    public void showClientEdited(Client client) {
+        ui.showMessage("Updated client " + client.getClientId() + ": " + client.getName() + ".");
+    }
+
     /** Confirms that a note was attached to its client. */
     public void showNoteAdded(Client client) {
         ui.showMessage("Note added to client " + client.getClientId() + ".");
@@ -62,6 +67,12 @@ public final class ClientUi {
             break;
         case "list":
             ui.showMessage("Format: client.list");
+            break;
+        case "find":
+            ui.showMessage("Format: client.find NAME");
+            break;
+        case "edit":
+            ui.showMessage("Format: client.edit CLIENT_ID name/NEW_NAME");
             break;
         default:
             break;
