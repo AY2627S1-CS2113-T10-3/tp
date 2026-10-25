@@ -27,11 +27,11 @@ public final class Project {
     /**
      * Creates an empty active project with externally assigned identifiers.
      *
-     * @param projectId unique project ID assigned by the application's model
-     * @param clientId ID of the existing client who owns the project
-     * @param name non-blank project name
-     * @param deadline project deadline as a calendar date
-     * @throws ProjectException if required data is missing
+     * @param projectId Unique project ID assigned by the application's model.
+     * @param clientId ID of the existing client who owns the project.
+     * @param name Non-blank project name.
+     * @param deadline Project deadline as a calendar date.
+     * @throws ProjectException If required data is missing.
      */
     public Project(String projectId, String clientId, String name, LocalDate deadline) {
         if (projectId == null || projectId.isBlank()) {
@@ -75,7 +75,7 @@ public final class Project {
     /**
      * Returns an unmodifiable snapshot of the project's tasks.
      *
-     * @return tasks in insertion order
+     * @return Tasks in insertion order.
      */
     public List<Task> getTasks() {
         return List.copyOf(tasks);
@@ -84,7 +84,7 @@ public final class Project {
     /**
      * Returns an unmodifiable snapshot of the project's events.
      *
-     * @return events in insertion order
+     * @return Events in insertion order.
      */
     public List<Event> getEvents() {
         return List.copyOf(events);
@@ -93,8 +93,8 @@ public final class Project {
     /**
      * Adds a task that belongs to this project.
      *
-     * @param task task to add
-     * @throws TaskException if the task is null, belongs elsewhere or has a duplicate ID
+     * @param task Task to add.
+     * @throws TaskException If the task is null, belongs elsewhere or has a duplicate ID.
      */
     public void addTask(Task task) {
         validateNewItem(task, tasks, TaskException::new);
@@ -104,8 +104,8 @@ public final class Project {
     /**
      * Adds an event that belongs to this project.
      *
-     * @param event event to add
-     * @throws EventException if the event is null, belongs elsewhere or has a duplicate ID
+     * @param event Event to add.
+     * @throws EventException If the event is null, belongs elsewhere or has a duplicate ID.
      */
     public void addEvent(Event event) {
         validateNewItem(event, events, EventException::new);
@@ -115,8 +115,8 @@ public final class Project {
     /**
      * Changes the project's status without changing its scheduled items.
      *
-     * @param status new project status
-     * @throws ProjectException if the status is null
+     * @param status New project status.
+     * @throws ProjectException If the status is null.
      */
     public void changeStatus(ProjectStatus status) {
         if (status == null) {
@@ -128,7 +128,7 @@ public final class Project {
     /**
      * Returns the combined number of tasks and events owned by this project.
      *
-     * @return number of scheduled items
+     * @return Number of scheduled items.
      */
     public int getItemCount() {
         return tasks.size() + events.size();

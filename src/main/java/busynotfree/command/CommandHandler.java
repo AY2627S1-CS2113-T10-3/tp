@@ -38,9 +38,9 @@ public class CommandHandler {
      * Creates a handler with the supplied parser and user interface.
      * Uses an independent client manager; use the overload for shared client lookup.
      *
-     * @param commandParser parser for the entity type, action and argument text
-     * @param ui user interface for responses
-     * @param projectManager manager for projects and their scheduled items
+     * @param commandParser Parser for the entity type, action and argument text.
+     * @param ui User interface for responses.
+     * @param projectManager Manager for projects and their scheduled items.
      */
     public CommandHandler(CommandParser commandParser, Ui ui, ProjectManager projectManager) {
         this(commandParser, ui, projectManager, new ClientManager());
@@ -65,11 +65,11 @@ public class CommandHandler {
 
     /**
      * Parses and routes one command, displaying errors without stopping the caller.
-     * Failed client, add, project status, project filtering and project deadline commands
-     * display usage hints.
+     * Failed client, add, edit, task mark, project status, project filtering, project view,
+     * project delete and project deadline commands display usage hints.
      *
-     * @param userInput non-null raw user input
-     * @return true if the user enters exit; false otherwise
+     * @param userInput Non-null raw user input.
+     * @return True if the user enters exit; false otherwise.
      */
     public boolean execute(String userInput) {
         ui.showSeparator();
@@ -110,6 +110,14 @@ public class CommandHandler {
             ui.showProjectDeadlinesUsage();
         } else if (command.getEntityType().equals("project") && command.getAction().equals("overdue")) {
             ui.showProjectOverdueUsage();
+        } else if (command.getEntityType().equals("task") && command.getAction().equals("mark")) {
+            ui.showTaskMarkUsage();
+        } else if (command.getEntityType().equals("task") && command.getAction().equals("unmark")) {
+            ui.showTaskUnmarkUsage();
+        } else if (command.getEntityType().equals("task") && command.getAction().equals("edit")) {
+            ui.showTaskEditUsage();
+        } else if (command.getEntityType().equals("event") && command.getAction().equals("edit")) {
+            ui.showEventEditUsage();
         } else if (command.getAction().equals("add")) {
             ui.showAddCommandUsage(command.getEntityType());
         }
@@ -149,6 +157,22 @@ public class CommandHandler {
             handleProjectDelete(command.getArgumentText());
             return;
         }
+        if (command.getEntityType().equals("task") && command.getAction().equals("mark")) {
+            handleTaskMark(command.getArgumentText());
+            return;
+        }
+        if (command.getEntityType().equals("task") && command.getAction().equals("unmark")) {
+            handleTaskUnmark(command.getArgumentText());
+            return;
+        }
+        if (command.getEntityType().equals("task") && command.getAction().equals("edit")) {
+            handleTaskEdit(command.getArgumentText());
+            return;
+        }
+        if (command.getEntityType().equals("event") && command.getAction().equals("edit")) {
+            handleEventEdit(command.getArgumentText());
+            return;
+        }
         if (!command.getAction().equals("add")) {
             throw new CommandException("Unsupported action: " + command.getAction() + ".");
         }
@@ -168,12 +192,18 @@ public class CommandHandler {
         }
     }
 
-    /** Parses project arguments and reports the newly created project. */
+    /** Parses project arguments and reports the newly created project with its client's name. */
     private void handleProjectAdd(String arguments) {
         Map<String, String> values = argumentParser.parse(arguments, "client", "name", "due");
         Project project = projectManager.addProject(values.get("client"), values.get("name"),
                 argumentParser.parseDate(values.get("due")));
-        ui.showProjectAdded(project);
+        if (clientManager.exists(project.getClientId())) {
+            ui.showProjectAdded(project, clientManager.getClient(project.getClientId()));
+        } else {
+            // Reachable only when the project manager checks clients through a different lookup,
+            // as with the three-argument constructor; the project is already created, so do not fail here.
+            ui.showProjectAdded(project);
+        }
     }
 
     /** Parses task arguments and reports the task added to its owning project. */
@@ -182,6 +212,64 @@ public class CommandHandler {
         Task task = projectManager.addTask(values.get("project"), values.get("name"),
                 argumentParser.parseDate(values.get("date")));
         ui.showTaskAdded(task);
+    }
+
+    /** Requires one task ID before marking the matching task complete. */
+    private void handleTaskMark(String arguments) {
+        if (arguments.isBlank() || arguments.trim().split("\\s+").length != 1) {
+            throw new CommandException("Provide exactly one task ID.");
+        }
+        Task task = projectManager.markTaskComplete(arguments.trim());
+        ui.showTaskMarked(task);
+    }
+
+    /** Requires one task ID before reopening the matching task. */
+    private void handleTaskUnmark(String arguments) {
+        if (arguments.isBlank() || arguments.trim().split("\\s+").length != 1) {
+            throw new CommandException("Provide exactly one task ID.");
+        }
+        Task task = projectManager.markTaskIncomplete(arguments.trim());
+        ui.showTaskUnmarked(task);
+    }
+
+    /** Parses every argument before editing, so invalid input cannot partially change the task. */
+    private void handleTaskEdit(String arguments) {
+        EditArguments values = parseEditArguments(arguments, "task");
+        Task task = projectManager.editTask(values.itemId(), values.description(), values.date());
+        ui.showTaskEdited(task);
+    }
+
+    /** Parses every argument before editing, so invalid input cannot partially change the event. */
+    private void handleEventEdit(String arguments) {
+        EditArguments values = parseEditArguments(arguments, "event");
+        Event event = projectManager.editEvent(values.itemId(), values.description(), values.date());
+        ui.showEventEdited(event);
+    }
+
+    /**
+     * Separates the positional item ID from the name/ and date/ arguments of an edit command.
+     * Other recognized prefixes, such as project/, are rejected so an edit cannot move an item.
+     *
+     * @param arguments Argument text after task.edit or event.edit.
+     * @param itemType Task or event, used in the error message.
+     * @return The item ID, new description and validated new date.
+     * @throws CommandException If the ID is missing, an argument is invalid or the date is malformed.
+     */
+    private EditArguments parseEditArguments(String arguments, String itemType) {
+        String[] parts = arguments.trim().split("\\s+", 2);
+        String itemId = parts[0];
+        if (itemId.isBlank() || itemId.contains("/")) {
+            LOGGER.log(Level.FINE, "{0}.edit rejected because no item ID was given", itemType);
+            throw new CommandException("Provide the " + itemType + " ID before name/ and date/.");
+        }
+        String prefixedArguments = parts.length > 1 ? parts[1] : "";
+        Map<String, String> values = argumentParser.parse(prefixedArguments, "name", "date");
+        LocalDate date = argumentParser.parseDate(values.get("date"));
+        return new EditArguments(itemId, values.get("name"), date);
+    }
+
+    /** Holds the validated values of an edit command before the model is changed. */
+    private record EditArguments(String itemId, String description, LocalDate date) {
     }
 
     /** Parses event arguments and reports the event added to its owning project. */

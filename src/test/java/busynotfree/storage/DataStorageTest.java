@@ -64,6 +64,30 @@ class DataStorageTest {
     }
 
     @Test
+    public void saveAndLoad_editedItems_preservesUpdatedDetailsAndIds() throws IOException {
+        DataStorage storage = new DataStorage(directory.resolve("edited.properties"));
+        ClientManager clients = new ClientManager();
+        clients.addClient("Acme Studio");
+        ProjectManager projects = new ProjectManager(clients);
+        projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projects.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 15));
+        projects.addEvent("P001", "Meeting", LocalDate.of(2026, 10, 20));
+        projects.editTask("T001", "Revised UI/UX wireframe", LocalDate.of(2026, 12, 1));
+        projects.editEvent("E001", "Rescheduled meeting", LocalDate.of(2026, 12, 2));
+
+        storage.save(clients, projects);
+        ProjectManager loaded = storage.load().projectManager();
+
+        assertEquals("Revised UI/UX wireframe", loaded.getTask("T001").getDescription());
+        assertEquals(LocalDate.of(2026, 12, 1), loaded.getTask("T001").getDate());
+        assertEquals("P001", loaded.getTask("T001").getProject().getProjectId());
+        assertEquals("Rescheduled meeting", loaded.getEvent("E001").getDescription());
+        assertEquals(LocalDate.of(2026, 12, 2), loaded.getEvent("E001").getDate());
+        assertEquals("P001", loaded.getEvent("E001").getProject().getProjectId());
+        assertEquals("T002", loaded.addTask("P001", "Next task", LocalDate.of(2026, 12, 3)).getId());
+    }
+
+    @Test
     public void load_missingFile_startsWithEmptyManagers() throws IOException {
         DataStorage storage = new DataStorage(directory.resolve("missing.properties"));
 

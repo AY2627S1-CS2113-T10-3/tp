@@ -20,7 +20,7 @@ public class Ui {
         showMessage("Commands: client.add, client.note, client.view, client.list, "
                 + "project.add, project.status, project.list, project.filter, project.deadlines, "
                 + "project.overdue, project.view, project.delete, "
-                + "task.add, event.add, help, exit");
+                + "task.add, task.mark, task.unmark, task.edit, event.add, event.edit, help, exit");
         showSeparator();
     }
 
@@ -39,7 +39,11 @@ public class Ui {
         showMessage("project.overdue |   List overdue active projects");
         showMessage("project.view   |   View a project summary");
         showMessage("task.add       |   Add a task");
+        showMessage("task.mark      |   Mark a task complete");
+        showMessage("task.unmark    |   Reopen a task");
+        showMessage("task.edit      |   Edit a task");
         showMessage("event.add      |   Add an event");
+        showMessage("event.edit     |   Edit an event");
         showMessage("help           |   View help");
         showMessage("exit           |   Save data and exit");
     }
@@ -59,30 +63,99 @@ public class Ui {
     }
 
     /**
-     * Displays confirmation after a project is successfully registered.
+     * Displays confirmation after a project is successfully registered, naming its client
+     * so the user can confirm the right client ID was used.
      *
-     * @param project project that was created
+     * @param project Project that was created.
+     * @param client Client who owns the project.
+     */
+    public void showProjectAdded(Project project, Client client) {
+        showMessage("Created project " + describeProject(project) + " for client " + client.getClientId()
+                + " \"" + client.getName() + "\".");
+    }
+
+    /**
+     * Displays confirmation after a project is successfully registered,
+     * when its client's name is unavailable.
+     *
+     * @param project Project that was created.
      */
     public void showProjectAdded(Project project) {
-        showMessage("Created project " + project.getProjectId() + " for client " + project.getClientId() + ".");
+        showMessage("Created project " + describeProject(project) + " for client "
+                + project.getClientId() + ".");
     }
 
     /**
      * Displays confirmation after a task is successfully attached to its project.
      *
-     * @param task task that was added
+     * @param task Task that was added.
      */
     public void showTaskAdded(Task task) {
-        showMessage("Added task " + task.getId() + " to project " + task.getProject().getProjectId() + ".");
+        showMessage("Added task " + task.getId() + " \"" + task.getDescription() + "\" to project "
+                + describeProject(task.getProject()) + ".");
+    }
+
+    /** Confirms that a task was marked complete. */
+    public void showTaskMarked(Task task) {
+        showMessage("Task " + task.getId() + " marked as completed.");
+    }
+
+    /** Displays the expected format for marking a task complete. */
+    public void showTaskMarkUsage() {
+        showMessage("Format: task.mark TASK_ID");
+    }
+
+    /** Confirms that a task was reopened. */
+    public void showTaskUnmarked(Task task) {
+        showMessage("Task " + task.getId() + " reopened. Status: [In Progress]");
+    }
+
+    /** Displays the expected format for reopening a task. */
+    public void showTaskUnmarkUsage() {
+        showMessage("Format: task.unmark TASK_ID");
+    }
+
+    /**
+     * Displays the edited task's updated details, including its completion state.
+     *
+     * @param task Task that was edited.
+     */
+    public void showTaskEdited(Task task) {
+        showMessage("Updated task in project " + describeProject(task.getProject()) + ": " + task);
+    }
+
+    /** Displays the expected format for editing a task. */
+    public void showTaskEditUsage() {
+        showMessage("Format: task.edit TASK_ID name/DESCRIPTION date/YYYY-MM-DD");
     }
 
     /**
      * Displays confirmation after an event is successfully attached to its project.
      *
-     * @param event event that was added
+     * @param event Event that was added.
      */
     public void showEventAdded(Event event) {
-        showMessage("Added event " + event.getId() + " to project " + event.getProject().getProjectId() + ".");
+        showMessage("Added event " + event.getId() + " \"" + event.getDescription() + "\" to project "
+                + describeProject(event.getProject()) + ".");
+    }
+
+    /**
+     * Displays the edited event's updated details.
+     *
+     * @param event Event that was edited.
+     */
+    public void showEventEdited(Event event) {
+        showMessage("Updated event in project " + describeProject(event.getProject()) + ": " + event);
+    }
+
+    /** Displays the expected format for editing an event. */
+    public void showEventEditUsage() {
+        showMessage("Format: event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD");
+    }
+
+    /** Formats a project as its ID followed by its quoted name, such as P001 "Website redesign". */
+    private String describeProject(Project project) {
+        return project.getProjectId() + " \"" + project.getName() + "\"";
     }
 
     /**
@@ -161,9 +234,9 @@ public class Ui {
 
     /**
      * Displays the expected format for a supported add command after an error.
-     * Unrecognised entity types have no add-command hint.
+     * Unrecognized entity types have no add-command hint.
      *
-     * @param entityType project, task or event
+     * @param entityType Project, task or event.
      */
     public void showAddCommandUsage(String entityType) {
         switch (entityType) {
@@ -211,7 +284,7 @@ public class Ui {
     /**
      * Displays a command response.
      *
-     * @param message response to display
+     * @param message Response to display.
      */
     public void showMessage(String message) {
         System.out.println(message);
@@ -220,7 +293,7 @@ public class Ui {
     /**
      * Displays a user-facing error.
      *
-     * @param message error to display
+     * @param message Error to display.
      */
     public void showError(String message) {
         System.out.println("Error: " + message);

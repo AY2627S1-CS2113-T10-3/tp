@@ -33,9 +33,9 @@ class BusyNotFreeTest {
                 + "task.add project/P001 name/Wireframe date/2026-10-15\n"
                 + "event.add project/P001 name/Meeting date/2026-10-20\nexit\n");
 
-        assertTrue(ui.messages.contains("Created project P001 for client C001."));
-        assertTrue(ui.messages.contains("Added task T001 to project P001."));
-        assertTrue(ui.messages.contains("Added event E001 to project P001."));
+        assertTrue(ui.messages.contains("Created project P001 \"Website\" for client C001."));
+        assertTrue(ui.messages.contains("Added task T001 \"Wireframe\" to project P001 \"Website\"."));
+        assertTrue(ui.messages.contains("Added event E001 \"Meeting\" to project P001 \"Website\"."));
         assertEquals(2, projectManager.getProject("P001").getItemCount());
         assertTrue(ui.errors.isEmpty());
         assertEquals(4, ui.messages.stream().filter("Enter a command:"::equals).count());
@@ -46,7 +46,7 @@ class BusyNotFreeTest {
         runWithInput("\ninvalid\nproject.add\nproject.add client/C001 name/Website due/2026-11-30\nexit\n");
 
         assertEquals(3, ui.errors.size());
-        assertTrue(ui.messages.contains("Created project P001 for client C001."));
+        assertTrue(ui.messages.contains("Created project P001 \"Website\" for client C001."));
         assertEquals("Data saved. Goodbye!", ui.messages.getLast());
     }
 
@@ -66,8 +66,8 @@ class BusyNotFreeTest {
         assertTrue(ui.messages.contains(eventFormat));
         assertEquals("Enter a command:", ui.messages.get(ui.messages.indexOf(taskFormat) + 1));
         assertEquals("Enter a command:", ui.messages.get(ui.messages.indexOf(eventFormat) + 1));
-        assertTrue(ui.messages.contains("Added task T001 to project P001."));
-        assertTrue(ui.messages.contains("Added event E001 to project P001."));
+        assertTrue(ui.messages.contains("Added task T001 \"Wireframe\" to project P001 \"Website\"."));
+        assertTrue(ui.messages.contains("Added event E001 \"Meeting\" to project P001 \"Website\"."));
         assertEquals(2, projectManager.getProject("P001").getItemCount());
         assertEquals("Data saved. Goodbye!", ui.messages.getLast());
     }
@@ -106,7 +106,7 @@ class BusyNotFreeTest {
     public void run_endOfInput_exitsCleanly() {
         runWithInput("project.add client/C001 name/Website due/2026-11-30\n");
 
-        assertTrue(ui.messages.contains("Created project P001 for client C001."));
+        assertTrue(ui.messages.contains("Created project P001 \"Website\" for client C001."));
         assertEquals("Data saved. Goodbye!", ui.messages.getLast());
         assertTrue(ui.errors.isEmpty());
     }
@@ -138,7 +138,8 @@ class BusyNotFreeTest {
         runWithInput(String.join("\r\n", commands) + "\r\n");
 
         assertEquals(List.of("Use a valid date in YYYY-MM-DD format.",
-                "Use a valid date in YYYY-MM-DD format.", "Project P999 does not exist."), ui.errors);
+                "Use a valid date in YYYY-MM-DD format.",
+                "Project P999 does not exist. Use project.list to see project IDs."), ui.errors);
         assertEquals(1, projectManager.getProjects().size());
         assertEquals("Create UI/UX redesign", projectManager.getProject("P001").getName());
         assertEquals(List.of("T001", "T002"), projectManager.getProject("P001").getTasks().stream()

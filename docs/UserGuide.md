@@ -72,11 +72,11 @@ Lists client IDs and names in creation order. If there are none, the app shows `
 
 Format: `project.add client/CLIENT_ID name/PROJECT_NAME due/YYYY-MM-DD`
 
-The client must already exist. A new project receives an ID such as `P001` and starts with status `ACTIVE`.
+The client must already exist; use `client.list` to look up client IDs. A new project receives an ID such as `P001` and starts with status `ACTIVE`. The confirmation shows the project and client names, so you can check that the right client was used.
 
 ```text
 project.add client/C001 name/Website redesign due/2026-11-30
-Created project P001 for client C001.
+Created project P001 "Website redesign" for client C001 "Acme Studio".
 ```
 
 ### List projects: `project.list`
@@ -143,12 +143,14 @@ Client: C001 - Acme Studio
 Status: ACTIVE
 Deadline: 2026-11-30
 Tasks:
-[T001] Create homepage wireframe - 2026-10-15
+[T001] Create homepage wireframe - 2026-10-15 [In Progress]
 Events:
 [E001] Stakeholder meeting - 2026-10-20
 ```
 
 An empty section says `No tasks found.` or `No events found.` If there are no projects, viewing all says `No projects found.` A missing ID produces `Project PROJECT_ID was not found.` with the requested ID in place of `PROJECT_ID`.
+
+Each task shows `[In Progress]` after its date until it is marked complete, when it shows `[COMPLETED]`.
 
 ### Change a project's status: `project.status`
 
@@ -179,23 +181,71 @@ Website redesign has been deleted
 
 Format: `task.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD`
 
-Adds a dated task to an existing project. Task IDs use `T`, for example `T001`.
+Adds a dated task to an existing project; use `project.list` to look up project IDs. Task IDs use `T`, for example `T001`.
 
 ```text
 task.add project/P001 name/Create homepage wireframe date/2026-10-15
-Added task T001 to project P001.
+Added task T001 "Create homepage wireframe" to project P001 "Website redesign".
 ```
+
+### Mark a task complete: `task.mark`
+
+Format: `task.mark TASK_ID`
+
+Marks an existing task complete. Use the task ID shown by `task.add`; the task keeps its project, description, and date. `project.view` then shows `[COMPLETED]` beside it. An unknown task ID produces an error.
+
+```text
+task.mark T001
+Task T001 marked as completed.
+```
+
+### Reopen a task: `task.unmark`
+
+Format: `task.unmark TASK_ID`
+
+Marks an existing task incomplete again, for example when a client requests more work. The task keeps its ID, project, description, and date. In `project.view`, its `[COMPLETED]` label changes to `[In Progress]`. An unknown task ID produces an error.
+
+```text
+task.unmark T001
+Task T001 reopened. Status: [In Progress]
+```
+
+### Edit a task: `task.edit`
+
+Format: `task.edit TASK_ID name/DESCRIPTION date/YYYY-MM-DD`
+
+Replaces an existing task's description and date, for example when a client changes their requirements. Both `name/` and `date/` are required, in any order. The task keeps its ID, project, and completion status. To move work to another project, add a new task there instead; `project/` is not accepted.
+
+```text
+task.edit T001 name/Create mobile homepage wireframe date/2026-10-22
+Updated task in project P001 "Website redesign": [T001] Create mobile homepage wireframe - 2026-10-22 [In Progress]
+```
+
+If the task ID is unknown, a value is blank, or the date is invalid, the app shows an error and the format, and the task is not changed.
 
 ### Add an event: `event.add`
 
 Format: `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD`
 
-Adds a dated event to an existing project. Event IDs use `E`, for example `E001`.
+Adds a dated event to an existing project; use `project.list` to look up project IDs. Event IDs use `E`, for example `E001`.
 
 ```text
 event.add project/P001 name/Stakeholder meeting date/2026-10-20
-Added event E001 to project P001.
+Added event E001 "Stakeholder meeting" to project P001 "Website redesign".
 ```
+
+### Edit an event: `event.edit`
+
+Format: `event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD`
+
+Replaces an existing event's description and date, for example when a meeting is rescheduled. Both `name/` and `date/` are required, in any order. The event keeps its ID and project.
+
+```text
+event.edit E001 name/Stakeholder meeting (rescheduled) date/2026-10-27
+Updated event in project P001 "Website redesign": [E001] Stakeholder meeting (rescheduled) - 2026-10-27
+```
+
+If the event ID is unknown, a value is blank, or the date is invalid, the app shows an error and the format, and the event is not changed.
 
 ## Help and saving
 
@@ -209,7 +259,7 @@ Shows a list of available commands and short descriptions.
 
 Format: `exit`
 
-Saves all clients, notes, projects, tasks, and events, then closes the app:
+Saves clients, notes, projects, tasks, and events, then closes the app. Task completion is not yet included in the save file:
 
 ```text
 exit
@@ -237,6 +287,10 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | Change project status | `project.status PROJECT_ID STATUS` |
 | Delete project | `project.delete PROJECT_ID` |
 | Add task | `task.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
+| Mark task complete | `task.mark TASK_ID` |
+| Reopen task | `task.unmark TASK_ID` |
+| Edit task | `task.edit TASK_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Add event | `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
+| Edit event | `event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Help | `help` |
 | Save and exit | `exit` |
