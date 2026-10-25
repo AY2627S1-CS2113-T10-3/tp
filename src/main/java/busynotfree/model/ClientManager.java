@@ -67,6 +67,24 @@ public final class ClientManager implements ClientLookup {
         return client;
     }
 
+    /** Renames an existing client without replacing its ID, notes or project links. */
+    public Client editClient(String clientId, String name) {
+        Client client = getClient(clientId);
+        client.setName(name);
+        return client;
+    }
+
+    /** Finds case-insensitive name substrings in creation order, rejecting blank searches. */
+    public List<Client> findClients(String name) {
+        if (name == null || name.isBlank()) {
+            throw new ClientException("A search name must not be blank.");
+        }
+        String search = name.trim().toLowerCase(Locale.ROOT);
+        return clients.values().stream()
+                .filter(client -> client.getName().toLowerCase(Locale.ROOT).contains(search))
+                .toList();
+    }
+
     /**
      * Returns an unmodifiable snapshot of clients in creation order.
      *

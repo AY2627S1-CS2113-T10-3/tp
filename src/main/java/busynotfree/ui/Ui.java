@@ -17,7 +17,7 @@ public class Ui {
     public void showWelcome() {
         showSeparator();
         showMessage("Welcome to BusyNotFree!");
-        showMessage("Commands: client.add, client.note, client.view, client.list, "
+        showMessage("Commands: client.add, client.note, client.view, client.list, client.find, client.edit, "
                 + "project.add, project.status, project.list, project.view, project.delete, "
                 + "task.add, task.mark, task.unmark, task.edit, event.add, event.edit, help, exit");
         showSeparator();
@@ -29,6 +29,8 @@ public class Ui {
         showMessage("client.add     |   Add a client");
         showMessage("client.note    |   Add a client note");
         showMessage("client.view    |   View a client");
+        showMessage("client.find    |   Find clients by name");
+        showMessage("client.edit    |   Edit a client's name");
         showMessage("project.add    |   Add a project");
         showMessage("project.delete |   Delete a project");
         showMessage("project.status |   Update a project status");
