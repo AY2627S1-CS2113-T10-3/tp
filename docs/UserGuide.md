@@ -111,6 +111,46 @@ project.list
 1. P001|Website redesign|ACTIVE|Due 2026-11-30
 ```
 
+### Filter projects by status: `project.filter`
+
+Format: `project.filter STATUS`
+
+Displays only projects with the selected status. The status must be one of
+`active`, `paused`, `completed`, or `cancelled`, and is not case-sensitive.
+If no projects match, the app shows `No projects found.`
+
+```text
+project.filter active
+1. P001|Website redesign|ACTIVE|Due 2026-11-30
+```
+
+### List projects by deadline: `project.deadlines`
+
+Format: `project.deadlines`
+
+Displays projects from the earliest deadline to the latest deadline. Projects
+with the same deadline remain in their creation order. If there are no projects,
+the app shows `No projects found.`
+
+```text
+project.deadlines
+1. P001|Website redesign|ACTIVE|Due 2026-11-30
+2. P002|Logo design|ACTIVE|Due 2026-12-15
+```
+
+### List overdue active projects: `project.overdue`
+
+Format: `project.overdue`
+
+Displays active projects whose deadlines are earlier than today's date. Projects
+that are paused, completed, or cancelled are not included. If there are no
+overdue active projects, the app shows `No overdue projects found.`
+
+```text
+project.overdue
+1. P001|Website redesign|ACTIVE|Due 2026-10-01
+```
+
 ### View a project summary: `project.view`
 
 Format: `project.view [PROJECT_ID|all]`
@@ -263,6 +303,9 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | Edit client name | `client.edit CLIENT_ID name/NEW_NAME` |
 | Add project | `project.add client/CLIENT_ID name/PROJECT_NAME due/YYYY-MM-DD` |
 | List projects | `project.list` |
+| Filter projects by status | `project.filter STATUS` |
+| List projects by deadline | `project.deadlines` |
+| List overdue active projects | `project.overdue` |
 | View project(s) | `project.view [PROJECT_ID|all]` |
 | Change project status | `project.status PROJECT_ID STATUS` |
 | Delete project | `project.delete PROJECT_ID` |

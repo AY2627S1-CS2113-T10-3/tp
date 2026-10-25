@@ -18,7 +18,8 @@ public class Ui {
         showSeparator();
         showMessage("Welcome to BusyNotFree!");
         showMessage("Commands: client.add, client.note, client.view, client.list, client.find, client.edit, "
-                + "project.add, project.status, project.list, project.view, project.delete, "
+                + "project.add, project.status, project.list, project.filter, project.deadlines, "
+                + "project.overdue, project.view, project.delete, "
                 + "task.add, task.mark, task.unmark, task.edit, event.add, event.edit, help, exit");
         showSeparator();
     }
@@ -35,6 +36,9 @@ public class Ui {
         showMessage("project.delete |   Delete a project");
         showMessage("project.status |   Update a project status");
         showMessage("project.list   |   List all projects");
+        showMessage("project.filter |   Filter projects by status");
+        showMessage("project.deadlines |   List projects by deadline");
+        showMessage("project.overdue |   List overdue active projects");
         showMessage("project.view   |   View a project summary");
         showMessage("task.add       |   Add a task");
         showMessage("task.mark      |   Mark a task complete");
@@ -183,9 +187,15 @@ public class Ui {
 
     /** Displays projects in creation order, or a message when the list is empty. */
     public void showProjects(List<Project> projects) {
+        showProjects(projects, "No projects found.");
+    }
+
+    /** Displays projects using a caller-supplied empty-result message. */
+    public void showProjects(List<Project> projects, String emptyMessage) {
         assert projects != null;
+        assert emptyMessage != null;
         if (projects.isEmpty()) {
-            showMessage("No projects found.");
+            showMessage(emptyMessage);
             return;
         }
         for (int i = 0; i < projects.size(); i++) {
@@ -249,6 +259,21 @@ public class Ui {
     /** Displays the expected format for changing a project's status. */
     public void showProjectStatusUsage() {
         showMessage("Format: project.status PROJECT_ID STATUS");
+    }
+
+    /** Displays the expected format for filtering projects by status. */
+    public void showProjectFilterUsage() {
+        showMessage("Format: project.filter STATUS");
+    }
+
+    /** Displays the expected format for listing projects by deadline. */
+    public void showProjectDeadlinesUsage() {
+        showMessage("Format: project.deadlines");
+    }
+
+    /** Displays the expected format for listing overdue projects. */
+    public void showProjectOverdueUsage() {
+        showMessage("Format: project.overdue");
     }
 
     /**
