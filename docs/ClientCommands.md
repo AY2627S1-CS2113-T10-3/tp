@@ -64,6 +64,27 @@ client.list
 An empty list displays `No clients found.` Invalid client commands display an
 error and the expected command format, then allow the user to try again.
 
+## Find clients by name
+
+Format: `client.find NAME`
+
+Searches for a case-insensitive substring anywhere in a client's name. Multiword
+searches are allowed. A summary such as `Found 2 matching clients.` precedes the
+numbered IDs and names in creation order, using the same format as `client.list`.
+A single match displays `Found 1 matching client.` No matches displays
+`Found 0 matching clients.` followed by `No clients found.` Missing or
+whitespace-only search text is rejected.
+
+## Edit a client's name
+
+Format: `client.edit CLIENT_ID name/NEW_NAME`
+
+Renames an existing client and displays
+`Updated client C001 from "OLD_NAME" to "NEW_NAME".` for client `C001`.
+The ID, notes and project links are preserved, and the updated
+name is saved on exit. The new name must not be blank; missing or unknown IDs
+are rejected. Name arguments follow the prefix rules described above.
+
 ## Integration and testing
 
 `ClientManager` implements `ClientLookup`. Application startup supplies the same

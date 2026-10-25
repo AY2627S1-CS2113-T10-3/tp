@@ -40,6 +40,12 @@ public final class ClientCommandHandler {
         case "view":
             handleView(arguments);
             break;
+        case "find":
+            clientUi.showSearchResults(clientManager.findClients(arguments));
+            break;
+        case "edit":
+            handleEdit(arguments);
+            break;
         case "list":
             // The guide ignores extra arguments for commands that take no parameters.
             clientUi.showClients(clientManager.getClients());
@@ -71,6 +77,19 @@ public final class ClientCommandHandler {
         Map<String, String> values = argumentParser.parse(noteArguments, "text");
         Client client = clientManager.addNote(clientId, values.get("text"));
         clientUi.showNoteAdded(client);
+    }
+
+    /** Parses the positional ID and required name before attempting a rename. */
+    private void handleEdit(String arguments) {
+        String[] parts = arguments.trim().split("\\s+", 2);
+        if (parts[0].isBlank() || parts[0].contains("/")) {
+            throw new CommandException("A client ID is required before name/.");
+        }
+        String nameArguments = parts.length > 1 ? parts[1] : "";
+        Map<String, String> values = argumentParser.parse(nameArguments, "name");
+        String previousName = clientManager.getClient(parts[0]).getName();
+        Client client = clientManager.editClient(parts[0], values.get("name"));
+        clientUi.showClientEdited(client, previousName);
     }
 
     /** Requires exactly one positional ID for a client view. */

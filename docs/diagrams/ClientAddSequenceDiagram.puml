@@ -1,0 +1,51 @@
+@startuml
+' Successful client.add after CommandParser has parsed the input.
+hide footbox
+skinparam defaultFontSize 13
+skinparam maxMessageSize 180
+
+participant ":CommandHandler" as CH
+participant ":ClientCommandHandler" as CCH
+participant ":ArgumentParser" as AP
+participant ":ClientManager" as CM
+participant "client:Client" as C
+participant ":ClientUi" as CUI
+participant ":Ui" as UI
+
+note over CH, CCH
+  Input: client.add name/Acme Studio
+  Command parsing, separators and formatting getters are omitted.
+end note
+
+CH -> CCH : execute(command)
+activate CCH
+CCH -> CCH : handleAdd(arguments)
+CCH -> AP : parse(arguments, "name")
+activate AP
+AP --> CCH : values
+deactivate AP
+
+CCH -> CM : addClient("Acme Studio")
+activate CM
+create C
+CM -> C : new Client("C001", "Acme Studio")
+activate C
+note right of C : Validate and trim ID and name.
+C --> CM
+deactivate C
+CM -> CM : clients.put("C001", client)
+CM -> CM : nextClientNumber++
+CM --> CCH : client
+deactivate CM
+
+CCH -> CUI : showClientAdded(client)
+activate CUI
+CUI -> UI : showMessage("Added client C001: Acme Studio.")
+activate UI
+UI --> CUI
+deactivate UI
+CUI --> CCH
+deactivate CUI
+CCH --> CH
+deactivate CCH
+@enduml
