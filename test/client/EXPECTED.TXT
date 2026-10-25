@@ -1,6 +1,6 @@
 ------------------------------------------------------------
 Welcome to BusyNotFree!
-Commands: client.add, client.note, client.view, client.list, client.find, client.edit, project.add, project.status, project.list, project.view, project.delete, task.add, task.mark, task.unmark, task.edit, event.add, event.edit, help, exit
+Commands: client.add, client.note, client.view, client.list, client.find, client.edit, project.add, project.status, project.list, project.filter, project.deadlines, project.overdue, project.view, project.delete, task.add, task.mark, task.unmark, task.edit, event.add, event.edit, help, exit
 ------------------------------------------------------------
 Enter a command:
 ------------------------------------------------------------
