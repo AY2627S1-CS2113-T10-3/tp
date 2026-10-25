@@ -86,6 +86,28 @@ Each layer throws its own subclass of the unchecked `BusyNotFreeException`: `Com
 * **Strict dates.** Impossible or loosely formatted dates are rejected instead of being corrected, so a typo cannot silently schedule work on the wrong day.
 * **Logging without private text.** `ProjectManager` logs creation at the `FINE` level and includes only IDs, never client names or descriptions.
 
+### Task completion, project progress and persistence
+
+`task.mark TASK_ID` and `task.unmark TASK_ID` find a task by its application-wide ID through
+`ProjectManager`. They change the task's `completed` flag without changing its ID, project,
+description or date. `Task#toString` includes `[COMPLETED]` or `[In Progress]` so each task's
+state is visible in `project.view`.
+
+`Ui#showProjectSummary` counts completed tasks while it prints the project's task list, then
+shows the completed and total task counts. Events are printed in a separate section and do not
+affect this count. A project with no tasks shows `No tasks found.` and
+`Progress: 0 of 0 tasks completed.`.
+
+`DataStorage` saves each task's flag as `task.N.completed=true` or `false` in the existing
+version 1 properties file. On load, a missing flag defaults to `false`, allowing files saved
+before task completion was added to load with their tasks in progress. An invalid flag is
+rejected as invalid saved data. The existing exit path saves the file and the next startup
+loads it; marking a task alone does not write to disk.
+
+[`DataStorageTest`](../src/test/java/busynotfree/storage/DataStorageTest.java) checks saved and
+restored completion state and the older-file default. [`ProjectViewTest`](../src/test/java/busynotfree/command/ProjectViewTest.java)
+checks empty, partial and complete progress counts, including `project.view all`.
+
 ### Editing tasks and events: `task.edit` and `event.edit`
 
 `task.edit TASK_ID name/DESCRIPTION date/YYYY-MM-DD` and `event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD` replace the description and date of an existing task or event. Both commands share one implementation path:
