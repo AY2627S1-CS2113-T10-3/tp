@@ -1,6 +1,7 @@
 package busynotfree.model;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -150,6 +151,51 @@ public final class ProjectManager {
      */
     public List<Project> getProjects() {
         return List.copyOf(projects.values());
+    }
+
+    /**
+     * Returns projects with the requested status in their creation order.
+     *
+     * @param status status to match
+     * @return an unmodifiable snapshot of matching projects
+     * @throws ProjectException if the status is null
+     */
+    public List<Project> getProjectsByStatus(ProjectStatus status) {
+        if (status == null) {
+            throw new ProjectException("A project status is required.");
+        }
+        return projects.values().stream()
+                .filter(project -> project.getStatus() == status)
+                .toList();
+    }
+
+    /**
+     * Returns projects ordered by the earliest deadline first.
+     * Projects with the same deadline retain their creation order.
+     *
+     * @return an unmodifiable snapshot ordered by deadline
+     */
+    public List<Project> getProjectsByDeadline() {
+        return projects.values().stream()
+                .sorted(Comparator.comparing(Project::getDeadline))
+                .toList();
+    }
+
+    /**
+     * Returns active projects whose deadlines are before the supplied date.
+     *
+     * @param today date against which deadlines are compared
+     * @return an unmodifiable snapshot of overdue active projects
+     * @throws ProjectException if the comparison date is null
+     */
+    public List<Project> getOverdueActiveProjects(LocalDate today) {
+        if (today == null) {
+            throw new ProjectException("A comparison date is required.");
+        }
+        return projects.values().stream()
+                .filter(project -> project.getStatus() == ProjectStatus.ACTIVE)
+                .filter(project -> project.getDeadline().isBefore(today))
+                .toList();
     }
 
     /** Returns the next project number for saving the ID sequence. */

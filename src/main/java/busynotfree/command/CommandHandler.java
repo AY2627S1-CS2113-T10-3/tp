@@ -1,5 +1,6 @@
 package busynotfree.command;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -64,7 +65,8 @@ public class CommandHandler {
 
     /**
      * Parses and routes one command, displaying errors without stopping the caller.
-     * Failed client, add, project status and project delete commands display usage hints.
+     * Failed client, add, project status, project filtering and project deadline commands
+     * display usage hints.
      *
      * @param userInput non-null raw user input
      * @return true if the user enters exit; false otherwise
@@ -102,6 +104,12 @@ public class CommandHandler {
             ui.showProjectDeleteUsage();
         } else if (command.getEntityType().equals("project") && command.getAction().equals("view")) {
             ui.showProjectViewUsage();
+        } else if (command.getEntityType().equals("project") && command.getAction().equals("filter")) {
+            ui.showProjectFilterUsage();
+        } else if (command.getEntityType().equals("project") && command.getAction().equals("deadlines")) {
+            ui.showProjectDeadlinesUsage();
+        } else if (command.getEntityType().equals("project") && command.getAction().equals("overdue")) {
+            ui.showProjectOverdueUsage();
         } else if (command.getAction().equals("add")) {
             ui.showAddCommandUsage(command.getEntityType());
         }
@@ -119,6 +127,18 @@ public class CommandHandler {
         }
         if (command.getEntityType().equals("project") && command.getAction().equals("list")) {
             handleProjectList();
+            return;
+        }
+        if (command.getEntityType().equals("project") && command.getAction().equals("filter")) {
+            handleProjectFilter(command.getArgumentText());
+            return;
+        }
+        if (command.getEntityType().equals("project") && command.getAction().equals("deadlines")) {
+            handleProjectDeadlines(command.getArgumentText());
+            return;
+        }
+        if (command.getEntityType().equals("project") && command.getAction().equals("overdue")) {
+            handleProjectOverdue(command.getArgumentText());
             return;
         }
         if (command.getEntityType().equals("project") && command.getAction().equals("view")) {
@@ -207,6 +227,37 @@ public class CommandHandler {
         assert projects != null;
         assert projects.stream().allMatch(project -> project != null);
         ui.showProjects(projects);
+    }
+
+    /** Filters projects by one status without changing the existing project list command. */
+    private void handleProjectFilter(String arguments) {
+        String[] parts = arguments.trim().split("\\s+");
+        if (arguments.isBlank() || parts.length != 1) {
+            throw new CommandException("Use project.filter STATUS.");
+        }
+        ProjectStatus status = parseProjectStatus(parts[0]);
+        List<Project> projects = projectManager.getProjectsByStatus(status);
+        ui.showProjects(projects);
+    }
+
+    /** Displays all projects from the earliest deadline to the latest deadline. */
+    private void handleProjectDeadlines(String arguments) {
+        requireNoArguments(arguments, "Use project.deadlines.");
+        ui.showProjects(projectManager.getProjectsByDeadline());
+    }
+
+    /** Displays active projects whose deadlines have passed as of the current date. */
+    private void handleProjectOverdue(String arguments) {
+        requireNoArguments(arguments, "Use project.overdue.");
+        List<Project> projects = projectManager.getOverdueActiveProjects(LocalDate.now());
+        ui.showProjects(projects, "No overdue projects found.");
+    }
+
+    /** Rejects unexpected arguments for commands that do not accept arguments. */
+    private void requireNoArguments(String arguments, String usageMessage) {
+        if (!arguments.isBlank()) {
+            throw new CommandException(usageMessage);
+        }
     }
 
     /** Displays one project or every project with its client and scheduled items. */

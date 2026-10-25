@@ -29,6 +29,9 @@ class CommandHandlerTest {
     private static final String PROJECT_FORMAT =
             "Format: project.add client/CLIENT_ID name/PROJECT_NAME due/YYYY-MM-DD";
     private static final String PROJECT_STATUS_FORMAT = "Format: project.status PROJECT_ID STATUS";
+    private static final String PROJECT_FILTER_FORMAT = "Format: project.filter STATUS";
+    private static final String PROJECT_DEADLINES_FORMAT = "Format: project.deadlines";
+    private static final String PROJECT_OVERDUE_FORMAT = "Format: project.overdue";
     private static final String TASK_FORMAT = "Format: task.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD";
     private static final String EVENT_FORMAT = "Format: event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD";
 
@@ -145,6 +148,101 @@ class CommandHandlerTest {
 
         assertEquals(List.of("No projects found."), ui.messages);
         assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectFilter_displaysOnlyMatchingStatus() {
+        projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
+        projectManager.addProject("C002", "Logo design", LocalDate.of(2026, 12, 15));
+        projectManager.changeProjectStatus("P001", ProjectStatus.PAUSED);
+
+        assertFalse(handler.execute("project.filter paused"));
+
+        assertEquals(List.of("1. P001|Website redesign|PAUSED|Due 2026-11-30"), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectFilter_acceptsStatusCapitalisation() {
+        projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
+
+        assertFalse(handler.execute("project.filter AcTiVe"));
+
+        assertEquals(List.of("1. P001|Website redesign|ACTIVE|Due 2026-11-30"), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectFilter_invalidArguments() {
+        projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
+
+        assertFalse(handler.execute("project.filter"));
+        assertFalse(handler.execute("project.filter archived"));
+        assertFalse(handler.execute("project.filter active paused"));
+
+        assertEquals(List.of("Use project.filter STATUS.", "Invalid Project Status.",
+                "Use project.filter STATUS."), ui.errors);
+        assertEquals(List.of(PROJECT_FILTER_FORMAT, PROJECT_FILTER_FORMAT, PROJECT_FILTER_FORMAT), ui.messages);
+    }
+
+    @Test
+    public void execute_projectFilter_noMatches() {
+        projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
+
+        assertFalse(handler.execute("project.filter completed"));
+
+        assertEquals(List.of("No projects found."), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectDeadlines_sortsProjectsByDeadline() {
+        projectManager.addProject("C001", "Latest", LocalDate.of(2026, 12, 15));
+        projectManager.addProject("C002", "Earliest", LocalDate.of(2026, 10, 15));
+
+        assertFalse(handler.execute("project.deadlines"));
+
+        assertEquals(List.of("1. P002|Earliest|ACTIVE|Due 2026-10-15",
+                "2. P001|Latest|ACTIVE|Due 2026-12-15"), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectDeadlines_invalidArguments() {
+        assertFalse(handler.execute("project.deadlines extra"));
+
+        assertEquals(List.of("Use project.deadlines."), ui.errors);
+        assertEquals(List.of(PROJECT_DEADLINES_FORMAT), ui.messages);
+    }
+
+    @Test
+    public void execute_projectOverdue_displaysOnlyOverdueActiveProjects() {
+        LocalDate today = LocalDate.now();
+        projectManager.addProject("C001", "Overdue", today.minusDays(1));
+        projectManager.addProject("C002", "Due today", today);
+        projectManager.addProject("C003", "Paused overdue", today.minusDays(2));
+        projectManager.changeProjectStatus("P003", ProjectStatus.PAUSED);
+
+        assertFalse(handler.execute("project.overdue"));
+
+        assertEquals(List.of("1. P001|Overdue|ACTIVE|Due " + today.minusDays(1)), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectOverdue_noMatches() {
+        assertFalse(handler.execute("project.overdue"));
+
+        assertEquals(List.of("No overdue projects found."), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectOverdue_invalidArguments() {
+        assertFalse(handler.execute("project.overdue P001"));
+
+        assertEquals(List.of("Use project.overdue."), ui.errors);
+        assertEquals(List.of(PROJECT_OVERDUE_FORMAT), ui.messages);
     }
 
     @Test

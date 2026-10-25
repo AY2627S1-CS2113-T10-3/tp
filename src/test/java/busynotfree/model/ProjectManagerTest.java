@@ -125,6 +125,43 @@ class ProjectManagerTest {
     }
 
     @Test
+    public void getProjectsByStatus_returnsMatchingProjectsInCreationOrder() {
+        Project first = manager.addProject("C001", "Website", date);
+        Project second = manager.addProject("C001", "App", date);
+        Project third = manager.addProject("C001", "Logo", date);
+        manager.changeProjectStatus(first.getProjectId(), ProjectStatus.PAUSED);
+        manager.changeProjectStatus(third.getProjectId(), ProjectStatus.PAUSED);
+
+        assertEquals(List.of(first, third), manager.getProjectsByStatus(ProjectStatus.PAUSED));
+        assertEquals(List.of(second), manager.getProjectsByStatus(ProjectStatus.ACTIVE));
+        assertThrows(ProjectException.class, () -> manager.getProjectsByStatus(null));
+    }
+
+    @Test
+    public void getProjectsByDeadline_sortsEarliestFirstAndKeepsTiesInCreationOrder() {
+        Project latest = manager.addProject("C001", "Latest", LocalDate.of(2026, 12, 15));
+        Project earliest = manager.addProject("C001", "Earliest", LocalDate.of(2026, 10, 15));
+        Project tied = manager.addProject("C001", "Tied", LocalDate.of(2026, 10, 15));
+
+        assertEquals(List.of(earliest, tied, latest), manager.getProjectsByDeadline());
+    }
+
+    @Test
+    public void getOverdueActiveProjects_returnsOnlyActiveProjectsBeforeToday() {
+        LocalDate today = LocalDate.of(2026, 10, 25);
+        Project overdue = manager.addProject("C001", "Overdue", today.minusDays(1));
+        Project dueToday = manager.addProject("C001", "Due today", today);
+        Project upcoming = manager.addProject("C001", "Upcoming", today.plusDays(1));
+        Project pausedOverdue = manager.addProject("C001", "Paused overdue", today.minusDays(2));
+        manager.changeProjectStatus(pausedOverdue.getProjectId(), ProjectStatus.PAUSED);
+
+        assertEquals(List.of(overdue), manager.getOverdueActiveProjects(today));
+        assertThrows(ProjectException.class, () -> manager.getOverdueActiveProjects(null));
+        assertEquals(ProjectStatus.ACTIVE, dueToday.getStatus());
+        assertEquals(ProjectStatus.ACTIVE, upcoming.getStatus());
+    }
+
+    @Test
     public void addProject_after999Ids_doesNotWrapOrReuseId() {
         for (int number = 1; number <= 999; number++) {
             manager.addProject("C001", "Project " + number, date);
