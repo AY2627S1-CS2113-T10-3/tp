@@ -287,6 +287,28 @@ class BusyNotFreeTest {
         assertTrue(ui.errors.isEmpty());
     }
 
+    @Test
+    public void run_deleteNoteEndOfInput_cancelsBeforeSaving() {
+        ClientManager clients = new ClientManager();
+        clients.addClient("Acme");
+        clients.addNote("C001", "Keep this note");
+        ProjectManager projects = new ProjectManager(clients);
+        CommandHandler handler = new CommandHandler(new CommandParser(), ui, projects, clients);
+        List<List<String>> notesAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui, handler,
+                () -> notesAtSave.add(clients.getClient("C001").getNotes()));
+
+        try (Scanner scanner = new Scanner("client.delete_note C001 index/1\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(List.of("Keep this note")), notesAtSave);
+        assertTrue(!handler.isAwaitingDeletionConfirmation());
+        assertEquals("Note deletion cancelled.", ui.messages.get(ui.messages.size() - 2));
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
     /** Supplies simulated input while closing only the test's scanner. */
     private void runWithInput(String input) {
         try (Scanner scanner = new Scanner(input)) {

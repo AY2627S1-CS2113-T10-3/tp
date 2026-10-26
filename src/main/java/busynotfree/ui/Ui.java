@@ -18,7 +18,7 @@ public class Ui {
         showSeparator();
         showMessage("Welcome to BusyNotFree!");
         showMessage("Commands: client.add, client.note, client.view, client.list, client.find, client.edit, "
-                + "client.delete, "
+                + "client.delete, client.delete_note, "
                 + "project.add, project.status, project.list, project.filter, project.deadlines, "
                 + "project.overdue, project.view, project.delete, "
                 + "task.add, task.mark, task.unmark, task.edit, event.add, event.edit, help, save, exit");
@@ -34,6 +34,7 @@ public class Ui {
         showMessage("client.find    |   Find clients by name");
         showMessage("client.edit    |   Edit a client's name");
         showMessage("client.delete  |   Delete a client and its notes");
+        showMessage("client.delete_note |   Delete a client note");
         showMessage("project.add    |   Add a project");
         showMessage("project.delete |   Delete a project");
         showMessage("project.status |   Update a project status");

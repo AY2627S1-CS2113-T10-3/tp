@@ -41,6 +41,13 @@ public class CommandHandler {
     /** Client awaiting confirmation; null when no client deletion is pending. */
     private Client pendingClientDeletion;
 
+    /** Note awaiting confirmation; null when no note deletion is pending. */
+    private PendingNoteDeletion pendingNoteDeletion;
+
+    /** Stores the selected note's client ID, position and preview text. */
+    private record PendingNoteDeletion(String clientId, int noteIndex, String text) {
+    }
+
     /**
      * Creates a handler with the supplied parser and user interface.
      * Uses an independent client manager; use the overload for shared client lookup.
@@ -136,6 +143,10 @@ public class CommandHandler {
 
     /** Delegates client operations and routes project, task and event commands. */
     private void routeCommand(ParsedCommand command) {
+        if (command.getEntityType().equals("client") && command.getAction().equals("delete_note")) {
+            handleClientDeleteNote(command.getArgumentText());
+            return;
+        }
         if (command.getEntityType().equals("client") && command.getAction().equals("delete")) {
             handleClientDelete(command.getArgumentText());
             return;
@@ -326,14 +337,18 @@ public class CommandHandler {
     /**
      * Reports whether the next input must answer a deletion confirmation.
      *
-     * @return True while a project or client is awaiting confirmation.
+     * @return True while a project, client or note is awaiting confirmation.
      */
     public boolean isAwaitingDeletionConfirmation() {
-        return pendingDeletion != null || pendingClientDeletion != null;
+        return pendingDeletion != null || pendingClientDeletion != null || pendingNoteDeletion != null;
     }
 
     /** Deletes only after yes; keeps the confirmation pending for other invalid input. */
     private void handleDeletionConfirmation(String input) {
+        if (pendingNoteDeletion != null) {
+            handleNoteDeletionConfirmation(input);
+            return;
+        }
         if (pendingClientDeletion != null) {
             handleClientDeletionConfirmation(input);
             return;
@@ -357,6 +372,10 @@ public class CommandHandler {
 
     /** Cancels any pending deletion, including when the input stream ends. */
     public void cancelPendingDeletion() {
+        if (pendingNoteDeletion != null) {
+            pendingNoteDeletion = null;
+            ui.showMessage("Note deletion cancelled.");
+        }
         if (pendingClientDeletion != null) {
             pendingClientDeletion = null;
             ui.showMessage("Client deletion cancelled.");
@@ -396,6 +415,65 @@ public class CommandHandler {
         default:
             ui.showError("Please type yes to confirm deletion or no to cancel.");
             ui.showClientDeleteConfirmation(pendingClientDeletion);
+            break;
+        }
+    }
+
+    /** Parses and validates the client and note before requesting confirmation. */
+    private void handleClientDeleteNote(String arguments) {
+        String[] parts = arguments.trim().split("\\s+", 2);
+        if (parts[0].isBlank() || parts[0].contains("/")) {
+            throw new CommandException("A client ID is required before index/.");
+        }
+        Client client = clientManager.getClient(parts[0]);
+        String indexArguments = parts.length > 1 ? parts[1] : "";
+        Map<String, String> values = argumentParser.parse(indexArguments, "index");
+        int noteIndex = parseNoteIndex(values.get("index"));
+        String note = client.getNote(noteIndex);
+        pendingNoteDeletion = new PendingNoteDeletion(client.getClientId(), noteIndex, note);
+        showNoteDeleteConfirmation();
+    }
+
+    /** Accepts positive whole numbers that fit within Java's integer range. */
+    private int parseNoteIndex(String value) {
+        if (!value.matches("[0-9]+")) {
+            throw new CommandException("Note index must be a positive whole number.");
+        }
+        try {
+            int index = Integer.parseInt(value);
+            if (index < 1) {
+                throw new CommandException("Note index must be a positive whole number.");
+            }
+            return index;
+        } catch (NumberFormatException exception) {
+            throw new CommandException("Note index is too large.", exception);
+        }
+    }
+
+    /** Displays the exact note selected for deletion. */
+    private void showNoteDeleteConfirmation() {
+        ui.showMessage("Delete note " + pendingNoteDeletion.noteIndex()
+                + " from client " + pendingNoteDeletion.clientId()
+                + ": \"" + pendingNoteDeletion.text() + "\"?");
+        ui.showMessage("Type yes to confirm deletion or no to cancel.");
+    }
+
+    /** Removes the selected note only after explicit confirmation. */
+    private void handleNoteDeletionConfirmation(String input) {
+        switch (input.trim()) {
+        case "yes":
+            PendingNoteDeletion selection = pendingNoteDeletion;
+            pendingNoteDeletion = null;
+            clientManager.deleteNote(selection.clientId(), selection.noteIndex());
+            ui.showMessage("Deleted note " + selection.noteIndex()
+                    + " from client " + selection.clientId() + ".");
+            break;
+        case "no":
+            cancelPendingDeletion();
+            break;
+        default:
+            ui.showError("Please type yes to confirm deletion or no to cancel.");
+            showNoteDeleteConfirmation();
             break;
         }
     }

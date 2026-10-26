@@ -1,6 +1,6 @@
 ------------------------------------------------------------
 Welcome to BusyNotFree!
-Commands: client.add, client.note, client.view, client.list, client.find, client.edit, project.add, project.status, project.list, project.filter, project.deadlines, project.overdue, project.view, project.delete, task.add, task.mark, task.unmark, task.edit, event.add, event.edit, help, save, exit
+Commands: client.add, client.note, client.view, client.list, client.find, client.edit, client.delete, client.delete_note, project.add, project.status, project.list, project.filter, project.deadlines, project.overdue, project.view, project.delete, task.add, task.mark, task.unmark, task.edit, event.add, event.edit, help, save, exit
 ------------------------------------------------------------
 Enter a command:
 ------------------------------------------------------------
@@ -13,7 +13,7 @@ Note added to client C001.
 Enter a command:
 ------------------------------------------------------------
 C001 | Acme Studio
-Notes: Prefers weekly updates
+Note 1: Prefers weekly updates
 ------------------------------------------------------------
 Enter a command:
 ------------------------------------------------------------

@@ -58,7 +58,7 @@ Displays one client's name and notes. If the client has no notes, the app shows 
 ```text
 client.view C001
 C001 | Acme Studio
-Notes: Prefers weekly updates
+Note 1: Prefers weekly updates
 ```
 
 ### List clients: `client.list`
@@ -100,6 +100,20 @@ The client must have no associated projects, including completed or cancelled
 projects. Delete those projects first. Missing, unknown or multiple IDs are
 rejected; IDs are case-sensitive. Changes are saved on `save` or `exit`, and
 deleted client IDs are never reused.
+
+### Delete a client note: `client.delete_note`
+
+Format: `client.delete_note CLIENT_ID index/NOTE_INDEX`
+
+Use `client.view CLIENT_ID` to see numbered notes. Indexes start at 1.
+For example, `client.delete_note C001 index/2` requests deletion of the second note.
+The prompt shows the selected note. Type `yes` to delete it or `no` to cancel.
+Other input repeats the prompt; reaching the end of input cancels deletion.
+
+Missing or invalid client IDs and missing, nonpositive, nonnumeric or out-of-range
+indexes are rejected. Remaining notes are renumbered after deletion. The client
+and its projects remain available; having projects does not block note deletion.
+Changes are saved on `save` or `exit`.
 
 ## Projects
 
@@ -335,6 +349,7 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | Find clients | `client.find NAME` |
 | Edit client name | `client.edit CLIENT_ID name/NEW_NAME` |
 | Delete client | `client.delete CLIENT_ID` |
+| Delete client note | `client.delete_note CLIENT_ID index/NOTE_INDEX` |
 | Add project | `project.add client/CLIENT_ID name/PROJECT_NAME due/YYYY-MM-DD` |
 | List projects | `project.list` |
 | Filter projects by status | `project.filter STATUS` |

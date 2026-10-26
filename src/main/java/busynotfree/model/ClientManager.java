@@ -68,6 +68,18 @@ public final class ClientManager implements ClientLookup {
         return client;
     }
 
+    /**
+     * Deletes a note belonging to an existing client.
+     *
+     * @param clientId Owning client's ID.
+     * @param noteIndex One-based note position.
+     * @return Deleted note text.
+     * @throws ClientException If the client or note does not exist.
+     */
+    public String deleteNote(String clientId, int noteIndex) {
+        return getClient(clientId).deleteNote(noteIndex);
+    }
+
     /** Renames an existing client without replacing its ID, notes or project links. */
     public Client editClient(String clientId, String name) {
         Client client = getClient(clientId);

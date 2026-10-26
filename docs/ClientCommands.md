@@ -45,7 +45,7 @@ it was added. A client without notes displays `Notes: No notes found.`
 ```text
 client.view C001
 C001 | Acme Studio
-Notes: Prefers weekly updates
+Note 1: Prefers weekly updates
 ```
 
 ## List clients
@@ -96,6 +96,18 @@ Missing, unknown or multiple IDs are rejected. IDs are case-sensitive.
 Deletion is blocked if the client has any projects, regardless of project status.
 Delete those projects first. Changes are saved on `save` or `exit`, and deleted IDs
 are never reused.
+
+## Delete a client note
+
+Format: `client.delete_note CLIENT_ID index/NOTE_INDEX`
+
+Use `client.view CLIENT_ID` to see numbered notes. Indexes start at 1.
+The confirmation prompt shows the selected note; type `yes` to delete it or `no`
+to cancel. Other input repeats the prompt. Reaching the end of input cancels deletion.
+Missing or invalid client IDs and missing, nonpositive, nonnumeric or out-of-range
+indexes are rejected. Remaining notes are renumbered after deletion.
+The client and its projects remain available; clients with projects can have notes deleted.
+Changes are saved on `save` or `exit`.
 
 ## Integration and testing
 

@@ -108,6 +108,27 @@ class DataStorageTest {
     }
 
     @Test
+    public void saveAndLoad_deletedNote_preservesRemainingNotesAndProjectLinks() throws IOException {
+        DataStorage storage = new DataStorage(directory.resolve("deleted-note.properties"));
+        ClientManager clients = new ClientManager();
+        clients.addClient("Acme");
+        clients.addNote("C001", "First");
+        clients.addNote("C001", "Remove");
+        clients.addNote("C001", "Last");
+        ProjectManager projects = new ProjectManager(clients);
+        projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        storage.save(clients, projects);
+
+        clients.deleteNote("C001", 2);
+        storage.save(clients, projects);
+        DataStorage.LoadedData loaded = storage.load();
+
+        assertEquals(List.of("First", "Last"), loaded.clientManager().getClient("C001").getNotes());
+        assertEquals("C001", loaded.projectManager().getProject("P001").getClientId());
+        assertEquals("Website", loaded.projectManager().getProject("P001").getName());
+    }
+
+    @Test
     public void saveAndLoad_deletedClient_staysDeletedWithoutReusingId() throws IOException {
         DataStorage storage = new DataStorage(directory.resolve("deleted-client.properties"));
         ClientManager clients = new ClientManager();
