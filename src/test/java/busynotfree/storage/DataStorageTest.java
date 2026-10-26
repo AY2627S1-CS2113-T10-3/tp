@@ -108,6 +108,28 @@ class DataStorageTest {
     }
 
     @Test
+    public void saveAndLoad_deletedClient_staysDeletedWithoutReusingId() throws IOException {
+        DataStorage storage = new DataStorage(directory.resolve("deleted-client.properties"));
+        ClientManager clients = new ClientManager();
+        ProjectManager projects = new ProjectManager(clients);
+        clients.addClient("Keep");
+        clients.addNote("C001", "Keep this note");
+        clients.addClient("Delete");
+        clients.addNote("C002", "Remove this note");
+        storage.save(clients, projects);
+
+        clients.deleteClient("C002", projects);
+        storage.save(clients, projects);
+        DataStorage.LoadedData loaded = storage.load();
+
+        assertFalse(loaded.clientManager().exists("C002"));
+        assertEquals(List.of("C001"), loaded.clientManager().getClients().stream()
+                .map(client -> client.getClientId()).toList());
+        assertEquals(List.of("Keep this note"), loaded.clientManager().getClient("C001").getNotes());
+        assertEquals("C003", loaded.clientManager().addClient("Next").getClientId());
+    }
+
+    @Test
     public void load_legacyTaskWithoutCompletionState_defaultsToIncomplete() throws IOException {
         Path file = directory.resolve("legacy.properties");
         DataStorage storage = new DataStorage(file);

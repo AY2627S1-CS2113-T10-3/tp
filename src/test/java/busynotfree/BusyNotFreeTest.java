@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import busynotfree.command.CommandHandler;
 import busynotfree.command.CommandParser;
+import busynotfree.model.ClientManager;
 import busynotfree.model.PlaceholderClientLookup;
 import busynotfree.model.ProjectManager;
 import busynotfree.ui.Ui;
@@ -256,6 +257,32 @@ class BusyNotFreeTest {
         assertEquals(List.of(1), activityCountsAtSave);
         assertTrue(!handler.isAwaitingDeletionConfirmation());
         assertEquals("Project deletion cancelled.", ui.messages.get(ui.messages.size() - 2));
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void run_clientDeleteEndOfInput_cancelsBeforeSaving() {
+        ClientManager clients = new ClientManager();
+        clients.addClient("Acme");
+        clients.addNote("C001", "Keep this note");
+        ProjectManager projects = new ProjectManager(clients);
+        CommandHandler handler = new CommandHandler(new CommandParser(), ui, projects, clients);
+        List<Boolean> clientsPresentAtSave = new ArrayList<>();
+        List<List<String>> notesAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui, handler, () -> {
+            clientsPresentAtSave.add(clients.exists("C001"));
+            notesAtSave.add(clients.getClient("C001").getNotes());
+        });
+
+        try (Scanner scanner = new Scanner("client.delete C001\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(true), clientsPresentAtSave);
+        assertEquals(List.of(List.of("Keep this note")), notesAtSave);
+        assertTrue(!handler.isAwaitingDeletionConfirmation());
+        assertEquals("Client deletion cancelled.", ui.messages.get(ui.messages.size() - 2));
         assertEquals("Data saved. Goodbye!", ui.messages.getLast());
         assertTrue(ui.errors.isEmpty());
     }

@@ -66,4 +66,9 @@ public final class Client {
     public List<String> getNotes() {
         return List.copyOf(notes);
     }
+
+    /** Removes every note when the owning client is deleted. */
+    void clearNotes() {
+        notes.clear();
+    }
 }

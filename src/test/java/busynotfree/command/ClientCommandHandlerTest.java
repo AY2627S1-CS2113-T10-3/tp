@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,7 +16,9 @@ import org.junit.jupiter.api.TestFactory;
 
 import busynotfree.model.Client;
 import busynotfree.model.ClientManager;
+import busynotfree.model.Project;
 import busynotfree.model.ProjectManager;
+import busynotfree.model.ProjectStatus;
 import busynotfree.ui.Ui;
 
 /**
@@ -217,9 +220,9 @@ class ClientCommandHandlerTest {
 
     @Test
     public void execute_unsupportedClientAction_reportsErrorWithoutMutation() {
-        assertFalse(handler.execute("client.delete C001"));
+        assertFalse(handler.execute("client.unknown C001"));
 
-        assertEquals(List.of("Unsupported action: delete."), ui.errors);
+        assertEquals(List.of("Unsupported action: unknown."), ui.errors);
         assertTrue(ui.messages.isEmpty());
         assertTrue(manager.getClients().isEmpty());
     }
@@ -239,6 +242,146 @@ class ClientCommandHandlerTest {
         assertTrue(ui.messages.contains("Created project P001 \"Website\" for client C001 \"Acme Studio\"."));
         assertTrue(ui.messages.contains("Added task T001 \"Wireframe\" to project P001 \"Website\"."));
         assertTrue(ui.messages.contains("Added event E001 \"Meeting\" to project P001 \"Website\"."));
+    }
+
+    /** Invalid deletion arguments must leave clients and notes unchanged. */
+    @TestFactory
+    public List<DynamicTest> execute_invalidDeleteArguments_preservesClient() {
+        List<String> inputs = List.of("client.delete", "client.delete   ", "client.delete invalid",
+                "client.delete C999", "client.delete c001", "client.delete C001 C002");
+        List<String> errors = List.of("A client ID must not be blank.", "A client ID must not be blank.",
+                "Client invalid does not exist.", "Client C999 does not exist.",
+                "Client c001 does not exist.", "Provide exactly one client ID.");
+        List<DynamicTest> tests = new ArrayList<>();
+        for (int i = 0; i < inputs.size(); i++) {
+            String input = inputs.get(i);
+            String expectedError = errors.get(i);
+            tests.add(dynamicTest(input, () -> {
+                ClientCommandHandlerTest fixture = new ClientCommandHandlerTest();
+                Client client = fixture.manager.addClient("Acme");
+                fixture.manager.addNote("C001", "Keep this note");
+
+                assertFalse(fixture.handler.execute(input));
+
+                assertEquals(List.of(expectedError), fixture.ui.errors);
+                assertEquals(List.of("Format: client.delete CLIENT_ID"), fixture.ui.messages);
+                assertFalse(fixture.handler.isAwaitingDeletionConfirmation());
+                assertEquals(List.of(client), fixture.manager.getClients());
+                assertEquals(List.of("Keep this note"), client.getNotes());
+            }));
+        }
+        return tests;
+    }
+
+    @Test
+    public void execute_deleteConfirmed_removesClientAndNotesOnlyAfterYes() {
+        Client client = manager.addClient("Acme");
+        manager.addNote("C001", "First note");
+        manager.addNote("C001", "Second note");
+        Client otherClient = manager.addClient("Other");
+        manager.addNote("C002", "Keep this note");
+
+        handler.execute("client.delete C001");
+
+        assertTrue(handler.isAwaitingDeletionConfirmation());
+        assertTrue(manager.exists("C001"));
+        assertEquals(List.of("First note", "Second note"), client.getNotes());
+        assertEquals(List.of("Delete client C001 \"Acme\" and 2 associated notes?",
+                "Type yes to confirm deletion or no to cancel."), ui.messages);
+
+        handler.execute("yes");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertFalse(manager.exists("C001"));
+        assertTrue(client.getNotes().isEmpty());
+        assertEquals(List.of(otherClient), manager.getClients());
+        assertEquals(List.of("Keep this note"), otherClient.getNotes());
+        assertEquals("Deleted client C001: Acme and all associated notes.", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_deleteCancelled_preservesClientAndNotes() {
+        Client client = manager.addClient("Acme");
+        manager.addNote("C001", "Keep this note");
+
+        handler.execute("client.delete C001");
+        handler.execute("no");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of(client), manager.getClients());
+        assertEquals(List.of("Keep this note"), client.getNotes());
+        assertEquals("Client deletion cancelled.", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+
+        // Cancellation must return the handler to normal command processing.
+        handler.execute("client.view C001");
+        assertEquals("Notes: Keep this note", ui.messages.getLast());
+    }
+
+    @Test
+    public void execute_invalidDeleteAnswers_keepsConfirmationPending() {
+        Client client = manager.addClient("Acme");
+        manager.addNote("C001", "Keep this note");
+        handler.execute("client.delete C001");
+
+        for (String answer : List.of("", "YES", "yes please", "exit", "help", "client.delete C001")) {
+            assertFalse(handler.execute(answer));
+            assertTrue(handler.isAwaitingDeletionConfirmation());
+            assertEquals(List.of(client), manager.getClients());
+            assertEquals(List.of("Keep this note"), client.getNotes());
+            assertEquals("Please type yes to confirm deletion or no to cancel.", ui.errors.getLast());
+            assertEquals("Type yes to confirm deletion or no to cancel.", ui.messages.getLast());
+        }
+
+        handler.execute("no");
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+    }
+
+    /** Every project status blocks deletion, including completed and cancelled. */
+    @TestFactory
+    public List<DynamicTest> execute_deleteClientWithProject_rejectsEveryStatus() {
+        List<DynamicTest> tests = new ArrayList<>();
+        for (ProjectStatus status : ProjectStatus.values()) {
+            tests.add(dynamicTest(status.name(), () -> {
+                ClientCommandHandlerTest fixture = new ClientCommandHandlerTest();
+                Client client = fixture.manager.addClient("Acme");
+                fixture.manager.addNote("C001", "Keep this note");
+                Project project = fixture.projectManager.addProject(
+                        "C001", "Website", LocalDate.of(2026, 11, 30));
+                fixture.projectManager.changeProjectStatus(project.getProjectId(), status);
+
+                fixture.handler.execute("client.delete C001");
+
+                assertFalse(fixture.handler.isAwaitingDeletionConfirmation());
+                assertEquals(List.of("Client C001 has associated projects. Delete those projects first."),
+                        fixture.ui.errors);
+                assertTrue(fixture.ui.messages.isEmpty());
+                assertEquals(List.of(client), fixture.manager.getClients());
+                assertEquals(List.of("Keep this note"), client.getNotes());
+                assertEquals(List.of(project), fixture.projectManager.getProjects());
+                assertEquals(status, project.getStatus());
+            }));
+        }
+        return tests;
+    }
+
+    @Test
+    public void execute_deleteConfirmation_rechecksProjectLinksBeforeDeleting() {
+        Client client = manager.addClient("Acme");
+        manager.addNote("C001", "Keep this note");
+        handler.execute("client.delete C001");
+
+        // Simulates another caller changing the model while confirmation is pending.
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        handler.execute("yes");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of(client), manager.getClients());
+        assertEquals(List.of("Keep this note"), client.getNotes());
+        assertEquals(List.of(project), projectManager.getProjects());
+        assertEquals(List.of("Client C001 has associated projects. Delete those projects first."), ui.errors);
+        assertFalse(ui.messages.contains("Deleted client C001: Acme and all associated notes."));
     }
 
     /** Captures output through the shared UI, including delegated client responses. */

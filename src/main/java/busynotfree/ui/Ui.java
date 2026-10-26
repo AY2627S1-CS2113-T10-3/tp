@@ -18,6 +18,7 @@ public class Ui {
         showSeparator();
         showMessage("Welcome to BusyNotFree!");
         showMessage("Commands: client.add, client.note, client.view, client.list, client.find, client.edit, "
+                + "client.delete, "
                 + "project.add, project.status, project.list, project.filter, project.deadlines, "
                 + "project.overdue, project.view, project.delete, "
                 + "task.add, task.mark, task.unmark, task.edit, event.add, event.edit, help, save, exit");
@@ -32,6 +33,7 @@ public class Ui {
         showMessage("client.view    |   View a client");
         showMessage("client.find    |   Find clients by name");
         showMessage("client.edit    |   Edit a client's name");
+        showMessage("client.delete  |   Delete a client and its notes");
         showMessage("project.add    |   Add a project");
         showMessage("project.delete |   Delete a project");
         showMessage("project.status |   Update a project status");
@@ -187,6 +189,14 @@ public class Ui {
         int count = project.getItemCount();
         showMessage("Delete project " + describeProject(project) + " and "
                 + count + " associated " + (count == 1 ? "activity" : "activities") + "?");
+        showMessage("Type yes to confirm deletion or no to cancel.");
+    }
+
+    /** Identifies the client and note count before requesting deletion confirmation. */
+    public void showClientDeleteConfirmation(Client client) {
+        int count = client.getNotes().size();
+        showMessage("Delete client " + client.getClientId() + " \"" + client.getName()
+                + "\" and " + count + " associated " + (count == 1 ? "note" : "notes") + "?");
         showMessage("Type yes to confirm deletion or no to cancel.");
     }
 

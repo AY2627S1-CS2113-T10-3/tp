@@ -85,6 +85,18 @@ The ID, notes and project links are preserved, and the updated
 name is saved on `save` or `exit`. The new name must not be blank; missing or unknown IDs
 are rejected. Name arguments follow the prefix rules described above.
 
+## Delete a client
+
+Format: `client.delete CLIENT_ID`
+
+Deletes the client and all its notes after you type `yes` at the confirmation prompt.
+The prompt shows the client's ID, name and note count. Type `no` to cancel.
+Other input repeats the prompt; reaching the end of input cancels deletion.
+Missing, unknown or multiple IDs are rejected. IDs are case-sensitive.
+Deletion is blocked if the client has any projects, regardless of project status.
+Delete those projects first. Changes are saved on `save` or `exit`, and deleted IDs
+are never reused.
+
 ## Integration and testing
 
 `ClientManager` implements `ClientLookup`. Application startup supplies the same

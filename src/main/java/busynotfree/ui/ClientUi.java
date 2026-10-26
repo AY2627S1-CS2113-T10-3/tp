@@ -81,6 +81,9 @@ public final class ClientUi {
         case "edit":
             ui.showMessage("Format: client.edit CLIENT_ID name/NEW_NAME");
             break;
+        case "delete":
+            ui.showMessage("Format: client.delete CLIENT_ID");
+            break;
         default:
             break;
         }

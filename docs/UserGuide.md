@@ -88,6 +88,19 @@ example, `client.edit C001 name/Acme Design` displays
 The new name is saved when you enter `save` or `exit`.
 Missing or unknown client IDs and blank names are rejected.
 
+### Delete a client: `client.delete`
+
+Format: `client.delete CLIENT_ID`
+
+Deletes a client and all its notes. The confirmation prompt shows the client's ID,
+name and note count. Type `yes` to delete or `no` to cancel. Other input repeats
+the prompt; reaching the end of input cancels deletion.
+
+The client must have no associated projects, including completed or cancelled
+projects. Delete those projects first. Missing, unknown or multiple IDs are
+rejected; IDs are case-sensitive. Changes are saved on `save` or `exit`, and
+deleted client IDs are never reused.
+
 ## Projects
 
 ### Add a project: `project.add`
@@ -321,6 +334,7 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | List clients | `client.list` |
 | Find clients | `client.find NAME` |
 | Edit client name | `client.edit CLIENT_ID name/NEW_NAME` |
+| Delete client | `client.delete CLIENT_ID` |
 | Add project | `project.add client/CLIENT_ID name/PROJECT_NAME due/YYYY-MM-DD` |
 | List projects | `project.list` |
 | Filter projects by status | `project.filter STATUS` |

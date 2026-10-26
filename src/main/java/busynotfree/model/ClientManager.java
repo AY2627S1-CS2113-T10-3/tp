@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import busynotfree.exception.ClientException;
+import busynotfree.exception.ClientHasProjectsException;
 
 /**
  * Keeps clients in memory and supplies the client lookup used by project creation.
@@ -71,6 +72,42 @@ public final class ClientManager implements ClientLookup {
     public Client editClient(String clientId, String name) {
         Client client = getClient(clientId);
         client.setName(name);
+        return client;
+    }
+
+    /**
+     * Finds a client eligible for deletion, rejecting projects of every status.
+     *
+     * @param clientId ID of the client to check.
+     * @param projectManager Manager containing all current projects.
+     * @return Client with no associated projects.
+     * @throws ClientException If the client ID is blank or the client is missing.
+     * @throws ClientHasProjectsException If the client has any projects.
+     */
+    public Client getDeletableClient(String clientId, ProjectManager projectManager) {
+        Client client = getClient(clientId);
+        boolean hasProjects = projectManager.getProjects().stream()
+                .anyMatch(project -> project.getClientId().equals(client.getClientId()));
+        if (hasProjects) {
+            throw new ClientHasProjectsException(client.getClientId());
+        }
+        return client;
+    }
+
+    /**
+     * Deletes a client and its notes, preserving the next client ID.
+     * Rechecks project links immediately before changing any data.
+     *
+     * @param clientId ID of the client to delete.
+     * @param projectManager Manager containing all current projects.
+     * @return Deleted client, with its notes cleared.
+     * @throws ClientException If the client ID is blank or the client is missing.
+     * @throws ClientHasProjectsException If the client has any projects.
+     */
+    public Client deleteClient(String clientId, ProjectManager projectManager) {
+        Client client = getDeletableClient(clientId, projectManager);
+        client.clearNotes();
+        clients.remove(client.getClientId());
         return client;
     }
 

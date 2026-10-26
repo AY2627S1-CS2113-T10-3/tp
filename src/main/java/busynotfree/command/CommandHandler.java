@@ -8,6 +8,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import busynotfree.exception.BusyNotFreeException;
+import busynotfree.exception.ClientHasProjectsException;
 import busynotfree.exception.CommandException;
 import busynotfree.exception.ProjectException;
 import busynotfree.model.Client;
@@ -36,6 +37,9 @@ public class CommandHandler {
 
     /** Project awaiting confirmation; null when no deletion is pending. */
     private Project pendingDeletion;
+
+    /** Client awaiting confirmation; null when no client deletion is pending. */
+    private Client pendingClientDeletion;
 
     /**
      * Creates a handler with the supplied parser and user interface.
@@ -89,6 +93,8 @@ public class CommandHandler {
                 command = commandParser.parse(userInput);
                 routeCommand(command);
             }
+        } catch (ClientHasProjectsException exception) {
+            ui.showError(exception.getMessage());
         } catch (BusyNotFreeException exception) {
             ui.showError(exception.getMessage());
             if (command != null) {
@@ -130,6 +136,10 @@ public class CommandHandler {
 
     /** Delegates client operations and routes project, task and event commands. */
     private void routeCommand(ParsedCommand command) {
+        if (command.getEntityType().equals("client") && command.getAction().equals("delete")) {
+            handleClientDelete(command.getArgumentText());
+            return;
+        }
         if (command.getEntityType().equals("client")) {
             clientCommandHandler.execute(command);
             return;
@@ -316,14 +326,18 @@ public class CommandHandler {
     /**
      * Reports whether the next input must answer a deletion confirmation.
      *
-     * @return True while a project is awaiting confirmation.
+     * @return True while a project or client is awaiting confirmation.
      */
     public boolean isAwaitingDeletionConfirmation() {
-        return pendingDeletion != null;
+        return pendingDeletion != null || pendingClientDeletion != null;
     }
 
     /** Deletes only after yes; keeps the confirmation pending for other invalid input. */
     private void handleDeletionConfirmation(String input) {
+        if (pendingClientDeletion != null) {
+            handleClientDeletionConfirmation(input);
+            return;
+        }
         switch (input.trim()) {
         case "yes":
             Project project = pendingDeletion;
@@ -343,9 +357,46 @@ public class CommandHandler {
 
     /** Cancels any pending deletion, including when the input stream ends. */
     public void cancelPendingDeletion() {
+        if (pendingClientDeletion != null) {
+            pendingClientDeletion = null;
+            ui.showMessage("Client deletion cancelled.");
+        }
         if (pendingDeletion != null) {
             pendingDeletion = null;
             ui.showMessage("Project deletion cancelled.");
+        }
+    }
+
+    /** Validates the client and project links before requesting confirmation. */
+    private void handleClientDelete(String arguments) {
+        if (arguments.isBlank()) {
+            throw new CommandException("A client ID must not be blank.");
+        }
+        String[] parts = arguments.trim().split("\\s+");
+        if (parts.length != 1) {
+            throw new CommandException("Provide exactly one client ID.");
+        }
+        pendingClientDeletion = clientManager.getDeletableClient(parts[0], projectManager);
+        ui.showClientDeleteConfirmation(pendingClientDeletion);
+    }
+
+    /** Handles a pending client deletion without treating the answer as a command. */
+    private void handleClientDeletionConfirmation(String input) {
+        switch (input.trim()) {
+        case "yes":
+            Client client = pendingClientDeletion;
+            pendingClientDeletion = null;
+            clientManager.deleteClient(client.getClientId(), projectManager);
+            ui.showMessage("Deleted client " + client.getClientId()
+                    + ": " + client.getName() + " and all associated notes.");
+            break;
+        case "no":
+            cancelPendingDeletion();
+            break;
+        default:
+            ui.showError("Please type yes to confirm deletion or no to cancel.");
+            ui.showClientDeleteConfirmation(pendingClientDeletion);
+            break;
         }
     }
 
