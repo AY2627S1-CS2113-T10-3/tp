@@ -126,6 +126,19 @@ public final class Project {
     }
 
     /**
+     * Removes an event owned by this project.
+     * Package-private so deletion goes through the project manager.
+     *
+     * @param event Registered event to remove.
+     * @throws EventException If the event is missing or belongs elsewhere.
+     */
+    void removeEvent(Event event) {
+        if (event == null || event.getProject() != this || !events.remove(event)) {
+            throw new EventException("Event does not belong to this project.");
+        }
+    }
+
+    /**
      * Changes the project's status without changing its scheduled items.
      *
      * @param status New project status.

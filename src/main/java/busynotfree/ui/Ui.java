@@ -21,7 +21,8 @@ public class Ui {
                 + "client.delete, client.delete_note, "
                 + "project.add, project.status, project.list, project.filter, project.deadlines, "
                 + "project.overdue, project.view, project.delete, "
-                + "task.add, task.mark, task.unmark, task.edit, task.delete, event.add, event.edit, help, save, exit");
+                + "task.add, task.mark, task.unmark, task.edit, task.delete, "
+                + "event.add, event.edit, event.delete, help, save, exit");
         showSeparator();
     }
 
@@ -50,6 +51,7 @@ public class Ui {
         showMessage("task.delete    |   Delete a task");
         showMessage("event.add      |   Add an event");
         showMessage("event.edit     |   Edit an event");
+        showMessage("event.delete   |   Delete an event");
         showMessage("help           |   View help");
         showMessage("save           |   Save data and continue");
         showMessage("exit           |   Save data and exit");
@@ -212,6 +214,18 @@ public class Ui {
     /** Displays the expected format for deleting a task. */
     public void showTaskDeleteUsage() {
         showMessage("Format: task.delete TASK_ID");
+    }
+
+    /** Identifies the event and its owning project before requesting confirmation. */
+    public void showEventDeleteConfirmation(Event event) {
+        showMessage("Delete event " + event.getId() + " \"" + event.getDescription()
+                + "\" from project " + describeProject(event.getProject()) + "?");
+        showMessage("Type yes to confirm deletion or no to cancel.");
+    }
+
+    /** Displays the expected format for deleting an event. */
+    public void showEventDeleteUsage() {
+        showMessage("Format: event.delete EVENT_ID");
     }
 
     /** Displays the expected format for deleting a project. */

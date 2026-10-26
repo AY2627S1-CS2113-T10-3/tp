@@ -312,6 +312,18 @@ Updated event in project P001 "Website redesign": [E001] Stakeholder meeting (re
 
 If the event ID is unknown, a value is blank, or the date is invalid, the app shows an error and the format, and the event is not changed.
 
+### Delete an event: `event.delete`
+
+Format: `event.delete EVENT_ID`
+
+Deletes an event after confirmation. The prompt identifies the event and its
+project. Type `yes` to delete or `no` to cancel. Other input repeats the
+prompt; reaching the end of input cancels deletion.
+
+Event IDs are case-sensitive. Missing, unknown or multiple IDs are rejected.
+The project, its tasks and other events remain available. Changes are saved
+on `save` or `exit`, and deleted event IDs are never reused.
+
 ## Help and saving
 
 ### Show help: `help`
@@ -376,6 +388,7 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | Reopen task | `task.unmark TASK_ID` |
 | Edit task | `task.edit TASK_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Delete task | `task.delete TASK_ID` |
+| Delete event | `event.delete EVENT_ID` |
 | Add event | `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Edit event | `event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Help | `help` |

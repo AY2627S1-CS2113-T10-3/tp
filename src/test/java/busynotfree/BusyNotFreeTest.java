@@ -330,6 +330,27 @@ class BusyNotFreeTest {
         assertTrue(ui.errors.isEmpty());
     }
 
+    @Test
+    public void run_deleteEventEndOfInput_cancelsBeforeSaving() {
+        projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projectManager.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 1));
+        CommandHandler handler = new CommandHandler(new CommandParser(), ui, projectManager);
+        List<List<String>> eventIdsAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui, handler,
+                () -> eventIdsAtSave.add(projectManager.getProject("P001").getEvents()
+                        .stream().map(event -> event.getId()).toList()));
+
+        try (Scanner scanner = new Scanner("event.delete E001\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(List.of("E001")), eventIdsAtSave);
+        assertTrue(!handler.isAwaitingDeletionConfirmation());
+        assertEquals("Event deletion cancelled.", ui.messages.get(ui.messages.size() - 2));
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
     /** Supplies simulated input while closing only the test's scanner. */
     private void runWithInput(String input) {
         try (Scanner scanner = new Scanner(input)) {

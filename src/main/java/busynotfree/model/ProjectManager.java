@@ -165,6 +165,20 @@ public final class ProjectManager {
     }
 
     /**
+     * Deletes an event using its application-wide ID.
+     * Preserves the project, other activities and all ID counters.
+     *
+     * @param eventId ID of the event to delete.
+     * @return Deleted event.
+     * @throws EventException If the ID is blank or the event does not exist.
+     */
+    public Event deleteEvent(String eventId) {
+        Event event = getEvent(eventId);
+        event.getProject().removeEvent(event);
+        return event;
+    }
+
+    /**
      * Updates an existing event's description and date.
      * Leaves ID counters unchanged because no new event is created.
      *

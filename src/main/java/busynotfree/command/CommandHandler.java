@@ -47,6 +47,9 @@ public class CommandHandler {
     /** Task awaiting confirmation; null when no task deletion is pending. */
     private Task pendingTaskDeletion;
 
+    /** Event awaiting confirmation; null when no event deletion is pending. */
+    private Event pendingEventDeletion;
+
     /** Stores the selected note's client ID, position and preview text. */
     private record PendingNoteDeletion(String clientId, int noteIndex, String text) {
     }
@@ -141,6 +144,8 @@ public class CommandHandler {
             ui.showTaskDeleteUsage();
         } else if (command.getEntityType().equals("event") && command.getAction().equals("edit")) {
             ui.showEventEditUsage();
+        } else if (command.getEntityType().equals("event") && command.getAction().equals("delete")) {
+            ui.showEventDeleteUsage();
         } else if (command.getAction().equals("add")) {
             ui.showAddCommandUsage(command.getEntityType());
         }
@@ -148,6 +153,10 @@ public class CommandHandler {
 
     /** Delegates client operations and routes project, task and event commands. */
     private void routeCommand(ParsedCommand command) {
+        if (command.getEntityType().equals("event") && command.getAction().equals("delete")) {
+            handleEventDelete(command.getArgumentText());
+            return;
+        }
         if (command.getEntityType().equals("task") && command.getAction().equals("delete")) {
             handleTaskDelete(command.getArgumentText());
             return;
@@ -346,15 +355,19 @@ public class CommandHandler {
     /**
      * Reports whether the next input must answer a deletion confirmation.
      *
-     * @return True while a project, client, note or task is awaiting confirmation.
+     * @return True while a project, client, note, task or event is awaiting confirmation.
      */
     public boolean isAwaitingDeletionConfirmation() {
         return pendingDeletion != null || pendingClientDeletion != null
-                || pendingNoteDeletion != null || pendingTaskDeletion != null;
+                || pendingNoteDeletion != null || pendingTaskDeletion != null || pendingEventDeletion != null;
     }
 
     /** Deletes only after yes; keeps the confirmation pending for other invalid input. */
     private void handleDeletionConfirmation(String input) {
+        if (pendingEventDeletion != null) {
+            handleEventDeletionConfirmation(input);
+            return;
+        }
         if (pendingTaskDeletion != null) {
             handleTaskDeletionConfirmation(input);
             return;
@@ -386,6 +399,10 @@ public class CommandHandler {
 
     /** Cancels any pending deletion, including when the input stream ends. */
     public void cancelPendingDeletion() {
+        if (pendingEventDeletion != null) {
+            pendingEventDeletion = null;
+            ui.showMessage("Event deletion cancelled.");
+        }
         if (pendingTaskDeletion != null) {
             pendingTaskDeletion = null;
             ui.showMessage("Task deletion cancelled.");
@@ -401,6 +418,39 @@ public class CommandHandler {
         if (pendingDeletion != null) {
             pendingDeletion = null;
             ui.showMessage("Project deletion cancelled.");
+        }
+    }
+
+    /** Validates exactly one event ID before requesting confirmation. */
+    private void handleEventDelete(String arguments) {
+        if (arguments.isBlank()) {
+            throw new CommandException("An event ID must not be blank.");
+        }
+        String[] parts = arguments.trim().split("\\s+");
+        if (parts.length != 1) {
+            throw new CommandException("Provide exactly one event ID.");
+        }
+        pendingEventDeletion = projectManager.getEvent(parts[0]);
+        ui.showEventDeleteConfirmation(pendingEventDeletion);
+    }
+
+    /** Deletes only after yes; other invalid answers leave confirmation pending. */
+    private void handleEventDeletionConfirmation(String input) {
+        switch (input.trim()) {
+        case "yes":
+            Event event = pendingEventDeletion;
+            pendingEventDeletion = null;
+            projectManager.deleteEvent(event.getId());
+            ui.showMessage("Deleted event " + event.getId()
+                    + " from project " + event.getProject().getProjectId() + ".");
+            break;
+        case "no":
+            cancelPendingDeletion();
+            break;
+        default:
+            ui.showError("Please type yes to confirm deletion or no to cancel.");
+            ui.showEventDeleteConfirmation(pendingEventDeletion);
+            break;
         }
     }
 

@@ -108,6 +108,33 @@ class DataStorageTest {
     }
 
     @Test
+    public void saveAndLoad_deletedEvent_staysDeletedWithoutReusingId() throws IOException {
+        DataStorage storage = new DataStorage(directory.resolve("deleted-event.properties"));
+        ClientManager clients = new ClientManager();
+        clients.addClient("Acme");
+        ProjectManager projects = new ProjectManager(clients);
+        projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projects.addEvent("P001", "Keep", LocalDate.of(2026, 11, 1));
+        projects.addEvent("P001", "Delete", LocalDate.of(2026, 11, 2));
+        projects.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 3));
+        projects.markTaskComplete("T001");
+        storage.save(clients, projects);
+
+        projects.deleteEvent("E002");
+        storage.save(clients, projects);
+        DataStorage.LoadedData loaded = storage.load();
+
+        Project restored = loaded.projectManager().getProject("P001");
+        assertEquals(List.of("E001"), restored.getEvents().stream().map(event -> event.getId()).toList());
+        assertEquals("Keep", loaded.projectManager().getEvent("E001").getDescription());
+        assertEquals(List.of("T001"), restored.getTasks().stream().map(task -> task.getId()).toList());
+        assertTrue(loaded.projectManager().getTask("T001").isCompleted());
+        assertEquals("C001", restored.getClientId());
+        assertEquals("E003", loaded.projectManager().addEvent(
+                "P001", "Next meeting", LocalDate.of(2026, 11, 4)).getId());
+    }
+
+    @Test
     public void saveAndLoad_deletedTask_staysDeletedWithoutReusingId() throws IOException {
         DataStorage storage = new DataStorage(directory.resolve("deleted-task.properties"));
         ClientManager clients = new ClientManager();
