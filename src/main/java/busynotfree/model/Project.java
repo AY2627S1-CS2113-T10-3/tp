@@ -176,6 +176,23 @@ public final class Project {
         return removedCount;
     }
 
+    /** Copies the project and its activities, preserving IDs, dates and completion states. */
+    Project copy() {
+        Project copy = new Project(projectId, clientId, name, deadline);
+        copy.changeStatus(status);
+        for (Task task : tasks) {
+            Task copiedTask = new Task(task.getId(), copy, task.getDescription(), task.getDate());
+            if (task.isCompleted()) {
+                copiedTask.markCompleted();
+            }
+            copy.addTask(copiedTask);
+        }
+        for (Event event : events) {
+            copy.addEvent(new Event(event.getId(), copy, event.getDescription(), event.getDate()));
+        }
+        return copy;
+    }
+
     /** Checks ownership and ID uniqueness using the task or event exception supplied by the caller. */
     private void validateNewItem(ScheduledItem item, List<? extends ScheduledItem> existingItems,
             Function<String, ? extends BusyNotFreeException> exceptionFactory) {

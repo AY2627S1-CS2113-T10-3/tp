@@ -311,6 +311,27 @@ Assertions check internal assumptions: only client commands reach `ClientCommand
 
 [`ClientTest`](../src/test/java/busynotfree/model/ClientTest.java) and [`ClientManagerTest`](../src/test/java/busynotfree/model/ClientManagerTest.java) cover validation, duplicate names, ID allocation beyond `C999`, note ownership, collection snapshots and real client lookup during project creation. [`ClientCommandHandlerTest`](../src/test/java/busynotfree/command/ClientCommandHandlerTest.java) covers all four commands through the shared router, including malformed input, missing clients, output order and recovery after errors. [`ClientArgumentParserTest`](../src/test/java/busynotfree/command/ClientArgumentParserTest.java) covers free text and reserved prefixes. The repeatable console acceptance scenario is documented in the [UI test plan](../test/ui-test-plan.md).
 
+### Trashcan responsibilities and shared wiring
+
+`TrashcanManager` owns deleted client and project snapshots. Both deletion paths
+store independent copies before clearing active data. Returned trashcan lists also
+contain copies, so callers cannot modify the stored snapshots.
+
+`TrashcanCommandHandler` handles `trashcan.list`, `trashcan.restore`, argument
+validation and usage hints. `CommandHandler` delegates these commands and retains
+the shared error-reporting boundary. Display formatting continues through `Ui`.
+
+Project restoration calls `ProjectManager#registerRestoredProject` to validate the
+active client and check ID conflicts. Only successful registration removes the
+trash entry. Existing manager methods delegate to the shared trashcan, preserving
+storage imports, ID-counter validation and existing callers.
+
+`DataStorage#load` explicitly creates one `TrashcanManager` and supplies it to
+`ClientManager` and `ProjectManager`. The command handler uses that same instance.
+The convenience constructor `ProjectManager(ClientLookup)` also reuses the
+trashcan when its lookup is a `ClientManager`. File fields and command output
+remain unchanged by this separation of responsibilities.
+
 ## Product scope
 ### Target user profile
 

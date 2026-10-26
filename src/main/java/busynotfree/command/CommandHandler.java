@@ -33,6 +33,7 @@ public class CommandHandler {
     private final ProjectManager projectManager;
     private final ClientManager clientManager;
     private final ClientCommandHandler clientCommandHandler;
+    private final TrashcanCommandHandler trashcanCommandHandler;
     private final ArgumentParser argumentParser = new ArgumentParser();
 
     /** Project awaiting confirmation; null when no deletion is pending. */
@@ -56,14 +57,15 @@ public class CommandHandler {
 
     /**
      * Creates a handler with the supplied parser and user interface.
-     * Uses an independent client manager; use the overload for shared client lookup.
+     * Uses an independent active-client collection with the project's shared trashcan;
+     * use the overload for shared client lookup.
      *
      * @param commandParser Parser for the entity type, action and argument text.
      * @param ui User interface for responses.
      * @param projectManager Manager for projects and their scheduled items.
      */
     public CommandHandler(CommandParser commandParser, Ui ui, ProjectManager projectManager) {
-        this(commandParser, ui, projectManager, new ClientManager());
+        this(commandParser, ui, projectManager, new ClientManager(projectManager.getTrashcanManager()));
     }
 
     /**
@@ -81,6 +83,8 @@ public class CommandHandler {
         this.projectManager = projectManager;
         this.clientManager = clientManager;
         this.clientCommandHandler = new ClientCommandHandler(clientManager, ui);
+        this.trashcanCommandHandler = new TrashcanCommandHandler(
+                projectManager.getTrashcanManager(), projectManager, ui);
     }
 
     /**
@@ -120,7 +124,9 @@ public class CommandHandler {
 
     /** Selects a usage hint without changing the error handling for other targets. */
     private void showCommandUsage(ParsedCommand command) {
-        if (command.getEntityType().equals("client")) {
+        if (command.getEntityType().equals("trashcan")) {
+            trashcanCommandHandler.showCommandUsage(command.getAction());
+        } else if (command.getEntityType().equals("client")) {
             clientCommandHandler.showCommandUsage(command.getAction());
         } else if (command.getEntityType().equals("project") && command.getAction().equals("status")) {
             ui.showProjectStatusUsage();
@@ -153,6 +159,10 @@ public class CommandHandler {
 
     /** Delegates client operations and routes project, task and event commands. */
     private void routeCommand(ParsedCommand command) {
+        if (command.getEntityType().equals("trashcan")) {
+            trashcanCommandHandler.execute(command);
+            return;
+        }
         if (command.getEntityType().equals("event") && command.getAction().equals("delete")) {
             handleEventDelete(command.getArgumentText());
             return;

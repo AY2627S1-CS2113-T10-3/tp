@@ -25,17 +25,31 @@ public final class ProjectManager {
 
     private final ClientLookup clientLookup;
     private final Map<String, Project> projects = new LinkedHashMap<>();
+    private final TrashcanManager trashcanManager;
     private int nextProjectNumber = 1;
     private int nextTaskNumber = 1;
     private int nextEventNumber = 1;
 
     /**
      * Creates an empty manager using the supplied client-existence check.
+     * Reuses a client manager's trashcan; other lookups receive a separate trashcan.
      *
      * @param clientLookup Client-existence check, normally the application's {@code ClientManager}.
      */
     public ProjectManager(ClientLookup clientLookup) {
+        this(clientLookup, clientLookup instanceof ClientManager clients
+                ? clients.getTrashcanManager() : new TrashcanManager());
+    }
+
+    /** Creates a project manager using the supplied client lookup and shared trashcan. */
+    public ProjectManager(ClientLookup clientLookup, TrashcanManager trashcanManager) {
         this.clientLookup = Objects.requireNonNull(clientLookup);
+        this.trashcanManager = Objects.requireNonNull(trashcanManager);
+    }
+
+    /** Returns the trashcan shared with client management and command routing. */
+    public TrashcanManager getTrashcanManager() {
+        return trashcanManager;
     }
 
     /**
@@ -242,6 +256,7 @@ public final class ProjectManager {
      */
     public int deleteProject(String projectId) {
         Project project = getProject(projectId);
+        trashcanManager.storeProject(project);
         int expectedCount = project.getItemCount();
         int removedCount = project.removeAllActivities();
         projects.remove(project.getProjectId());
@@ -252,6 +267,71 @@ public final class ProjectManager {
                 : "Deleted project must no longer be registered";
 
         return removedCount;
+    }
+
+    /** Returns independent copies of deleted projects and activities in ID order. */
+    public List<Project> getDeletedProjects() {
+        return trashcanManager.getDeletedProjects();
+    }
+
+    /**
+     * Restores a deleted project and all its activities using their original IDs.
+     * All checks finish before either the active collection or trashcan is changed.
+     *
+     * @param projectId Deleted project's case-sensitive ID.
+     * @return Restored project.
+     * @throws ProjectException If the ID is blank, unavailable, conflicting or its client is deleted.
+     */
+    public Project restoreProject(String projectId) {
+        return trashcanManager.restoreProject(projectId, this);
+    }
+
+    /**
+     * Registers a restored project after checking its client and active IDs.
+     * Leaves ID counters unchanged.
+     *
+     * @param project Snapshot to register in the active collection.
+     * @throws ProjectException If its client is inactive or an ID conflicts.
+     */
+    void registerRestoredProject(Project project) {
+        if (!clientLookup.exists(project.getClientId())) {
+            throw new ProjectException("Cannot restore project " + project.getProjectId()
+                    + ": client " + project.getClientId() + " is no longer active.");
+        }
+        validateProjectIds(project, projects.values());
+        projects.put(project.getProjectId(), project);
+    }
+
+    /**
+     * Registers a deleted project read from storage and reserves its activity IDs.
+     *
+     * @param project Saved project including tasks and events.
+     * @throws ProjectException If any saved ID conflicts with active data or another deleted project.
+     */
+    public void loadDeletedProject(Project project) {
+        validateProjectIds(project, projects.values());
+        trashcanManager.storeProject(project);
+        nextProjectNumber = Math.max(nextProjectNumber, Integer.parseInt(project.getProjectId().substring(1)) + 1);
+        for (Task task : project.getTasks()) {
+            nextTaskNumber = Math.max(nextTaskNumber, Integer.parseInt(task.getId().substring(1)) + 1);
+        }
+        for (Event event : project.getEvents()) {
+            nextEventNumber = Math.max(nextEventNumber, Integer.parseInt(event.getId().substring(1)) + 1);
+        }
+    }
+
+    /** Rejects project or activity ID collisions before a restore or storage import changes data. */
+    private void validateProjectIds(Project candidate, Iterable<Project> existingProjects) {
+        for (Project existing : existingProjects) {
+            boolean duplicateTask = candidate.getTasks().stream().anyMatch(task -> existing.getTasks().stream()
+                    .anyMatch(other -> other.getId().equals(task.getId())));
+            boolean duplicateEvent = candidate.getEvents().stream().anyMatch(event -> existing.getEvents().stream()
+                    .anyMatch(other -> other.getId().equals(event.getId())));
+            if (existing.getProjectId().equals(candidate.getProjectId()) || duplicateTask || duplicateEvent) {
+                throw new ProjectException("Cannot restore or load project " + candidate.getProjectId()
+                        + ": an ID is already in use.");
+            }
+        }
     }
 
     /**

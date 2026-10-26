@@ -97,6 +97,9 @@ Deletion is blocked if the client has any projects, regardless of project status
 Delete those projects first. Changes are saved on `save` or `exit`, and deleted IDs
 are never reused.
 
+The deleted client and its notes remain visible in `trashcan.list`, including
+after saving and restarting. Client restoration is not currently supported.
+
 ## Delete a client note
 
 Format: `client.delete_note CLIENT_ID index/NOTE_INDEX`

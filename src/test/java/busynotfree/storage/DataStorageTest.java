@@ -18,6 +18,7 @@ import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import busynotfree.exception.ProjectException;
 import busynotfree.model.ClientManager;
 import busynotfree.model.Project;
 import busynotfree.model.ProjectManager;
@@ -105,6 +106,118 @@ class DataStorageTest {
         assertEquals("P001", loaded.projectManager().addProject(
                 loaded.clientManager().addClient("Acme").getClientId(), "Website",
                 LocalDate.of(2026, 11, 30)).getProjectId());
+    }
+
+    @Test
+    public void saveAndLoad_trashcan_preservesSnapshotsAndRestoresOlderProject() throws IOException {
+        DataStorage storage = new DataStorage(directory.resolve("trashcan.properties"));
+        ClientManager clients = new ClientManager();
+        clients.addClient("Acme");
+        clients.addClient("Deleted client");
+        clients.addNote("C002", "Call on Friday");
+        ProjectManager projects = new ProjectManager(clients);
+        projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projects.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 1));
+        projects.markTaskComplete("T001");
+        projects.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 2));
+        projects.changeProjectStatus("P001", ProjectStatus.PAUSED);
+        projects.deleteProject("P001");
+        clients.deleteClient("C002", projects);
+        projects.addProject("C001", "Newer", LocalDate.of(2026, 12, 1));
+        storage.save(clients, projects);
+
+        DataStorage.LoadedData loaded = storage.load();
+
+        assertEquals(1, loaded.projectManager().getProjects().size());
+        assertEquals(1, loaded.projectManager().getDeletedProjects().size());
+        assertEquals(List.of("Call on Friday"), loaded.clientManager().getDeletedClients().getFirst().getNotes());
+        assertFalse(loaded.clientManager().exists("C002"));
+        Project restored = loaded.projectManager().restoreProject("P001");
+        assertEquals(ProjectStatus.PAUSED, restored.getStatus());
+        assertTrue(loaded.projectManager().getTask("T001").isCompleted());
+        assertEquals("Meeting", loaded.projectManager().getEvent("E001").getDescription());
+        storage.save(loaded.clientManager(), loaded.projectManager());
+
+        DataStorage.LoadedData reloaded = storage.load();
+        assertEquals(2, reloaded.projectManager().getProjects().size());
+        assertTrue(reloaded.projectManager().getDeletedProjects().isEmpty());
+        assertEquals(2, reloaded.projectManager().getProject("P001").getItemCount());
+        assertEquals("P003", reloaded.projectManager().addProject(
+                "C001", "Next", LocalDate.of(2027, 1, 1)).getProjectId());
+        assertEquals("T002", reloaded.projectManager().addTask(
+                "P001", "Next task", LocalDate.of(2026, 12, 2)).getId());
+        assertEquals("E002", reloaded.projectManager().addEvent(
+                "P001", "Next event", LocalDate.of(2026, 12, 3)).getId());
+        assertEquals("C003", reloaded.clientManager().addClient("Next client").getClientId());
+    }
+
+    @Test
+    public void saveAndLoad_deletedProjectWithDeletedClient_retainsBothInTrashcan() throws IOException {
+        DataStorage storage = new DataStorage(directory.resolve("deleted-parent.properties"));
+        ClientManager clients = new ClientManager();
+        clients.addClient("Acme");
+        clients.addNote("C001", "Retain this note");
+        ProjectManager projects = new ProjectManager(clients);
+        projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projects.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 1));
+        projects.deleteProject("P001");
+        clients.deleteClient("C001", projects);
+        storage.save(clients, projects);
+
+        DataStorage.LoadedData loaded = storage.load();
+
+        assertEquals(1, loaded.projectManager().getDeletedProjects().getFirst().getItemCount());
+        assertEquals(List.of("Retain this note"), loaded.clientManager().getDeletedClients().getFirst().getNotes());
+        assertThrows(ProjectException.class,
+                () -> loaded.projectManager().restoreProject("P001"));
+        assertEquals(1, loaded.projectManager().getDeletedProjects().size());
+    }
+
+    @Test
+    public void load_legacyFileWithoutTrashSection_startsWithEmptyTrashcan() throws IOException {
+        Path file = directory.resolve("without-trash.properties");
+        DataStorage storage = new DataStorage(file);
+        ClientManager clients = new ClientManager();
+        clients.addClient("Acme");
+        ProjectManager projects = new ProjectManager(clients);
+        storage.save(clients, projects);
+        Properties data = new Properties();
+        try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            data.load(reader);
+        }
+        data.keySet().removeIf(key -> key.toString().startsWith("trash."));
+        try (Writer writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
+            data.store(writer, "Legacy data without trashcan");
+        }
+
+        DataStorage.LoadedData loaded = storage.load();
+        assertEquals(1, loaded.clientManager().getClients().size());
+        assertTrue(loaded.clientManager().getDeletedClients().isEmpty());
+        assertTrue(loaded.projectManager().getDeletedProjects().isEmpty());
+    }
+
+    @Test
+    public void load_trashcanWithConflictingProjectId_rejectsInvalidFile() throws IOException {
+        Path file = directory.resolve("conflicting-trash.properties");
+        DataStorage storage = new DataStorage(file);
+        ClientManager clients = new ClientManager();
+        clients.addClient("Acme");
+        ProjectManager projects = new ProjectManager(clients);
+        projects.addProject("C001", "Deleted", LocalDate.of(2026, 11, 30));
+        projects.deleteProject("P001");
+        projects.addProject("C001", "Active", LocalDate.of(2026, 12, 1));
+        storage.save(clients, projects);
+        Properties data = new Properties();
+        try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            data.load(reader);
+        }
+        data.setProperty("trash.project.0.id", "P002");
+        try (Writer writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
+            data.store(writer, "Conflicting active and deleted project IDs");
+        }
+
+        IOException exception = assertThrows(IOException.class, storage::load);
+        assertTrue(exception.getMessage().contains("an ID is already in use"));
     }
 
     @Test

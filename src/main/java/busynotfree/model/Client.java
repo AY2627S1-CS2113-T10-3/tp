@@ -98,4 +98,11 @@ public final class Client {
     void clearNotes() {
         notes.clear();
     }
+
+    /** Copies client details so trash entries cannot be changed through old references. */
+    Client copy() {
+        Client copy = new Client(clientId, name);
+        notes.forEach(copy::addNote);
+        return copy;
+    }
 }

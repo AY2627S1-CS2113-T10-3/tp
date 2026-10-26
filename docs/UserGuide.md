@@ -217,7 +217,9 @@ Project P001 status changed to PAUSED.
 
 Format: `project.delete PROJECT_ID`
 
-Deletes an existing project and its tasks and events. It does not delete the client. Deleted IDs are not reused.
+Moves an existing project and its tasks and events to the trashcan after confirmation.
+It does not delete the client. Deleted IDs are not reused. Use `trashcan.restore PROJECT_ID`
+to recover the project while its client is still active.
 
 ```text
 project.delete P001
@@ -324,6 +326,43 @@ Event IDs are case-sensitive. Missing, unknown or multiple IDs are rejected.
 The project, its tasks and other events remain available. Changes are saved
 on `save` or `exit`, and deleted event IDs are never reused.
 
+## Trashcan
+
+### List deleted items: `trashcan.list`
+
+Format: `trashcan.list`
+
+Shows deleted projects with their tasks and events, including dates, project status
+and task completion state. Also shows deleted clients with all their notes.
+Entries are grouped by type and displayed in ID order. Active items are not listed.
+An empty trashcan displays `Trashcan is empty.` Extra arguments are rejected.
+
+Deleting a project or client retains a snapshot in the trashcan. There is currently
+no expiry or automatic cleanup. Entries are saved on `save` or `exit` and remain
+available after restarting. Individually deleted tasks, events and notes are not
+retained; project snapshots contain only activities present when the project was deleted.
+Items deleted before this feature was installed cannot be recovered.
+
+### Restore a deleted project: `trashcan.restore`
+
+Format: `trashcan.restore PROJECT_ID`
+
+Restores a project immediately, including its tasks and events with their original
+IDs, descriptions, dates, status and task completion states. The restored project
+is removed from the trashcan and appended to the active project list.
+No new IDs are allocated. Changes are saved on `save` or `exit`.
+
+```text
+trashcan.restore P001
+Restored project P001 "Website" with 2 tasks and 1 event.
+```
+
+Missing, unknown, active, lowercase or multiple IDs are rejected. Only projects
+can be restored. The owning client must still be active; a client with the same
+name and a different ID does not satisfy this requirement. If a client was deleted
+after its projects, those projects remain visible in the trashcan but cannot yet
+be restored. Restoration also rejects conflicting IDs without changing any data.
+
 ## Help and saving
 
 ### Show help: `help`
@@ -392,5 +431,7 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | Add event | `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Edit event | `event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Help | `help` |
+| List deleted items | `trashcan.list` |
+| Restore project | `trashcan.restore PROJECT_ID` |
 | Save and continue | `save` |
 | Save and exit | `exit` |

@@ -22,6 +22,7 @@ import busynotfree.model.ProjectManager;
 import busynotfree.model.ProjectStatus;
 import busynotfree.model.ScheduledItem;
 import busynotfree.model.Task;
+import busynotfree.model.TrashcanManager;
 
 /**
  * Saves and loads all application data in one UTF-8 properties file.
@@ -47,8 +48,9 @@ public final class DataStorage {
      * @throws IOException if a saved file cannot be read or is invalid
      */
     public LoadedData load() throws IOException {
-        ClientManager clients = new ClientManager();
-        ProjectManager projects = new ProjectManager(clients);
+        TrashcanManager trashcan = new TrashcanManager();
+        ClientManager clients = new ClientManager(trashcan);
+        ProjectManager projects = new ProjectManager(clients, trashcan);
         if (!Files.exists(dataFile)) {
             return new LoadedData(clients, projects);
         }
@@ -64,6 +66,7 @@ public final class DataStorage {
             loadProjects(data, projects);
             loadTasks(data, projects);
             loadEvents(data, projects);
+            loadTrashcan(data, clients, projects);
             clients.advanceNextClientNumber(positiveNumber(data, "next.client"));
             projects.advanceNextNumbers(positiveNumber(data, "next.project"),
                     positiveNumber(data, "next.task"), positiveNumber(data, "next.event"));
@@ -81,8 +84,16 @@ public final class DataStorage {
     public void save(ClientManager clients, ProjectManager projects) throws IOException {
         Properties data = new Properties();
         data.setProperty("version", VERSION);
-        saveClients(data, clients);
-        saveProjects(data, projects);
+        // Restoring an older project appends it to memory; storage loaders require ID order.
+        saveClients(data, clients.getClients());
+        saveProjects(data, projects.getProjects().stream()
+                .sorted(Comparator.comparingInt(project -> idNumber(project.getProjectId(), "P"))).toList());
+        Properties trash = new Properties();
+        saveClients(trash, clients.getTrashcanManager().getDeletedClients());
+        saveProjects(trash, projects.getTrashcanManager().getDeletedProjects());
+        for (String key : trash.stringPropertyNames()) {
+            data.setProperty("trash." + key, trash.getProperty(key));
+        }
         data.setProperty("next.client", Integer.toString(clients.getNextClientNumber()));
         data.setProperty("next.project", Integer.toString(projects.getNextProjectNumber()));
         data.setProperty("next.task", Integer.toString(projects.getNextTaskNumber()));
@@ -104,6 +115,32 @@ public final class DataStorage {
         } finally {
             Files.deleteIfExists(temporaryFile);
         }
+    }
+
+    /**
+     * Reads optional trash data from the existing file format.
+     * Old files without a trash section remain valid. Deleted projects may refer
+     * to deleted clients, but such projects cannot be restored until their client is active.
+     */
+    private void loadTrashcan(Properties data, ClientManager clients, ProjectManager projects) {
+        Properties trash = new Properties();
+        for (String key : data.stringPropertyNames()) {
+            if (key.startsWith("trash.")) {
+                trash.setProperty(key.substring("trash.".length()), data.getProperty(key));
+            }
+        }
+        if (trash.isEmpty()) {
+            return;
+        }
+        ClientManager deletedClients = new ClientManager();
+        loadClients(trash, deletedClients);
+        ProjectManager deletedProjects = new ProjectManager(
+                id -> clients.exists(id) || deletedClients.exists(id));
+        loadProjects(trash, deletedProjects);
+        loadTasks(trash, deletedProjects);
+        loadEvents(trash, deletedProjects);
+        deletedClients.getClients().forEach(clients::loadDeletedClient);
+        deletedProjects.getProjects().forEach(projects::loadDeletedProject);
     }
 
     /** Restores clients and their notes in ID order. */
@@ -167,8 +204,7 @@ public final class DataStorage {
     }
 
     /** Stores clients and all notes in their creation order. */
-    private void saveClients(Properties data, ClientManager clients) {
-        List<Client> clientList = clients.getClients();
+    private void saveClients(Properties data, List<Client> clientList) {
         data.setProperty("client.count", Integer.toString(clientList.size()));
         for (int index = 0; index < clientList.size(); index++) {
             Client client = clientList.get(index);
@@ -183,8 +219,7 @@ public final class DataStorage {
     }
 
     /** Stores projects followed by activities sorted by their application-wide IDs. */
-    private void saveProjects(Properties data, ProjectManager projects) {
-        List<Project> projectList = projects.getProjects();
+    private void saveProjects(Properties data, List<Project> projectList) {
         List<Task> tasks = new ArrayList<>();
         List<Event> events = new ArrayList<>();
         data.setProperty("project.count", Integer.toString(projectList.size()));

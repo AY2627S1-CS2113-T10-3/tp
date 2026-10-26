@@ -22,7 +22,7 @@ public class Ui {
                 + "project.add, project.status, project.list, project.filter, project.deadlines, "
                 + "project.overdue, project.view, project.delete, "
                 + "task.add, task.mark, task.unmark, task.edit, task.delete, "
-                + "event.add, event.edit, event.delete, help, save, exit");
+                + "event.add, event.edit, event.delete, trashcan.list, trashcan.restore, help, save, exit");
         showSeparator();
     }
 
@@ -52,6 +52,8 @@ public class Ui {
         showMessage("event.add      |   Add an event");
         showMessage("event.edit     |   Edit an event");
         showMessage("event.delete   |   Delete an event");
+        showMessage("trashcan.list  |   List deleted projects and clients");
+        showMessage("trashcan.restore |   Restore a deleted project");
         showMessage("help           |   View help");
         showMessage("save           |   Save data and continue");
         showMessage("exit           |   Save data and exit");
@@ -288,6 +290,38 @@ public class Ui {
                 showMessage(event.toString());
             }
         }
+    }
+
+    /** Displays retained projects with their activities and deleted clients with their notes. */
+    public void showTrashcan(List<Project> projects, List<Client> clients) {
+        if (projects.isEmpty() && clients.isEmpty()) {
+            showMessage("Trashcan is empty.");
+            return;
+        }
+        showMessage("Deleted projects:");
+        if (projects.isEmpty()) {
+            showMessage("No deleted projects.");
+        }
+        for (Project project : projects) {
+            showMessage("Project: " + describeProject(project) + " | Client: " + project.getClientId()
+                    + " | Status: " + project.getStatus() + " | Due: " + project.getDeadline());
+            showMessage("Tasks:");
+            if (project.getTasks().isEmpty()) {
+                showMessage("No tasks found.");
+            }
+            project.getTasks().forEach(task -> showMessage(task.toString()));
+            showMessage("Events:");
+            if (project.getEvents().isEmpty()) {
+                showMessage("No events found.");
+            }
+            project.getEvents().forEach(event -> showMessage(event.toString()));
+        }
+        showMessage("Deleted clients:");
+        if (clients.isEmpty()) {
+            showMessage("No deleted clients.");
+        }
+        ClientUi clientUi = new ClientUi(this);
+        clients.forEach(clientUi::showClient);
     }
 
     /** Displays the accepted forms of the project view command. */
