@@ -1,0 +1,52 @@
+@startuml
+' Confirmation input handling; command validation and model deletion details are omitted.
+hide footbox
+skinparam defaultFontSize 14
+skinparam maxMessageSize 160
+
+actor User
+participant ":BusyNotFree" as App
+participant ":CommandHandler" as CH
+participant ":Ui" as UI
+
+User -> App : valid deletion request
+App -> CH : execute(request)
+CH -> CH : validate and retain pending selection
+CH -> UI : show deletion confirmation
+CH --> App : false
+
+note over App, CH
+  While confirmation is pending, normal command parsing
+  and standalone save handling are bypassed.
+end note
+
+loop zero or more invalid confirmation answers
+  User -> App : other input, including help / save / exit
+  App -> CH : execute(input)
+  CH -> UI : show error and repeat confirmation
+  CH --> App : false
+end
+
+alt user confirms
+  User -> App : yes
+  App -> CH : execute("yes")
+  CH -> CH : handleDeletionConfirmation("yes")
+  note right of CH
+    Model interactions are omitted here.
+    See ProjectDeletionSequenceDiagram.
+  end note
+  CH -> UI : show deletion result
+  CH --> App : false
+else user cancels
+  User -> App : no
+  App -> CH : execute("no")
+  CH -> CH : cancelPendingDeletion()
+  CH -> UI : show cancellation message
+  CH --> App : false
+else input ends
+  User -> App : end of input
+  App -> CH : cancelPendingDeletion()
+  CH -> UI : show cancellation message
+  App -> App : attempt save and return
+end
+@enduml

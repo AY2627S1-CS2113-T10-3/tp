@@ -1,0 +1,35 @@
+@startuml
+' Restore after argument validation and retained-project lookup succeed.
+hide footbox
+skinparam defaultFontSize 14
+skinparam maxMessageSize 145
+
+participant ":CommandHandler" as CH
+participant ":TrashcanCommandHandler" as TCH
+participant ":TrashcanManager" as TM
+participant ":ProjectManager" as PM
+participant ":Ui" as UI
+
+CH -> TCH : execute(restoreCommand)
+TCH -> TCH : validate one project ID
+TCH -> TM : restoreProject("P001", projectManager)
+TM -> TM : find retained project
+TM -> PM : registerRestoredProject(project)
+PM -> PM : check active client and ID conflicts
+
+alt registration succeeds
+  PM -> PM : add project to active collection
+  PM --> TM : registration complete
+  TM -> TM : remove retained entry
+  TM --> TCH : restored project
+  TCH -> UI : show restoration message
+else registration fails
+  PM --> TM : validation exception
+  TM --> TCH : propagate exception
+  TCH --> CH : propagate exception
+  CH -> UI : show error and usage
+  note over TM
+    Retained project remains available.
+  end note
+end
+@enduml
