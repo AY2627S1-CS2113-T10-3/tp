@@ -86,27 +86,107 @@ Each layer throws its own subclass of the unchecked `BusyNotFreeException`: `Com
 * **Strict dates.** Impossible or loosely formatted dates are rejected instead of being corrected, so a typo cannot silently schedule work on the wrong day.
 * **Logging without private text.** `ProjectManager` logs creation at the `FINE` level and includes only IDs, never client names or descriptions.
 
+### Viewing project details: `project.view`
+
+`project.view P001` displays one project's client, status, deadline, tasks, progress and events.
+The sequence diagram follows a successful lookup; parsing of the command word and separator
+output are omitted.
+
+![Sequence diagram of project.view P001](images/ProjectViewSequenceDiagram.png)
+
+`CommandHandler#handleProjectView` asks `ProjectManager` for the requested project. It then
+resolves the project's client ID through the shared `ClientManager` and passes both objects to
+`Ui#showProjectSummary`. The handler asserts that the returned IDs match the requested project
+and client IDs; these assertions check internal lookup consistency, while exceptions handle
+invalid user input. `Ui` reads the task and event lists and formats them separately. Neither
+viewing nor counting changes the model.
+
+With no ID or with `all`, the handler obtains the projects in creation order from
+`ProjectManager#getProjects` and prints each summary with one blank line between them. An empty
+collection produces `No projects found.`. An unknown single ID produces a user-facing error
+and usage hint without ending the command loop. Diagnostics at `FINE` level record the requested
+ID or number of projects, not client names or task descriptions.
+
 ### Task completion, project progress and persistence
 
-`task.mark TASK_ID` and `task.unmark TASK_ID` find a task by its application-wide ID through
-`ProjectManager`. They change the task's `completed` flag without changing its ID, project,
-description or date. `Task#toString` includes `[COMPLETED]` or `[In Progress]` so each task's
-state is visible in `project.view`.
+This v2.0 enhancement lets users finish or reopen tasks, see progress in `project.view`, and
+retain completion state across restarts. The diagram shows where completion state lives and
+which classes read or write it. Methods unrelated to this enhancement are omitted.
 
-`Ui#showProjectSummary` counts completed tasks while it prints the project's task list, then
-shows the completed and total task counts. Events are printed in a separate section and do not
-affect this count. A project with no tasks shows `No tasks found.` and
-`Progress: 0 of 0 tasks completed.`.
+![Class diagram of task completion and persistence](images/TaskCompletionClassDiagram.png)
 
-`DataStorage` saves each task's flag as `task.N.completed=true` or `false` in the existing
-version 1 properties file. On load, a missing flag defaults to `false`, allowing files saved
-before task completion was added to load with their tasks in progress. An invalid flag is
-rejected as invalid saved data. The existing exit path saves the file and the next startup
-loads it; marking a task alone does not write to disk.
+#### Marking and reopening tasks
 
-[`DataStorageTest`](../src/test/java/busynotfree/storage/DataStorageTest.java) checks saved and
-restored completion state and the older-file default. [`ProjectViewTest`](../src/test/java/busynotfree/command/ProjectViewTest.java)
-checks empty, partial and complete progress counts, including `project.view all`.
+`Task` owns one `completed` boolean, initially `false`. `task.mark TASK_ID` sets it to `true`;
+`task.unmark TASK_ID` sets it back to `false`. The task's ID, owning project, description and
+date do not change. `Task#toString` adds `[COMPLETED]` or `[In Progress]` so the state is visible
+beside each task in a project summary.
+
+The command handler requires exactly one task ID before asking `ProjectManager` to update the
+task. Task IDs are unique across the application, so the user need not supply a project ID.
+`ProjectManager#getTask` searches the tasks of each project, returns the matching object, or
+throws `TaskException` for an unknown ID. A failed lookup leaves every task unchanged. Repeating
+`task.mark` or `task.unmark` has the same result as applying it once.
+
+The sequence diagram shows `task.mark T001`. `task.unmark` follows the same path through
+`markTaskIncomplete` and `Task#markIncomplete`.
+
+![Sequence diagram of task.mark T001](images/TaskCompletionSequenceDiagram.png)
+
+`CommandHandler#execute` catches command and model exceptions, prints the error and the
+command's usage, then accepts another command. It does not catch unrelated programming errors.
+
+#### Calculating project progress
+
+`Ui#showProjectSummary` obtains the project's task list once. While printing each task, it
+counts the ones whose `isCompleted()` value is `true`. It then prints the completed count and
+the list size, for example `Progress: 1 of 2 tasks completed.`. The zero-task case prints
+`No tasks found.` and `Progress: 0 of 0 tasks completed.`. Events appear in their own section
+and are never part of the task count. For `project.view all`, each summary calculates its own
+count, so progress from one project cannot affect another.
+
+The count is derived when a summary is displayed instead of being stored in `Project`. This
+avoids a second value that could become stale when a task is marked, reopened or deleted.
+
+#### Saving on exit and restoring on startup
+
+The application saves all managers together when the user enters `exit`. In `BusyNotFree#main`,
+the `SaveAction` callback is connected to `DataStorage#save(clientManager, projectManager)`.
+`BusyNotFree#saveAndReportExit` invokes it before showing `Data saved. Goodbye!`. If saving
+throws `IOException`, the app reports the failure and lets an explicit `exit` be retried.
+`SaveAction` also lets a test simulate a failed write without accessing the real filesystem.
+
+![Sequence diagram of saving and restoring task completion](images/TaskCompletionPersistenceSequenceDiagram.png)
+
+`DataStorage#save` gathers tasks from every project, sorts them by their application-wide IDs,
+and writes each flag alongside the task's existing fields in the version 1 properties file.
+For example, `task.0.completed=true` records a completed task. It writes a temporary UTF-8
+file in the data directory before replacing the old file. An atomic replacement is attempted
+first, with an ordinary replacement when the filesystem does not support atomic moves.
+
+On the next launch, `DataStorage#load` creates linked client and project managers, restores
+clients and projects first, then reconstructs tasks and events. Once each task exists, a saved
+`true` flag marks it complete. A missing flag defaults to `false`, so data files produced before
+this enhancement still load with their tasks in progress. Only the exact values `true` and
+`false` are accepted; an invalid value makes loading fail instead of silently changing a task's
+state. Saved next-ID counters also prevent deleted IDs from being reused after a restart.
+
+Marking and reopening change only the in-memory model. They do not save immediately: the
+existing exit path writes the new state. `BusyNotFree#main` reports a load error and stops if a
+saved file is invalid. On end-of-input, the command loop attempts a save once before returning;
+only an explicit `exit` can be retried after a failed save.
+
+#### Design and verification
+
+* A boolean is sufficient because a task has only two completion states. An enum would be more
+  useful if additional workflow states were introduced later.
+* One properties file keeps task state with its project and client data. Adding an optional
+  field avoids changing the file version or rejecting existing v1.0 saves.
+* [`CommandHandlerTest`](../src/test/java/busynotfree/command/CommandHandlerTest.java)
+  covers marking, reopening and invalid IDs. [`ProjectViewTest`](../src/test/java/busynotfree/command/ProjectViewTest.java)
+  checks empty, partial and complete counts, including `project.view all`.
+  [`DataStorageTest`](../src/test/java/busynotfree/storage/DataStorageTest.java) checks
+  saved and restored flags, the older-file default and malformed saved data.
 
 ### Editing tasks and events: `task.edit` and `event.edit`
 
@@ -231,6 +311,11 @@ Assertions check internal assumptions: only client commands reach `ClientCommand
 |v1.0|freelancer|create a project for an existing client with a deadline|organise and plan the client's work|
 |v1.0|freelancer|add a dated internal task to a project|track the work that needs to be completed|
 |v1.0|freelancer|add a scheduled event to a project|keep track of meetings, reviews and presentations|
+|v1.0|freelancer|view one or all project summaries|check clients, deadlines, tasks and events together|
+|v1.0|freelancer|save my work when I exit|continue from the same data on the next run|
+|v2.0|freelancer|mark a task complete or reopen it|keep its status aligned with the work left to do|
+|v2.0|freelancer|see a completed-task count for each project|assess progress at a glance|
+|v2.0|freelancer|retain task completion after restarting|avoid marking the same tasks again|
 |v2.0|user|find a to-do item by name|locate a to-do without having to go through the entire list|
 |v2.0|freelancer responding to changes in client requirements|edit an existing task's description and date without changing its ID or project|keep the work plan accurate|
 |v2.0|freelance consultant arranging client meetings|edit an existing event's description and date without changing its ID or project|update a rescheduled meeting without deleting and recreating it|

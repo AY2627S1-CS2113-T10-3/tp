@@ -283,7 +283,7 @@ Shows a list of available commands and short descriptions.
 
 Format: `exit`
 
-Saves clients, notes, projects, tasks, and events, then closes the app. Task completion is not yet included in the save file:
+Saves clients, notes, projects, tasks, task completion, and events, then closes the app:
 
 ```text
 exit
