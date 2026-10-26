@@ -34,6 +34,9 @@ public class CommandHandler {
     private final ClientCommandHandler clientCommandHandler;
     private final ArgumentParser argumentParser = new ArgumentParser();
 
+    /** Project awaiting confirmation; null when no deletion is pending. */
+    private Project pendingDeletion;
+
     /**
      * Creates a handler with the supplied parser and user interface.
      * Uses an independent client manager; use the overload for shared client lookup.
@@ -76,7 +79,9 @@ public class CommandHandler {
         boolean shouldExit = false;
         ParsedCommand command = null;
         try {
-            if (userInput.trim().split("\\s+", 2)[0].equals("exit")) {
+            if (isAwaitingDeletionConfirmation()) {
+                handleDeletionConfirmation(userInput);
+            } else if (userInput.trim().split("\\s+", 2)[0].equals("exit")) {
                 shouldExit = true;
             } else if (userInput.trim().equals("help")) {
                 ui.showHelp();
@@ -294,7 +299,7 @@ public class CommandHandler {
         ui.showProjectStatusChanged(project);
     }
 
-    /** Requires one positional project ID before deleting the project and its activities. */
+    /** Validates the project ID and requests confirmation without deleting anything. */
     private void handleProjectDelete(String arguments) {
         if (arguments.isBlank()) {
             throw new CommandException("A project ID must not be blank.");
@@ -304,9 +309,44 @@ public class CommandHandler {
             throw new CommandException("Provide exactly one project ID.");
         }
 
-        Project project = projectManager.getProject(parts[0]);
-        int removedCount = projectManager.deleteProject(parts[0]);
-        ui.showProjectDeleted(project.getName(), removedCount);
+        pendingDeletion = projectManager.getProject(parts[0]);
+        ui.showProjectDeleteConfirmation(pendingDeletion);
+    }
+
+    /**
+     * Reports whether the next input must answer a deletion confirmation.
+     *
+     * @return True while a project is awaiting confirmation.
+     */
+    public boolean isAwaitingDeletionConfirmation() {
+        return pendingDeletion != null;
+    }
+
+    /** Deletes only after yes; keeps the confirmation pending for other invalid input. */
+    private void handleDeletionConfirmation(String input) {
+        switch (input.trim()) {
+        case "yes":
+            Project project = pendingDeletion;
+            pendingDeletion = null;
+            int removedCount = projectManager.deleteProject(project.getProjectId());
+            ui.showProjectDeleted(project.getName(), removedCount);
+            break;
+        case "no":
+            cancelPendingDeletion();
+            break;
+        default:
+            ui.showError("Please type yes to confirm deletion or no to cancel.");
+            ui.showProjectDeleteConfirmation(pendingDeletion);
+            break;
+        }
+    }
+
+    /** Cancels any pending deletion, including when the input stream ends. */
+    public void cancelPendingDeletion() {
+        if (pendingDeletion != null) {
+            pendingDeletion = null;
+            ui.showMessage("Project deletion cancelled.");
+        }
     }
 
     /** Displays all projects in their creation order and ignores extra arguments. */

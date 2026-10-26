@@ -178,6 +178,18 @@ public class Ui {
                 + (removedCount == 1 ? "activity" : "activities") + " removed.");
     }
 
+    /**
+     * Identifies the project and activities affected before requesting confirmation.
+     *
+     * @param project Project proposed for deletion.
+     */
+    public void showProjectDeleteConfirmation(Project project) {
+        int count = project.getItemCount();
+        showMessage("Delete project " + describeProject(project) + " and "
+                + count + " associated " + (count == 1 ? "activity" : "activities") + "?");
+        showMessage("Type yes to confirm deletion or no to cancel.");
+    }
+
     /** Displays the expected format for deleting a project. */
     public void showProjectDeleteUsage() {
         showMessage("Format: project.delete PROJECT_ID");

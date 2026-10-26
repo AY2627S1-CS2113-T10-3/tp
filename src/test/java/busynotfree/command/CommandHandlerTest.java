@@ -364,7 +364,13 @@ class CommandHandlerTest {
 
         assertFalse(handler.execute("project.delete P001"));
 
-        assertEquals(List.of("Website redesign has been deleted",
+        assertEquals(2, project.getItemCount());
+        assertTrue(handler.isAwaitingDeletionConfirmation());
+        assertFalse(handler.execute("yes"));
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+
+        assertEquals(List.of("Delete project P001 \"Website redesign\" and 2 associated activities?",
+                "Type yes to confirm deletion or no to cancel.", "Website redesign has been deleted",
                 "2 associated activities removed."), ui.messages);
         assertTrue(ui.errors.isEmpty());
         assertEquals(List.of(other), projectManager.getProjects());
@@ -383,7 +389,10 @@ class CommandHandlerTest {
 
         assertFalse(handler.execute("project.delete P001"));
 
-        assertEquals(List.of("Website has been deleted",
+        assertFalse(handler.execute("yes"));
+
+        assertEquals(List.of("Delete project P001 \"Website\" and 0 associated activities?",
+                "Type yes to confirm deletion or no to cancel.", "Website has been deleted",
                 "0 associated activities removed."), ui.messages);
         assertTrue(ui.errors.isEmpty());
         assertTrue(projectManager.getProjects().isEmpty());
@@ -397,9 +406,47 @@ class CommandHandlerTest {
 
         assertFalse(handler.execute("project.delete P001"));
 
-        assertEquals(List.of("Website has been deleted",
+        assertFalse(handler.execute("  yes\t"));
+
+        assertEquals(List.of("Delete project P001 \"Website\" and 1 associated activity?",
+                "Type yes to confirm deletion or no to cancel.", "Website has been deleted",
                 "1 associated activity removed."), ui.messages);
         assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectDeleteNo_preservesActivitiesAndResumesCommands() {
+        LocalDate date = LocalDate.of(2026, 11, 30);
+        Project project = projectManager.addProject("C001", "Website", date);
+        projectManager.addTask("P001", "Wireframe", date);
+        projectManager.addEvent("P001", "Meeting", date);
+
+        handler.execute("project.delete P001");
+        assertFalse(handler.execute(" no "));
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of(project), projectManager.getProjects());
+        assertEquals(2, project.getItemCount());
+        assertEquals("Project deletion cancelled.", ui.messages.getLast());
+        assertTrue(handler.execute("exit"));
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectDeleteInvalidAnswers_keepsWaitingWithoutExecutingCommands() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        handler.execute("project.delete P001");
+
+        for (String answer : List.of("", "YES", "yes please", "exit", "help", "project.delete P001")) {
+            assertFalse(handler.execute(answer));
+            assertTrue(handler.isAwaitingDeletionConfirmation());
+            assertEquals(List.of(project), projectManager.getProjects());
+            assertEquals("Please type yes to confirm deletion or no to cancel.", ui.errors.getLast());
+            assertEquals("Type yes to confirm deletion or no to cancel.", ui.messages.getLast());
+        }
+
+        handler.execute("no");
+        assertFalse(handler.isAwaitingDeletionConfirmation());
     }
 
     @Test

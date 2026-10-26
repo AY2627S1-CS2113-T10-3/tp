@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -219,6 +220,44 @@ class BusyNotFreeTest {
         assertEquals(2, ui.messages.stream().filter("Enter a command:"::equals).count());
         assertEquals(1, ui.messages.stream().filter("Data saved. Goodbye!"::equals).count());
         assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+    }
+
+    @Test
+    public void run_projectDeleteConfirmation_blocksSaveUntilAnswered() {
+        projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        List<Integer> projectCountsAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui,
+                new CommandHandler(new CommandParser(), ui, projectManager),
+                () -> projectCountsAtSave.add(projectManager.getProjects().size()));
+
+        try (Scanner scanner = new Scanner("project.delete P001\nsave\nyes\nexit\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(0), projectCountsAtSave);
+        assertEquals(List.of("Please type yes to confirm deletion or no to cancel."), ui.errors);
+        assertTrue(ui.messages.contains("Website has been deleted"));
+        assertEquals(2, ui.messages.stream().filter("Enter a command:"::equals).count());
+    }
+
+    @Test
+    public void run_projectDeleteEndOfInput_cancelsBeforeSaving() {
+        projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 30));
+        CommandHandler handler = new CommandHandler(new CommandParser(), ui, projectManager);
+        List<Integer> activityCountsAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui, handler,
+                () -> activityCountsAtSave.add(projectManager.getProject("P001").getItemCount()));
+
+        try (Scanner scanner = new Scanner("project.delete P001\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(1), activityCountsAtSave);
+        assertTrue(!handler.isAwaitingDeletionConfirmation());
+        assertEquals("Project deletion cancelled.", ui.messages.get(ui.messages.size() - 2));
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
     }
 
     /** Supplies simulated input while closing only the test's scanner. */
