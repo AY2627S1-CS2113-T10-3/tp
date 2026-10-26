@@ -275,6 +275,19 @@ Updated task in project P001 "Website redesign": [T001] Create mobile homepage w
 
 If the task ID is unknown, a value is blank, or the date is invalid, the app shows an error and the format, and the task is not changed.
 
+### Delete a task: `task.delete`
+
+Format: `task.delete TASK_ID`
+
+Deletes a task after confirmation. The prompt identifies the task and its
+project. Type `yes` to delete or `no` to cancel. Other input repeats the
+prompt; reaching the end of input cancels deletion.
+
+Task IDs are case-sensitive. Missing, unknown or multiple IDs are rejected.
+Completed tasks can also be deleted. The project, its events and other tasks
+remain available. Changes are saved on `save` or `exit`, and deleted task IDs
+are never reused.
+
 ### Add an event: `event.add`
 
 Format: `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD`
@@ -362,6 +375,7 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | Mark task complete | `task.mark TASK_ID` |
 | Reopen task | `task.unmark TASK_ID` |
 | Edit task | `task.edit TASK_ID name/DESCRIPTION date/YYYY-MM-DD` |
+| Delete task | `task.delete TASK_ID` |
 | Add event | `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Edit event | `event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Help | `help` |

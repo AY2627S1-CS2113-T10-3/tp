@@ -44,6 +44,9 @@ public class CommandHandler {
     /** Note awaiting confirmation; null when no note deletion is pending. */
     private PendingNoteDeletion pendingNoteDeletion;
 
+    /** Task awaiting confirmation; null when no task deletion is pending. */
+    private Task pendingTaskDeletion;
+
     /** Stores the selected note's client ID, position and preview text. */
     private record PendingNoteDeletion(String clientId, int noteIndex, String text) {
     }
@@ -134,6 +137,8 @@ public class CommandHandler {
             ui.showTaskUnmarkUsage();
         } else if (command.getEntityType().equals("task") && command.getAction().equals("edit")) {
             ui.showTaskEditUsage();
+        } else if (command.getEntityType().equals("task") && command.getAction().equals("delete")) {
+            ui.showTaskDeleteUsage();
         } else if (command.getEntityType().equals("event") && command.getAction().equals("edit")) {
             ui.showEventEditUsage();
         } else if (command.getAction().equals("add")) {
@@ -143,6 +148,10 @@ public class CommandHandler {
 
     /** Delegates client operations and routes project, task and event commands. */
     private void routeCommand(ParsedCommand command) {
+        if (command.getEntityType().equals("task") && command.getAction().equals("delete")) {
+            handleTaskDelete(command.getArgumentText());
+            return;
+        }
         if (command.getEntityType().equals("client") && command.getAction().equals("delete_note")) {
             handleClientDeleteNote(command.getArgumentText());
             return;
@@ -337,14 +346,19 @@ public class CommandHandler {
     /**
      * Reports whether the next input must answer a deletion confirmation.
      *
-     * @return True while a project, client or note is awaiting confirmation.
+     * @return True while a project, client, note or task is awaiting confirmation.
      */
     public boolean isAwaitingDeletionConfirmation() {
-        return pendingDeletion != null || pendingClientDeletion != null || pendingNoteDeletion != null;
+        return pendingDeletion != null || pendingClientDeletion != null
+                || pendingNoteDeletion != null || pendingTaskDeletion != null;
     }
 
     /** Deletes only after yes; keeps the confirmation pending for other invalid input. */
     private void handleDeletionConfirmation(String input) {
+        if (pendingTaskDeletion != null) {
+            handleTaskDeletionConfirmation(input);
+            return;
+        }
         if (pendingNoteDeletion != null) {
             handleNoteDeletionConfirmation(input);
             return;
@@ -372,6 +386,10 @@ public class CommandHandler {
 
     /** Cancels any pending deletion, including when the input stream ends. */
     public void cancelPendingDeletion() {
+        if (pendingTaskDeletion != null) {
+            pendingTaskDeletion = null;
+            ui.showMessage("Task deletion cancelled.");
+        }
         if (pendingNoteDeletion != null) {
             pendingNoteDeletion = null;
             ui.showMessage("Note deletion cancelled.");
@@ -383,6 +401,39 @@ public class CommandHandler {
         if (pendingDeletion != null) {
             pendingDeletion = null;
             ui.showMessage("Project deletion cancelled.");
+        }
+    }
+
+    /** Validates exactly one task ID before requesting confirmation. */
+    private void handleTaskDelete(String arguments) {
+        if (arguments.isBlank()) {
+            throw new CommandException("A task ID must not be blank.");
+        }
+        String[] parts = arguments.trim().split("\\s+");
+        if (parts.length != 1) {
+            throw new CommandException("Provide exactly one task ID.");
+        }
+        pendingTaskDeletion = projectManager.getTask(parts[0]);
+        ui.showTaskDeleteConfirmation(pendingTaskDeletion);
+    }
+
+    /** Deletes only after yes; other invalid answers leave confirmation pending. */
+    private void handleTaskDeletionConfirmation(String input) {
+        switch (input.trim()) {
+        case "yes":
+            Task task = pendingTaskDeletion;
+            pendingTaskDeletion = null;
+            projectManager.deleteTask(task.getId());
+            ui.showMessage("Deleted task " + task.getId()
+                    + " from project " + task.getProject().getProjectId() + ".");
+            break;
+        case "no":
+            cancelPendingDeletion();
+            break;
+        default:
+            ui.showError("Please type yes to confirm deletion or no to cancel.");
+            ui.showTaskDeleteConfirmation(pendingTaskDeletion);
+            break;
         }
     }
 

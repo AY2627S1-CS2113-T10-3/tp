@@ -21,7 +21,7 @@ public class Ui {
                 + "client.delete, client.delete_note, "
                 + "project.add, project.status, project.list, project.filter, project.deadlines, "
                 + "project.overdue, project.view, project.delete, "
-                + "task.add, task.mark, task.unmark, task.edit, event.add, event.edit, help, save, exit");
+                + "task.add, task.mark, task.unmark, task.edit, task.delete, event.add, event.edit, help, save, exit");
         showSeparator();
     }
 
@@ -47,6 +47,7 @@ public class Ui {
         showMessage("task.mark      |   Mark a task complete");
         showMessage("task.unmark    |   Reopen a task");
         showMessage("task.edit      |   Edit a task");
+        showMessage("task.delete    |   Delete a task");
         showMessage("event.add      |   Add an event");
         showMessage("event.edit     |   Edit an event");
         showMessage("help           |   View help");
@@ -199,6 +200,18 @@ public class Ui {
         showMessage("Delete client " + client.getClientId() + " \"" + client.getName()
                 + "\" and " + count + " associated " + (count == 1 ? "note" : "notes") + "?");
         showMessage("Type yes to confirm deletion or no to cancel.");
+    }
+
+    /** Identifies the task and its owning project before requesting confirmation. */
+    public void showTaskDeleteConfirmation(Task task) {
+        showMessage("Delete task " + task.getId() + " \"" + task.getDescription()
+                + "\" from project " + describeProject(task.getProject()) + "?");
+        showMessage("Type yes to confirm deletion or no to cancel.");
+    }
+
+    /** Displays the expected format for deleting a task. */
+    public void showTaskDeleteUsage() {
+        showMessage("Format: task.delete TASK_ID");
     }
 
     /** Displays the expected format for deleting a project. */

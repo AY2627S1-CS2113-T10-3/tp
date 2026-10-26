@@ -99,6 +99,20 @@ public final class ProjectManager {
         throw new TaskException("Task " + requestedId + " was not found.");
     }
 
+    /**
+     * Deletes a task using its application-wide ID.
+     * Preserves the project, other activities and all ID counters.
+     *
+     * @param taskId ID of the task to delete.
+     * @return Deleted task.
+     * @throws TaskException If the ID is blank or the task does not exist.
+     */
+    public Task deleteTask(String taskId) {
+        Task task = getTask(taskId);
+        task.getProject().removeTask(task);
+        return task;
+    }
+
     /** Marks an existing task complete and returns it for the command response. */
     public Task markTaskComplete(String taskId) {
         Task task = getTask(taskId);

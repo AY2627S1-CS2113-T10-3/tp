@@ -102,6 +102,19 @@ public final class Project {
     }
 
     /**
+     * Removes a task owned by this project.
+     * Package-private so deletion goes through the project manager.
+     *
+     * @param task Registered task to remove.
+     * @throws TaskException If the task is missing or belongs elsewhere.
+     */
+    void removeTask(Task task) {
+        if (task == null || task.getProject() != this || !tasks.remove(task)) {
+            throw new TaskException("Task does not belong to this project.");
+        }
+    }
+
+    /**
      * Adds an event that belongs to this project.
      *
      * @param event Event to add.

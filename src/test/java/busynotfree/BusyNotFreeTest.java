@@ -309,6 +309,27 @@ class BusyNotFreeTest {
         assertTrue(ui.errors.isEmpty());
     }
 
+    @Test
+    public void run_deleteTaskEndOfInput_cancelsBeforeSaving() {
+        projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 1));
+        CommandHandler handler = new CommandHandler(new CommandParser(), ui, projectManager);
+        List<List<String>> taskIdsAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui, handler,
+                () -> taskIdsAtSave.add(projectManager.getProject("P001").getTasks()
+                        .stream().map(task -> task.getId()).toList()));
+
+        try (Scanner scanner = new Scanner("task.delete T001\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(List.of("T001")), taskIdsAtSave);
+        assertTrue(!handler.isAwaitingDeletionConfirmation());
+        assertEquals("Task deletion cancelled.", ui.messages.get(ui.messages.size() - 2));
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
     /** Supplies simulated input while closing only the test's scanner. */
     private void runWithInput(String input) {
         try (Scanner scanner = new Scanner(input)) {
