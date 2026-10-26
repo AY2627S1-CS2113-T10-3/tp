@@ -1,0 +1,36 @@
+@startuml
+' Successful execution of project.view P001.
+hide footbox
+
+actor User
+participant ":CommandHandler" as CH
+participant ":ProjectManager" as PM
+participant ":ClientManager" as CM
+participant ":Ui" as UI
+participant "p:Project" as P
+participant "t:Task" as T
+
+User -> CH : execute("project.view P001")
+activate CH
+note right of CH : CommandParser routing and\nseparator output are omitted.
+CH -> PM : getProject("P001")
+PM --> CH : p
+CH -> CM : getClient(p.clientId)
+CM --> CH : client
+CH -> UI : showProjectSummary(p, client)
+activate UI
+UI -> P : getTasks()
+P --> UI : tasks
+loop each task
+    UI -> T : isCompleted()
+    T --> UI : true / false
+end
+UI -> P : getEvents()
+P --> UI : events
+note right of UI : Prints the client, task list,\nprogress count and event list.
+UI --> CH
+deactivate UI
+CH --> User : false (continue command loop)
+deactivate CH
+
+@enduml

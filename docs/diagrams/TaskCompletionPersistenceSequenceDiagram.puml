@@ -1,0 +1,54 @@
+@startuml
+' Save on exit and restore completion on the next application launch.
+hide footbox
+
+actor User
+participant ":BusyNotFree" as App
+participant "saveAction:SaveAction" as Action
+participant ":DataStorage" as Storage
+participant ":ProjectManager" as PM
+participant "t:Task" as Task
+database "busynotfree.properties" as File
+participant ":Ui" as UI
+
+User -> App : exit
+activate App
+App -> Action : save()
+activate Action
+note right of Action : At startup, the lambda binds\nthe managers to DataStorage.save.
+Action -> Storage : save(clients, projects)
+activate Storage
+Storage -> PM : getProjects()
+PM --> Storage : projects
+loop each project's tasks
+    Storage -> Task : isCompleted()
+    Task --> Storage : true / false
+end
+Storage -> File : write temporary file, then replace data file
+File --> Storage
+Storage --> Action
+deactivate Storage
+Action --> App
+deactivate Action
+App -> UI : showGoodbye()
+UI --> App
+deactivate App
+
+== Next launch ==
+User -> App : start application
+activate App
+App -> Storage : load()
+activate Storage
+Storage -> File : read properties
+File --> Storage : saved values
+Storage -> PM : addTask(projectId, description, date)
+PM --> Storage : t
+opt saved completed value is true
+    Storage -> Task : markCompleted()
+end
+Storage --> App : LoadedData(clients, projects)
+deactivate Storage
+App --> User : ready for commands
+deactivate App
+
+@enduml

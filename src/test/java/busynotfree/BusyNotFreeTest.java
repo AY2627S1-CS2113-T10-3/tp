@@ -103,6 +103,63 @@ class BusyNotFreeTest {
     }
 
     @Test
+    public void run_save_writesCurrentStateAndContinuesReading() {
+        List<Integer> projectCountsAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui,
+                new CommandHandler(new CommandParser(), ui, projectManager),
+                () -> projectCountsAtSave.add(projectManager.getProjects().size()));
+
+        try (Scanner scanner = new Scanner("project.add client/C001 name/Website due/2026-11-30\n"
+                + "save\nproject.add client/C001 name/Logo due/2026-12-15\nexit\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(1, 2), projectCountsAtSave);
+        assertEquals(2, projectManager.getProjects().size());
+        assertEquals(1, ui.messages.stream().filter("Data saved."::equals).count());
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void run_failedSaveCommand_reportsErrorAndAcceptsMoreCommands() {
+        AtomicInteger saveAttempts = new AtomicInteger();
+        BusyNotFree application = new BusyNotFree(ui,
+                new CommandHandler(new CommandParser(), ui, projectManager), () -> {
+                    if (saveAttempts.incrementAndGet() == 1) {
+                        throw new IOException("Disk unavailable");
+                    }
+                });
+
+        try (Scanner scanner = new Scanner("save\nproject.add client/C001 name/Website "
+                + "due/2026-11-30\nsave\nexit\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(3, saveAttempts.get());
+        assertEquals(List.of("Critical ERROR!!! Unable to save data: Disk unavailable"), ui.errors);
+        assertEquals(1, ui.messages.stream().filter("Data saved."::equals).count());
+        assertEquals("Website", projectManager.getProject("P001").getName());
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+    }
+
+    @Test
+    public void run_saveWithArguments_rejectsCommandWithoutSaving() {
+        AtomicInteger saveAttempts = new AtomicInteger();
+        BusyNotFree application = new BusyNotFree(ui,
+                new CommandHandler(new CommandParser(), ui, projectManager), saveAttempts::incrementAndGet);
+
+        try (Scanner scanner = new Scanner("save now\nexit\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(1, saveAttempts.get());
+        assertEquals(List.of("Use save without arguments."), ui.errors);
+        assertEquals(0, ui.messages.stream().filter("Data saved."::equals).count());
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+    }
+
+    @Test
     public void run_endOfInput_exitsCleanly() {
         runWithInput("project.add client/C001 name/Website due/2026-11-30\n");
 

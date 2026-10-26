@@ -1,0 +1,40 @@
+@startuml
+' A save command persists data and then returns to the command loop.
+hide footbox
+
+actor User
+participant ":BusyNotFree" as App
+participant "saveAction:SaveAction" as Action
+participant ":DataStorage" as Storage
+database "busynotfree.properties" as File
+participant ":Ui" as UI
+
+User -> App : save
+activate App
+note right of App : run() recognises the standalone\ncommand and checks for arguments.
+App -> Action : save()
+Action -> Storage : save(clients, projects)
+Storage -> File : write temporary file and replace data file
+
+alt save succeeds
+    File --> Storage
+    Storage --> Action
+    Action --> App
+    App -> UI : showDataSaved()
+    UI -> User : "Data saved."
+    UI --> App
+else IOException
+    File --> Storage : I/O failure
+    Storage --> Action : throws IOException
+    Action --> App : throws IOException
+    App -> UI : showError(...)
+    UI -> User : error message
+    UI --> App
+end
+
+App -> UI : showPrompt()
+UI -> User : "Enter a command:"
+UI --> App
+deactivate App
+
+@enduml

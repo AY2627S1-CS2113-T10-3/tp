@@ -2,7 +2,7 @@
 
 ## Introduction
 
-BusyNotFree is a command-line app for managing clients and their projects. A project can have dated tasks and events. You can view a project's details, update its status, and save your work when you exit.
+BusyNotFree is a command-line app for managing clients and their projects. A project can have dated tasks and events. You can view a project's details, update its status, and save your work during a session or when you exit.
 
 ## Quick start
 
@@ -17,6 +17,7 @@ BusyNotFree is a command-line app for managing clients and their projects. A pro
    task.add project/P001 name/Create homepage wireframe date/2026-10-15
    event.add project/P001 name/Stakeholder meeting date/2026-10-20
    project.view P001
+   save
    exit
    ```
 
@@ -84,7 +85,7 @@ Format: `client.edit CLIENT_ID name/NEW_NAME`
 Renames an existing client, preserving its ID, notes and project links. For
 example, `client.edit C001 name/Acme Design` displays
 `Updated client C001 from "Acme Studio" to "Acme Design".`
-The new name is saved when you exit.
+The new name is saved when you enter `save` or `exit`.
 Missing or unknown client IDs and blank names are rejected.
 
 ## Projects
@@ -216,7 +217,7 @@ Format: `task.mark TASK_ID`
 
 Marks an existing task complete. Use the task ID shown by `task.add`; the task keeps its project, description, and date. `project.view` then shows `[COMPLETED]` beside it. An unknown task ID produces an error.
 
-After a successful `exit`, the task's completion state is saved and restored the next time BusyNotFree starts. Tasks from older data files without a saved completion state start as `[In Progress]`.
+After a successful `save` or `exit`, the task's completion state is restored the next time BusyNotFree starts. Tasks from older data files without a saved completion state start as `[In Progress]`.
 
 ```text
 task.mark T001
@@ -279,20 +280,36 @@ Format: `help`
 
 Shows a list of available commands and short descriptions.
 
+### Save without exiting: `save`
+
+Format: `save`
+
+Writes all current clients, projects, tasks, completion states, and events to the same data file
+used by `exit`. The app then accepts another command:
+
+```text
+save
+Data saved.
+```
+
+`save` does not accept arguments. If the write fails, the app displays an error, does not show
+`Data saved.`, and lets you try again or continue working. Changes made after a successful
+`save` need another `save` or `exit` to reach the file.
+
 ### Save and exit: `exit`
 
 Format: `exit`
 
-Saves clients, notes, projects, tasks, and events, then closes the app. Task completion is not yet included in the save file:
+Saves clients, notes, projects, tasks, task completion, and events, then closes the app:
 
 ```text
 exit
 Data saved. Goodbye!
 ```
 
-Extra words after `exit` are ignored. If saving fails, the app displays an error and lets you try again. Closing the app without exiting normally may lose changes made since the last save.
+Extra words after `exit` are ignored. If saving fails, the app displays an error and lets you try again. Closing the app without exiting normally may lose changes made since the last successful `save`.
 
-The save file is `data/busynotfree.properties` relative to the directory from which you start the app. It is created on a successful exit and loaded automatically on the next run from that directory. To move your data to another computer, copy this file and place it in the same `data` directory relative to where you will run BusyNotFree.
+The save file is `data/busynotfree.properties` relative to the directory from which you start the app. It is created on a successful `save` or `exit` and loaded automatically on the next run from that directory. To move your data to another computer, copy this file and place it in the same `data` directory relative to where you will run BusyNotFree.
 
 ## Command summary
 
@@ -319,4 +336,5 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | Add event | `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Edit event | `event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Help | `help` |
+| Save and continue | `save` |
 | Save and exit | `exit` |
