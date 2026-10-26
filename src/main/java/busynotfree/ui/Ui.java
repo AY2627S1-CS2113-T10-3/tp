@@ -20,7 +20,7 @@ public class Ui {
         showMessage("Commands: client.add, client.note, client.view, client.list, client.find, client.edit, "
                 + "project.add, project.status, project.list, project.filter, project.deadlines, "
                 + "project.overdue, project.view, project.delete, "
-                + "task.add, task.mark, task.unmark, task.edit, event.add, event.edit, help, exit");
+                + "task.add, task.mark, task.unmark, task.edit, event.add, event.edit, help, save, exit");
         showSeparator();
     }
 
@@ -47,6 +47,7 @@ public class Ui {
         showMessage("event.add      |   Add an event");
         showMessage("event.edit     |   Edit an event");
         showMessage("help           |   View help");
+        showMessage("save           |   Save data and continue");
         showMessage("exit           |   Save data and exit");
     }
 
@@ -57,9 +58,12 @@ public class Ui {
         showMessage("Enter a command:");
     }
 
-    /**
-     * Confirms that application data was saved before exiting.
-     */
+    /** Confirms a successful save while the command loop continues. */
+    public void showDataSaved() {
+        showMessage("Data saved.");
+    }
+
+    /** Confirms that application data was saved before exiting. */
     public void showGoodbye() {
         showMessage("Data saved. Goodbye!");
     }

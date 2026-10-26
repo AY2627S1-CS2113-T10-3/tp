@@ -1,24 +1,62 @@
 package busynotfree;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import busynotfree.command.CommandHandler;
 import busynotfree.command.CommandParser;
 import busynotfree.model.ClientManager;
 import busynotfree.model.ProjectManager;
+import busynotfree.storage.DataStorage;
 import busynotfree.ui.Ui;
 
 /**
  * Tests the client workflow and error recovery through the application's CLI loop.
  */
 class BusyNotFreeClientTest {
+    @Test
+    public void run_save_persistsTaskStateBeforeExit(@TempDir Path directory) throws IOException {
+        RecordingUi ui = new RecordingUi();
+        ClientManager clients = new ClientManager();
+        ProjectManager projects = new ProjectManager(clients);
+        DataStorage storage = new DataStorage(directory.resolve("busynotfree.properties"));
+        AtomicInteger saveAttempts = new AtomicInteger();
+        AtomicBoolean completedAtSave = new AtomicBoolean();
+        BusyNotFree application = new BusyNotFree(ui,
+                new CommandHandler(new CommandParser(), ui, projects, clients), () -> {
+                    storage.save(clients, projects);
+                    if (saveAttempts.incrementAndGet() == 1) {
+                        completedAtSave.set(storage.load().projectManager().getTask("T001").isCompleted());
+                    }
+                });
+
+        String commands = "client.add name/Acme Studio\n"
+                + "project.add client/C001 name/Website due/2026-11-30\n"
+                + "task.add project/P001 name/Wireframe date/2026-10-15\n"
+                + "task.mark T001\nsave\ntask.unmark T001\nexit\n";
+        try (Scanner scanner = new Scanner(commands)) {
+            application.run(scanner);
+        }
+
+        assertEquals(2, saveAttempts.get());
+        assertTrue(completedAtSave.get());
+        assertFalse(storage.load().projectManager().getTask("T001").isCompleted());
+        assertEquals(1, ui.messages.stream().filter("Data saved."::equals).count());
+        assertTrue(ui.errors.isEmpty());
+    }
+
     @Test
     public void run_clientWorkflow_recoversFromErrorsAndSharesClientsWithProjects() {
         RecordingUi ui = new RecordingUi();

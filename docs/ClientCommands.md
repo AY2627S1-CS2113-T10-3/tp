@@ -82,7 +82,7 @@ Format: `client.edit CLIENT_ID name/NEW_NAME`
 Renames an existing client and displays
 `Updated client C001 from "OLD_NAME" to "NEW_NAME".` for client `C001`.
 The ID, notes and project links are preserved, and the updated
-name is saved on exit. The new name must not be blank; missing or unknown IDs
+name is saved on `save` or `exit`. The new name must not be blank; missing or unknown IDs
 are rejected. Name arguments follow the prefix rules described above.
 
 ## Integration and testing
@@ -95,7 +95,7 @@ it creates a separate client manager. Callers that need real client validation
 should use the four-argument constructor with a shared manager, as in
 `BusyNotFree.main`.
 
-Clients and notes are kept in memory while the app runs. On `exit`, the app saves
+Clients and notes are kept in memory while the app runs. On `save` or `exit`, the app saves
 them with the project data to `data/busynotfree.properties` and loads them on
 the next run from the same working directory.
 

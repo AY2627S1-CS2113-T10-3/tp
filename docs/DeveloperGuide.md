@@ -148,13 +148,25 @@ count, so progress from one project cannot affect another.
 The count is derived when a summary is displayed instead of being stored in `Project`. This
 avoids a second value that could become stale when a task is marked, reopened or deleted.
 
-#### Saving on exit and restoring on startup
+#### Saving during a session or on exit
 
-The application saves all managers together when the user enters `exit`. In `BusyNotFree#main`,
-the `SaveAction` callback is connected to `DataStorage#save(clientManager, projectManager)`.
-`BusyNotFree#saveAndReportExit` invokes it before showing `Data saved. Goodbye!`. If saving
-throws `IOException`, the app reports the failure and lets an explicit `exit` be retried.
-`SaveAction` also lets a test simulate a failed write without accessing the real filesystem.
+`save` lets a user persist current data without ending the session. `BusyNotFree#run` recognises
+this standalone command before sending dotted commands to `CommandHandler`. It rejects extra
+arguments, calls `saveData`, shows `Data saved.` only if the write succeeds, then prompts for
+another command. File I/O stays in the application layer, where the existing save action is
+already available. The sequence diagram shows the success and I/O failure paths.
+
+![Sequence diagram of the save command](images/SaveCommandSequenceDiagram.png)
+
+In `BusyNotFree#main`, the `SaveAction` callback is connected to
+`DataStorage#save(clientManager, projectManager)`. Both `save` and `exit` use `saveData`, which
+reports an `IOException` and returns `false` on failure. The `exit` path additionally shows
+`Data saved. Goodbye!` and leaves the command loop only after a successful write. A failed
+explicit `exit` can be retried, while a failed `save` simply returns to the next prompt.
+`SaveAction` lets tests simulate failed writes without accessing the real filesystem.
+
+The following diagram shows how an `exit` save stores task completion and how startup restores
+it. The standalone `save` command calls the same `DataStorage#save` method.
 
 ![Sequence diagram of saving and restoring task completion](images/TaskCompletionPersistenceSequenceDiagram.png)
 
@@ -171,10 +183,10 @@ this enhancement still load with their tasks in progress. Only the exact values 
 `false` are accepted; an invalid value makes loading fail instead of silently changing a task's
 state. Saved next-ID counters also prevent deleted IDs from being reused after a restart.
 
-Marking and reopening change only the in-memory model. They do not save immediately: the
-existing exit path writes the new state. `BusyNotFree#main` reports a load error and stops if a
-saved file is invalid. On end-of-input, the command loop attempts a save once before returning;
-only an explicit `exit` can be retried after a failed save.
+Marking and reopening change only the in-memory model. The next successful `save` or `exit`
+writes the new state. `BusyNotFree#main` reports a load error and stops if a saved file is
+invalid. On end-of-input, the command loop attempts a save once before returning; an explicit
+`save` or `exit` can be retried after a failed write.
 
 #### Design and verification
 
@@ -182,11 +194,16 @@ only an explicit `exit` can be retried after a failed save.
   useful if additional workflow states were introduced later.
 * One properties file keeps task state with its project and client data. Adding an optional
   field avoids changing the file version or rejecting existing v1.0 saves.
+* The application handles `save` because it is a standalone command that needs storage access.
+  This avoids giving the general `CommandHandler` responsibility for file I/O.
 * [`CommandHandlerTest`](../src/test/java/busynotfree/command/CommandHandlerTest.java)
   covers marking, reopening and invalid IDs. [`ProjectViewTest`](../src/test/java/busynotfree/command/ProjectViewTest.java)
   checks empty, partial and complete counts, including `project.view all`.
   [`DataStorageTest`](../src/test/java/busynotfree/storage/DataStorageTest.java) checks
   saved and restored flags, the older-file default and malformed saved data.
+  [`BusyNotFreeTest`](../src/test/java/busynotfree/BusyNotFreeTest.java) checks `save` success,
+  failure and continued input. [`BusyNotFreeClientTest`](../src/test/java/busynotfree/BusyNotFreeClientTest.java)
+  checks that an in-session save can be loaded before a later exit.
 
 ### Editing tasks and events: `task.edit` and `event.edit`
 
@@ -288,7 +305,7 @@ Assertions check internal assumptions: only client commands reach `ClientCommand
 * **A map preserves both lookup and display order.** `LinkedHashMap` supports lookup by ID and predictable listing. An `ArrayList` would preserve creation order but require a search for each ID; an ordinary `HashMap` would not guarantee creation order.
 * **Notes belong to their client.** An ordered list of strings is sufficient for appending and displaying notes. Separate note objects with their own IDs could support editing or deleting individual notes, but those operations are outside the current client commands.
 * **Validate before changing state.** Parsing precedes manager calls, client construction precedes registration and counter advancement, and note validation precedes insertion. Invalid operations therefore leave existing client data unchanged.
-* **Persistence is handled separately.** Client commands update the in-memory model. The application's `DataStorage` integration saves clients, notes and the next client number with the project data on exit and restores them at startup. The client handler does not perform file I/O or save after each command.
+* **Persistence is handled separately.** Client commands update the in-memory model. The application's `DataStorage` integration saves clients, notes and the next client number with the project data on `save` or `exit` and restores them at startup. The client handler does not perform file I/O or save after each command.
 
 #### Existing verification
 
@@ -316,6 +333,7 @@ Assertions check internal assumptions: only client commands reach `ClientCommand
 |v2.0|freelancer|mark a task complete or reopen it|keep its status aligned with the work left to do|
 |v2.0|freelancer|see a completed-task count for each project|assess progress at a glance|
 |v2.0|freelancer|retain task completion after restarting|avoid marking the same tasks again|
+|v2.0|freelancer|save my work without exiting|protect recent changes during a long session|
 |v2.0|user|find a to-do item by name|locate a to-do without having to go through the entire list|
 |v2.0|freelancer responding to changes in client requirements|edit an existing task's description and date without changing its ID or project|keep the work plan accurate|
 |v2.0|freelance consultant arranging client meetings|edit an existing event's description and date without changing its ID or project|update a rescheduled meeting without deleting and recreating it|
