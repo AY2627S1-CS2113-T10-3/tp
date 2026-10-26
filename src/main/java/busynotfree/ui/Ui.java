@@ -212,13 +212,20 @@ public class Ui {
         showMessage("Status: " + project.getStatus());
         showMessage("Deadline: " + project.getDeadline());
         showMessage("Tasks:");
-        if (project.getTasks().isEmpty()) {
+        List<Task> tasks = project.getTasks();
+        int completedTasks = 0;
+        if (tasks.isEmpty()) {
             showMessage("No tasks found.");
         } else {
-            for (Task task : project.getTasks()) {
+            for (Task task : tasks) {
                 showMessage(task.toString());
+                if (task.isCompleted()) {
+                    completedTasks++;
+                }
             }
         }
+        String taskLabel = tasks.size() == 1 ? "task" : "tasks";
+        showMessage("Progress: " + completedTasks + " of " + tasks.size() + " " + taskLabel + " completed.");
         showMessage("Events:");
         if (project.getEvents().isEmpty()) {
             showMessage("No events found.");

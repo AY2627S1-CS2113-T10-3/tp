@@ -1,15 +1,19 @@
 package busynotfree.storage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Properties;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -38,6 +42,7 @@ class DataStorageTest {
         projects.addTask("P001", "First wireframe", LocalDate.of(2026, 10, 15));
         projects.addTask("P002", "Discarded sketch", LocalDate.of(2026, 10, 16));
         projects.addTask("P001", "Final wireframe", LocalDate.of(2026, 10, 17));
+        projects.markTaskComplete("T001");
         projects.addEvent("P001", "Review", LocalDate.of(2026, 10, 20));
         projects.addEvent("P002", "Discarded meeting", LocalDate.of(2026, 10, 21));
         projects.deleteProject("P002");
@@ -52,6 +57,8 @@ class DataStorageTest {
         assertEquals(ProjectStatus.PAUSED, restored.getStatus());
         assertEquals(LocalDate.of(2026, 11, 30), restored.getDeadline());
         assertEquals(List.of("T001", "T003"), restored.getTasks().stream().map(task -> task.getId()).toList());
+        assertTrue(loaded.projectManager().getTask("T001").isCompleted());
+        assertFalse(loaded.projectManager().getTask("T003").isCompleted());
         assertEquals(List.of("E001"), restored.getEvents().stream().map(event -> event.getId()).toList());
         assertEquals(1, loaded.projectManager().getProjects().size());
         assertEquals("P003", loaded.projectManager().addProject("C002", "New project",
@@ -98,6 +105,29 @@ class DataStorageTest {
         assertEquals("P001", loaded.projectManager().addProject(
                 loaded.clientManager().addClient("Acme").getClientId(), "Website",
                 LocalDate.of(2026, 11, 30)).getProjectId());
+    }
+
+    @Test
+    public void load_legacyTaskWithoutCompletionState_defaultsToIncomplete() throws IOException {
+        Path file = directory.resolve("legacy.properties");
+        DataStorage storage = new DataStorage(file);
+        ClientManager clients = new ClientManager();
+        clients.addClient("Acme Studio");
+        ProjectManager projects = new ProjectManager(clients);
+        projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projects.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 15));
+        storage.save(clients, projects);
+
+        Properties legacyData = new Properties();
+        try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            legacyData.load(reader);
+        }
+        legacyData.remove("task.0.completed");
+        try (Writer writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
+            legacyData.store(writer, "V1.0 data without task completion");
+        }
+
+        assertFalse(storage.load().projectManager().getTask("T001").isCompleted());
     }
 
     @Test

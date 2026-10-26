@@ -144,6 +144,12 @@ public final class DataStorage {
             Task task = projects.addTask(required(data, key + "project"), required(data, key + "description"),
                     LocalDate.parse(required(data, key + "date")));
             requireMatchingId(id, task.getId());
+            String completed = data.getProperty(key + "completed", "false");
+            if ("true".equals(completed)) {
+                task.markCompleted();
+            } else if (!"false".equals(completed)) {
+                throw new IllegalArgumentException("Invalid " + key + "completed.");
+            }
         }
     }
 
@@ -198,7 +204,10 @@ public final class DataStorage {
         data.setProperty("task.count", Integer.toString(tasks.size()));
         data.setProperty("event.count", Integer.toString(events.size()));
         for (int index = 0; index < tasks.size(); index++) {
-            saveItem(data, "task." + index + ".", tasks.get(index));
+            String key = "task." + index + ".";
+            Task task = tasks.get(index);
+            saveItem(data, key, task);
+            data.setProperty(key + "completed", Boolean.toString(task.isCompleted()));
         }
         for (int index = 0; index < events.size(); index++) {
             saveItem(data, "event." + index + ".", events.get(index));

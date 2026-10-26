@@ -155,7 +155,7 @@ project.overdue
 
 Format: `project.view [PROJECT_ID|all]`
 
-Use a project ID to view one project. Use `project.view all` or just `project.view` to view every project, separated by a blank line. A summary shows the client, status, deadline, tasks, and events in separate sections.
+Use a project ID to view one project. Use `project.view all` or just `project.view` to view every project, separated by a blank line. A summary shows the client, status, deadline, tasks, and events in separate sections, plus a completed-task count.
 
 ```text
 project.view P001
@@ -165,11 +165,12 @@ Status: ACTIVE
 Deadline: 2026-11-30
 Tasks:
 [T001] Create homepage wireframe - 2026-10-15 [In Progress]
+Progress: 0 of 1 task completed.
 Events:
 [E001] Stakeholder meeting - 2026-10-20
 ```
 
-An empty section says `No tasks found.` or `No events found.` If there are no projects, viewing all says `No projects found.` A missing ID produces `Project PROJECT_ID was not found.` with the requested ID in place of `PROJECT_ID`.
+An empty section says `No tasks found.` or `No events found.` A project without tasks shows `Progress: 0 of 0 tasks completed.` If there are no projects, viewing all says `No projects found.` A missing ID produces `Project PROJECT_ID was not found.` with the requested ID in place of `PROJECT_ID`.
 
 Each task shows `[In Progress]` after its date until it is marked complete, when it shows `[COMPLETED]`.
 
@@ -214,6 +215,8 @@ Added task T001 "Create homepage wireframe" to project P001 "Website redesign".
 Format: `task.mark TASK_ID`
 
 Marks an existing task complete. Use the task ID shown by `task.add`; the task keeps its project, description, and date. `project.view` then shows `[COMPLETED]` beside it. An unknown task ID produces an error.
+
+After a successful `exit`, the task's completion state is saved and restored the next time BusyNotFree starts. Tasks from older data files without a saved completion state start as `[In Progress]`.
 
 ```text
 task.mark T001
