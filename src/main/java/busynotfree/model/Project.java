@@ -102,6 +102,19 @@ public final class Project {
     }
 
     /**
+     * Removes a task owned by this project.
+     * Package-private so deletion goes through the project manager.
+     *
+     * @param task Registered task to remove.
+     * @throws TaskException If the task is missing or belongs elsewhere.
+     */
+    void removeTask(Task task) {
+        if (task == null || task.getProject() != this || !tasks.remove(task)) {
+            throw new TaskException("Task does not belong to this project.");
+        }
+    }
+
+    /**
      * Adds an event that belongs to this project.
      *
      * @param event Event to add.
@@ -110,6 +123,19 @@ public final class Project {
     public void addEvent(Event event) {
         validateNewItem(event, events, EventException::new);
         events.add(event);
+    }
+
+    /**
+     * Removes an event owned by this project.
+     * Package-private so deletion goes through the project manager.
+     *
+     * @param event Registered event to remove.
+     * @throws EventException If the event is missing or belongs elsewhere.
+     */
+    void removeEvent(Event event) {
+        if (event == null || event.getProject() != this || !events.remove(event)) {
+            throw new EventException("Event does not belong to this project.");
+        }
     }
 
     /**
@@ -148,6 +174,23 @@ public final class Project {
         assert events.isEmpty() : "All project events must be removed";
 
         return removedCount;
+    }
+
+    /** Copies the project and its activities, preserving IDs, dates and completion states. */
+    Project copy() {
+        Project copy = new Project(projectId, clientId, name, deadline);
+        copy.changeStatus(status);
+        for (Task task : tasks) {
+            Task copiedTask = new Task(task.getId(), copy, task.getDescription(), task.getDate());
+            if (task.isCompleted()) {
+                copiedTask.markCompleted();
+            }
+            copy.addTask(copiedTask);
+        }
+        for (Event event : events) {
+            copy.addEvent(new Event(event.getId(), copy, event.getDescription(), event.getDate()));
+        }
+        return copy;
     }
 
     /** Checks ownership and ID uniqueness using the task or event exception supplied by the caller. */

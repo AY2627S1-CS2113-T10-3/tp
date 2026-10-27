@@ -38,8 +38,8 @@ public final class ClientUi {
             ui.showMessage("Notes: No notes found.");
             return;
         }
-        for (String note : notes) {
-            ui.showMessage("Notes: " + note);
+        for (int i = 0; i < notes.size(); i++) {
+            ui.showMessage("Note " + (i + 1) + ": " + notes.get(i));
         }
     }
 
@@ -80,6 +80,12 @@ public final class ClientUi {
             break;
         case "edit":
             ui.showMessage("Format: client.edit CLIENT_ID name/NEW_NAME");
+            break;
+        case "delete":
+            ui.showMessage("Format: client.delete CLIENT_ID");
+            break;
+        case "delete_note":
+            ui.showMessage("Format: client.delete_note CLIENT_ID index/NOTE_INDEX");
             break;
         default:
             break;

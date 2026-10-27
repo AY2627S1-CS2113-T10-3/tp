@@ -1,0 +1,35 @@
+@startuml
+' Dependencies relevant to deletion snapshots and project restoration.
+!pragma layout smetana
+hide circle
+hide empty members
+skinparam defaultFontSize 14
+skinparam classAttributeIconSize 0
+
+class CommandHandler
+class TrashcanCommandHandler
+class ClientManager
+class ProjectManager
+class TrashcanManager
+class Project
+class Client
+class Task
+class Event
+
+CommandHandler --> TrashcanCommandHandler : delegates
+TrashcanCommandHandler --> TrashcanManager : lists / restores
+TrashcanCommandHandler --> ProjectManager : supplies\nrestore target
+ClientManager --> TrashcanManager : stores deleted\nclients
+ProjectManager --> TrashcanManager : stores deleted\nprojects
+TrashcanManager ..> ProjectManager : registerRestoredProject(...)
+
+TrashcanManager --> "0..*" Project : retained snapshots
+TrashcanManager --> "0..*" Client : retained snapshots
+Project *-- "0..*" Task
+Project *-- "0..*" Event
+
+note bottom of TrashcanManager
+  One shared instance per application.
+  Active collections and utility classes are omitted.
+end note
+@enduml

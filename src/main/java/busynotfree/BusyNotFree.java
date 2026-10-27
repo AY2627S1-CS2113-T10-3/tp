@@ -61,14 +61,18 @@ public class BusyNotFree {
     void run(Scanner scanner) {
         ui.showWelcome();
         while (true) {
-            ui.showPrompt();
+            if (!commandHandler.isAwaitingDeletionConfirmation()) {
+                ui.showPrompt();
+            }
             if (!scanner.hasNextLine()) {
+                commandHandler.cancelPendingDeletion();
                 saveAndReportExit();
                 return;
             }
             String userInput = scanner.nextLine();
             String[] commandParts = userInput.trim().split("\\s+", 2);
-            if (commandParts[0].equals("save")) {
+            if (!commandHandler.isAwaitingDeletionConfirmation()
+                    && commandParts[0].equals("save")) {
                 ui.showSeparator();
                 if (commandParts.length > 1) {
                     ui.showError("Use save without arguments.");

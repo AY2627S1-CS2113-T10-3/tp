@@ -4,22 +4,27 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
 
 import busynotfree.exception.BusyNotFreeException;
 import busynotfree.exception.CommandException;
 import busynotfree.exception.EventException;
 import busynotfree.exception.ProjectException;
 import busynotfree.exception.TaskException;
+import busynotfree.model.Event;
 import busynotfree.model.PlaceholderClientLookup;
 import busynotfree.model.Project;
 import busynotfree.model.ProjectManager;
 import busynotfree.model.ProjectStatus;
+import busynotfree.model.Task;
 import busynotfree.ui.Ui;
 
 /**
@@ -364,7 +369,13 @@ class CommandHandlerTest {
 
         assertFalse(handler.execute("project.delete P001"));
 
-        assertEquals(List.of("Website redesign has been deleted",
+        assertEquals(2, project.getItemCount());
+        assertTrue(handler.isAwaitingDeletionConfirmation());
+        assertFalse(handler.execute("yes"));
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+
+        assertEquals(List.of("Delete project P001 \"Website redesign\" and 2 associated activities?",
+                "Type yes to confirm deletion or no to cancel.", "Website redesign has been deleted",
                 "2 associated activities removed."), ui.messages);
         assertTrue(ui.errors.isEmpty());
         assertEquals(List.of(other), projectManager.getProjects());
@@ -383,7 +394,10 @@ class CommandHandlerTest {
 
         assertFalse(handler.execute("project.delete P001"));
 
-        assertEquals(List.of("Website has been deleted",
+        assertFalse(handler.execute("yes"));
+
+        assertEquals(List.of("Delete project P001 \"Website\" and 0 associated activities?",
+                "Type yes to confirm deletion or no to cancel.", "Website has been deleted",
                 "0 associated activities removed."), ui.messages);
         assertTrue(ui.errors.isEmpty());
         assertTrue(projectManager.getProjects().isEmpty());
@@ -397,9 +411,47 @@ class CommandHandlerTest {
 
         assertFalse(handler.execute("project.delete P001"));
 
-        assertEquals(List.of("Website has been deleted",
+        assertFalse(handler.execute("  yes\t"));
+
+        assertEquals(List.of("Delete project P001 \"Website\" and 1 associated activity?",
+                "Type yes to confirm deletion or no to cancel.", "Website has been deleted",
                 "1 associated activity removed."), ui.messages);
         assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectDeleteNo_preservesActivitiesAndResumesCommands() {
+        LocalDate date = LocalDate.of(2026, 11, 30);
+        Project project = projectManager.addProject("C001", "Website", date);
+        projectManager.addTask("P001", "Wireframe", date);
+        projectManager.addEvent("P001", "Meeting", date);
+
+        handler.execute("project.delete P001");
+        assertFalse(handler.execute(" no "));
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of(project), projectManager.getProjects());
+        assertEquals(2, project.getItemCount());
+        assertEquals("Project deletion cancelled.", ui.messages.getLast());
+        assertTrue(handler.execute("exit"));
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectDeleteInvalidAnswers_keepsWaitingWithoutExecutingCommands() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        handler.execute("project.delete P001");
+
+        for (String answer : List.of("", "YES", "yes please", "exit", "help", "project.delete P001")) {
+            assertFalse(handler.execute(answer));
+            assertTrue(handler.isAwaitingDeletionConfirmation());
+            assertEquals(List.of(project), projectManager.getProjects());
+            assertEquals("Please type yes to confirm deletion or no to cancel.", ui.errors.getLast());
+            assertEquals("Type yes to confirm deletion or no to cancel.", ui.messages.getLast());
+        }
+
+        handler.execute("no");
+        assertFalse(handler.isAwaitingDeletionConfirmation());
     }
 
     @Test
@@ -566,6 +618,239 @@ class CommandHandlerTest {
                 () -> failingHandler.execute("project.add")));
         assertTrue(ui.errors.isEmpty());
         assertTrue(ui.messages.isEmpty());
+    }
+
+    /** Invalid IDs must not remove tasks or start confirmation. */
+    @TestFactory
+    public List<DynamicTest> execute_deleteTaskInvalidId_preservesTasks() {
+        List<String> inputs = List.of("task.delete", "task.delete   ", "task.delete invalid",
+                "task.delete T999", "task.delete t001", "task.delete P001", "task.delete T001 T002");
+        List<String> errors = List.of("A task ID must not be blank.", "A task ID must not be blank.",
+                "Task invalid was not found.", "Task T999 was not found.", "Task t001 was not found.",
+                "Task P001 was not found.", "Provide exactly one task ID.");
+        List<DynamicTest> tests = new ArrayList<>();
+        for (int i = 0; i < inputs.size(); i++) {
+            String input = inputs.get(i);
+            String expectedError = errors.get(i);
+            tests.add(dynamicTest(input, () -> {
+                CommandHandlerTest fixture = new CommandHandlerTest();
+                Project project = fixture.projectManager.addProject(
+                        "C001", "Website", LocalDate.of(2026, 11, 30));
+                Task task = fixture.projectManager.addTask(
+                        "P001", "Wireframe", LocalDate.of(2026, 11, 1));
+
+                assertFalse(fixture.handler.execute(input));
+
+                assertEquals(List.of(expectedError), fixture.ui.errors);
+                assertEquals(List.of("Format: task.delete TASK_ID"), fixture.ui.messages);
+                assertFalse(fixture.handler.isAwaitingDeletionConfirmation());
+                assertEquals(List.of(task), project.getTasks());
+            }));
+        }
+        return tests;
+    }
+
+    @Test
+    public void execute_deleteTaskConfirmed_preservesOtherActivitiesAndIds() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        Project otherProject = projectManager.addProject("C001", "Logo", LocalDate.of(2026, 12, 1));
+        Task deleted = projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 1));
+        Task kept = projectManager.addTask("P001", "Review", LocalDate.of(2026, 11, 2));
+        Task other = projectManager.addTask("P002", "Sketch", LocalDate.of(2026, 11, 3));
+        projectManager.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 4));
+
+        handler.execute("task.delete T001");
+
+        assertTrue(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of(deleted, kept), project.getTasks());
+        assertEquals(List.of("Delete task T001 \"Wireframe\" from project P001 \"Website\"?",
+                "Type yes to confirm deletion or no to cancel."), ui.messages);
+
+        handler.execute("yes");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertThrows(TaskException.class, () -> projectManager.getTask("T001"));
+        assertEquals(List.of(kept), project.getTasks());
+        assertEquals(List.of(other), otherProject.getTasks());
+        assertEquals(1, project.getEvents().size());
+        assertEquals(2, projectManager.getProjects().size());
+        assertEquals("Deleted task T001 from project P001.", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+        assertEquals("T004", projectManager.addTask(
+                "P001", "Next task", LocalDate.of(2026, 11, 5)).getId());
+    }
+
+    @Test
+    public void execute_deleteTaskCancelled_preservesTask() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        Task task = projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 1));
+
+        handler.execute("task.delete T001");
+        handler.execute("no");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of(task), project.getTasks());
+        assertEquals("Task deletion cancelled.", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_deleteTaskInvalidAnswers_keepsConfirmationPending() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        Task task = projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 1));
+        handler.execute("task.delete T001");
+
+        for (String answer : List.of("", "YES", "yes please", "exit", "save", "help")) {
+            assertFalse(handler.execute(answer));
+            assertTrue(handler.isAwaitingDeletionConfirmation());
+            assertEquals(List.of(task), project.getTasks());
+            assertEquals("Please type yes to confirm deletion or no to cancel.", ui.errors.getLast());
+            assertEquals("Type yes to confirm deletion or no to cancel.", ui.messages.getLast());
+        }
+        handler.execute("no");
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+    }
+
+    /** Deleting the last task preserves its project and never succeeds twice. */
+    @TestFactory
+    public List<DynamicTest> execute_deleteOnlyTask_handlesBothCompletionStates() {
+        List<DynamicTest> tests = new ArrayList<>();
+        for (boolean completed : List.of(false, true)) {
+            tests.add(dynamicTest(completed ? "completed" : "in progress", () -> {
+                CommandHandlerTest fixture = new CommandHandlerTest();
+                Project project = fixture.projectManager.addProject(
+                        "C001", "Website", LocalDate.of(2026, 11, 30));
+                fixture.projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 1));
+                if (completed) {
+                    fixture.projectManager.markTaskComplete("T001");
+                }
+                fixture.handler.execute("task.delete T001");
+                fixture.handler.execute("yes");
+
+                assertTrue(project.getTasks().isEmpty());
+                assertEquals(List.of(project), fixture.projectManager.getProjects());
+                assertTrue(fixture.ui.errors.isEmpty());
+
+                fixture.ui.messages.clear();
+                fixture.handler.execute("task.delete T001");
+
+                assertFalse(fixture.handler.isAwaitingDeletionConfirmation());
+                assertEquals(List.of("Task T001 was not found."), fixture.ui.errors);
+                assertEquals(List.of("Format: task.delete TASK_ID"), fixture.ui.messages);
+            }));
+        }
+        return tests;
+    }
+
+    /** Invalid IDs must not remove events or start confirmation. */
+    @TestFactory
+    public List<DynamicTest> execute_deleteEventInvalidId_preservesEvents() {
+        List<String> inputs = List.of("event.delete", "event.delete   ", "event.delete invalid",
+                "event.delete E999", "event.delete e001", "event.delete P001", "event.delete E001 E002");
+        List<String> errors = List.of("An event ID must not be blank.", "An event ID must not be blank.",
+                "Event invalid was not found. Use project.view to see event IDs.",
+                "Event E999 was not found. Use project.view to see event IDs.",
+                "Event e001 was not found. Use project.view to see event IDs.",
+                "Event P001 was not found. Use project.view to see event IDs.", "Provide exactly one event ID.");
+        List<DynamicTest> tests = new ArrayList<>();
+        for (int i = 0; i < inputs.size(); i++) {
+            String input = inputs.get(i);
+            String expectedError = errors.get(i);
+            tests.add(dynamicTest(input, () -> {
+                CommandHandlerTest fixture = new CommandHandlerTest();
+                Project project = fixture.projectManager.addProject(
+                        "C001", "Website", LocalDate.of(2026, 11, 30));
+                Event event = fixture.projectManager.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 1));
+
+                assertFalse(fixture.handler.execute(input));
+
+                assertEquals(List.of(expectedError), fixture.ui.errors);
+                assertEquals(List.of("Format: event.delete EVENT_ID"), fixture.ui.messages);
+                assertFalse(fixture.handler.isAwaitingDeletionConfirmation());
+                assertEquals(List.of(event), project.getEvents());
+            }));
+        }
+        return tests;
+    }
+
+    @Test
+    public void execute_deleteEventConfirmed_preservesOtherActivitiesAndIds() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        Project otherProject = projectManager.addProject("C001", "Logo", LocalDate.of(2026, 12, 1));
+        Event deleted = projectManager.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 1));
+        Event kept = projectManager.addEvent("P001", "Review", LocalDate.of(2026, 11, 2));
+        Event other = projectManager.addEvent("P002", "Presentation", LocalDate.of(2026, 11, 3));
+        Task task = projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 4));
+
+        handler.execute("event.delete E001");
+
+        assertTrue(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of(deleted, kept), project.getEvents());
+        assertEquals(List.of("Delete event E001 \"Meeting\" from project P001 \"Website\"?",
+                "Type yes to confirm deletion or no to cancel."), ui.messages);
+
+        handler.execute("yes");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertThrows(EventException.class, () -> projectManager.getEvent("E001"));
+        assertEquals(List.of(kept), project.getEvents());
+        assertEquals(List.of(other), otherProject.getEvents());
+        assertEquals(List.of(task), project.getTasks());
+        assertEquals(2, projectManager.getProjects().size());
+        assertEquals("Deleted event E001 from project P001.", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+        assertEquals("E004", projectManager.addEvent(
+                "P001", "Next meeting", LocalDate.of(2026, 11, 5)).getId());
+    }
+
+    @Test
+    public void execute_deleteEventCancelled_preservesEvent() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        Event event = projectManager.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 1));
+
+        handler.execute("event.delete E001");
+        handler.execute("no");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of(event), project.getEvents());
+        assertEquals("Event deletion cancelled.", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_deleteEventInvalidAnswers_keepsConfirmationPending() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        Event event = projectManager.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 1));
+        handler.execute("event.delete E001");
+        for (String answer : List.of("", "YES", "yes please", "exit", "save", "help")) {
+            assertFalse(handler.execute(answer));
+            assertTrue(handler.isAwaitingDeletionConfirmation());
+            assertEquals(List.of(event), project.getEvents());
+            assertEquals("Please type yes to confirm deletion or no to cancel.", ui.errors.getLast());
+            assertEquals("Type yes to confirm deletion or no to cancel.", ui.messages.getLast());
+        }
+        handler.execute("no");
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+    }
+
+    @Test
+    public void execute_deleteOnlyEvent_preservesProjectAndRejectsRepeatedDeletion() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projectManager.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 1));
+        handler.execute("event.delete E001");
+        handler.execute("yes");
+
+        assertTrue(project.getEvents().isEmpty());
+        assertEquals(List.of(project), projectManager.getProjects());
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertTrue(ui.errors.isEmpty());
+
+        ui.messages.clear();
+        handler.execute("event.delete E001");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of("Event E001 was not found. Use project.view to see event IDs."), ui.errors);
+        assertEquals(List.of("Format: event.delete EVENT_ID"), ui.messages);
     }
 
     /** Simulates parser failures to verify the CLI's exception boundary. */

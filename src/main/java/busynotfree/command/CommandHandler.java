@@ -8,6 +8,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import busynotfree.exception.BusyNotFreeException;
+import busynotfree.exception.ClientHasProjectsException;
 import busynotfree.exception.CommandException;
 import busynotfree.exception.ProjectException;
 import busynotfree.model.Client;
@@ -32,18 +33,39 @@ public class CommandHandler {
     private final ProjectManager projectManager;
     private final ClientManager clientManager;
     private final ClientCommandHandler clientCommandHandler;
+    private final TrashcanCommandHandler trashcanCommandHandler;
     private final ArgumentParser argumentParser = new ArgumentParser();
+
+    /** Project awaiting confirmation; null when no deletion is pending. */
+    private Project pendingDeletion;
+
+    /** Client awaiting confirmation; null when no client deletion is pending. */
+    private Client pendingClientDeletion;
+
+    /** Note awaiting confirmation; null when no note deletion is pending. */
+    private PendingNoteDeletion pendingNoteDeletion;
+
+    /** Task awaiting confirmation; null when no task deletion is pending. */
+    private Task pendingTaskDeletion;
+
+    /** Event awaiting confirmation; null when no event deletion is pending. */
+    private Event pendingEventDeletion;
+
+    /** Stores the selected note's client ID, position and preview text. */
+    private record PendingNoteDeletion(String clientId, int noteIndex, String text) {
+    }
 
     /**
      * Creates a handler with the supplied parser and user interface.
-     * Uses an independent client manager; use the overload for shared client lookup.
+     * Uses an independent active-client collection with the project's shared trashcan;
+     * use the overload for shared client lookup.
      *
      * @param commandParser Parser for the entity type, action and argument text.
      * @param ui User interface for responses.
      * @param projectManager Manager for projects and their scheduled items.
      */
     public CommandHandler(CommandParser commandParser, Ui ui, ProjectManager projectManager) {
-        this(commandParser, ui, projectManager, new ClientManager());
+        this(commandParser, ui, projectManager, new ClientManager(projectManager.getTrashcanManager()));
     }
 
     /**
@@ -61,6 +83,8 @@ public class CommandHandler {
         this.projectManager = projectManager;
         this.clientManager = clientManager;
         this.clientCommandHandler = new ClientCommandHandler(clientManager, ui);
+        this.trashcanCommandHandler = new TrashcanCommandHandler(
+                projectManager.getTrashcanManager(), projectManager, ui);
     }
 
     /**
@@ -76,7 +100,9 @@ public class CommandHandler {
         boolean shouldExit = false;
         ParsedCommand command = null;
         try {
-            if (userInput.trim().split("\\s+", 2)[0].equals("exit")) {
+            if (isAwaitingDeletionConfirmation()) {
+                handleDeletionConfirmation(userInput);
+            } else if (userInput.trim().split("\\s+", 2)[0].equals("exit")) {
                 shouldExit = true;
             } else if (userInput.trim().equals("help")) {
                 ui.showHelp();
@@ -84,6 +110,8 @@ public class CommandHandler {
                 command = commandParser.parse(userInput);
                 routeCommand(command);
             }
+        } catch (ClientHasProjectsException exception) {
+            ui.showError(exception.getMessage());
         } catch (BusyNotFreeException exception) {
             ui.showError(exception.getMessage());
             if (command != null) {
@@ -96,7 +124,9 @@ public class CommandHandler {
 
     /** Selects a usage hint without changing the error handling for other targets. */
     private void showCommandUsage(ParsedCommand command) {
-        if (command.getEntityType().equals("client")) {
+        if (command.getEntityType().equals("trashcan")) {
+            trashcanCommandHandler.showCommandUsage(command.getAction());
+        } else if (command.getEntityType().equals("client")) {
             clientCommandHandler.showCommandUsage(command.getAction());
         } else if (command.getEntityType().equals("project") && command.getAction().equals("status")) {
             ui.showProjectStatusUsage();
@@ -116,8 +146,12 @@ public class CommandHandler {
             ui.showTaskUnmarkUsage();
         } else if (command.getEntityType().equals("task") && command.getAction().equals("edit")) {
             ui.showTaskEditUsage();
+        } else if (command.getEntityType().equals("task") && command.getAction().equals("delete")) {
+            ui.showTaskDeleteUsage();
         } else if (command.getEntityType().equals("event") && command.getAction().equals("edit")) {
             ui.showEventEditUsage();
+        } else if (command.getEntityType().equals("event") && command.getAction().equals("delete")) {
+            ui.showEventDeleteUsage();
         } else if (command.getAction().equals("add")) {
             ui.showAddCommandUsage(command.getEntityType());
         }
@@ -125,6 +159,26 @@ public class CommandHandler {
 
     /** Delegates client operations and routes project, task and event commands. */
     private void routeCommand(ParsedCommand command) {
+        if (command.getEntityType().equals("trashcan")) {
+            trashcanCommandHandler.execute(command);
+            return;
+        }
+        if (command.getEntityType().equals("event") && command.getAction().equals("delete")) {
+            handleEventDelete(command.getArgumentText());
+            return;
+        }
+        if (command.getEntityType().equals("task") && command.getAction().equals("delete")) {
+            handleTaskDelete(command.getArgumentText());
+            return;
+        }
+        if (command.getEntityType().equals("client") && command.getAction().equals("delete_note")) {
+            handleClientDeleteNote(command.getArgumentText());
+            return;
+        }
+        if (command.getEntityType().equals("client") && command.getAction().equals("delete")) {
+            handleClientDelete(command.getArgumentText());
+            return;
+        }
         if (command.getEntityType().equals("client")) {
             clientCommandHandler.execute(command);
             return;
@@ -294,7 +348,7 @@ public class CommandHandler {
         ui.showProjectStatusChanged(project);
     }
 
-    /** Requires one positional project ID before deleting the project and its activities. */
+    /** Validates the project ID and requests confirmation without deleting anything. */
     private void handleProjectDelete(String arguments) {
         if (arguments.isBlank()) {
             throw new CommandException("A project ID must not be blank.");
@@ -304,9 +358,235 @@ public class CommandHandler {
             throw new CommandException("Provide exactly one project ID.");
         }
 
-        Project project = projectManager.getProject(parts[0]);
-        int removedCount = projectManager.deleteProject(parts[0]);
-        ui.showProjectDeleted(project.getName(), removedCount);
+        pendingDeletion = projectManager.getProject(parts[0]);
+        ui.showProjectDeleteConfirmation(pendingDeletion);
+    }
+
+    /**
+     * Reports whether the next input must answer a deletion confirmation.
+     *
+     * @return True while a project, client, note, task or event is awaiting confirmation.
+     */
+    public boolean isAwaitingDeletionConfirmation() {
+        return pendingDeletion != null || pendingClientDeletion != null
+                || pendingNoteDeletion != null || pendingTaskDeletion != null || pendingEventDeletion != null;
+    }
+
+    /** Deletes only after yes; keeps the confirmation pending for other invalid input. */
+    private void handleDeletionConfirmation(String input) {
+        if (pendingEventDeletion != null) {
+            handleEventDeletionConfirmation(input);
+            return;
+        }
+        if (pendingTaskDeletion != null) {
+            handleTaskDeletionConfirmation(input);
+            return;
+        }
+        if (pendingNoteDeletion != null) {
+            handleNoteDeletionConfirmation(input);
+            return;
+        }
+        if (pendingClientDeletion != null) {
+            handleClientDeletionConfirmation(input);
+            return;
+        }
+        switch (input.trim()) {
+        case "yes":
+            Project project = pendingDeletion;
+            pendingDeletion = null;
+            int removedCount = projectManager.deleteProject(project.getProjectId());
+            ui.showProjectDeleted(project.getName(), removedCount);
+            break;
+        case "no":
+            cancelPendingDeletion();
+            break;
+        default:
+            ui.showError("Please type yes to confirm deletion or no to cancel.");
+            ui.showProjectDeleteConfirmation(pendingDeletion);
+            break;
+        }
+    }
+
+    /** Cancels any pending deletion, including when the input stream ends. */
+    public void cancelPendingDeletion() {
+        if (pendingEventDeletion != null) {
+            pendingEventDeletion = null;
+            ui.showMessage("Event deletion cancelled.");
+        }
+        if (pendingTaskDeletion != null) {
+            pendingTaskDeletion = null;
+            ui.showMessage("Task deletion cancelled.");
+        }
+        if (pendingNoteDeletion != null) {
+            pendingNoteDeletion = null;
+            ui.showMessage("Note deletion cancelled.");
+        }
+        if (pendingClientDeletion != null) {
+            pendingClientDeletion = null;
+            ui.showMessage("Client deletion cancelled.");
+        }
+        if (pendingDeletion != null) {
+            pendingDeletion = null;
+            ui.showMessage("Project deletion cancelled.");
+        }
+    }
+
+    /** Validates exactly one event ID before requesting confirmation. */
+    private void handleEventDelete(String arguments) {
+        if (arguments.isBlank()) {
+            throw new CommandException("An event ID must not be blank.");
+        }
+        String[] parts = arguments.trim().split("\\s+");
+        if (parts.length != 1) {
+            throw new CommandException("Provide exactly one event ID.");
+        }
+        pendingEventDeletion = projectManager.getEvent(parts[0]);
+        ui.showEventDeleteConfirmation(pendingEventDeletion);
+    }
+
+    /** Deletes only after yes; other invalid answers leave confirmation pending. */
+    private void handleEventDeletionConfirmation(String input) {
+        switch (input.trim()) {
+        case "yes":
+            Event event = pendingEventDeletion;
+            pendingEventDeletion = null;
+            projectManager.deleteEvent(event.getId());
+            ui.showMessage("Deleted event " + event.getId()
+                    + " from project " + event.getProject().getProjectId() + ".");
+            break;
+        case "no":
+            cancelPendingDeletion();
+            break;
+        default:
+            ui.showError("Please type yes to confirm deletion or no to cancel.");
+            ui.showEventDeleteConfirmation(pendingEventDeletion);
+            break;
+        }
+    }
+
+    /** Validates exactly one task ID before requesting confirmation. */
+    private void handleTaskDelete(String arguments) {
+        if (arguments.isBlank()) {
+            throw new CommandException("A task ID must not be blank.");
+        }
+        String[] parts = arguments.trim().split("\\s+");
+        if (parts.length != 1) {
+            throw new CommandException("Provide exactly one task ID.");
+        }
+        pendingTaskDeletion = projectManager.getTask(parts[0]);
+        ui.showTaskDeleteConfirmation(pendingTaskDeletion);
+    }
+
+    /** Deletes only after yes; other invalid answers leave confirmation pending. */
+    private void handleTaskDeletionConfirmation(String input) {
+        switch (input.trim()) {
+        case "yes":
+            Task task = pendingTaskDeletion;
+            pendingTaskDeletion = null;
+            projectManager.deleteTask(task.getId());
+            ui.showMessage("Deleted task " + task.getId()
+                    + " from project " + task.getProject().getProjectId() + ".");
+            break;
+        case "no":
+            cancelPendingDeletion();
+            break;
+        default:
+            ui.showError("Please type yes to confirm deletion or no to cancel.");
+            ui.showTaskDeleteConfirmation(pendingTaskDeletion);
+            break;
+        }
+    }
+
+    /** Validates the client and project links before requesting confirmation. */
+    private void handleClientDelete(String arguments) {
+        if (arguments.isBlank()) {
+            throw new CommandException("A client ID must not be blank.");
+        }
+        String[] parts = arguments.trim().split("\\s+");
+        if (parts.length != 1) {
+            throw new CommandException("Provide exactly one client ID.");
+        }
+        pendingClientDeletion = clientManager.getDeletableClient(parts[0], projectManager);
+        ui.showClientDeleteConfirmation(pendingClientDeletion);
+    }
+
+    /** Handles a pending client deletion without treating the answer as a command. */
+    private void handleClientDeletionConfirmation(String input) {
+        switch (input.trim()) {
+        case "yes":
+            Client client = pendingClientDeletion;
+            pendingClientDeletion = null;
+            clientManager.deleteClient(client.getClientId(), projectManager);
+            ui.showMessage("Deleted client " + client.getClientId()
+                    + ": " + client.getName() + " and all associated notes.");
+            break;
+        case "no":
+            cancelPendingDeletion();
+            break;
+        default:
+            ui.showError("Please type yes to confirm deletion or no to cancel.");
+            ui.showClientDeleteConfirmation(pendingClientDeletion);
+            break;
+        }
+    }
+
+    /** Parses and validates the client and note before requesting confirmation. */
+    private void handleClientDeleteNote(String arguments) {
+        String[] parts = arguments.trim().split("\\s+", 2);
+        if (parts[0].isBlank() || parts[0].contains("/")) {
+            throw new CommandException("A client ID is required before index/.");
+        }
+        Client client = clientManager.getClient(parts[0]);
+        String indexArguments = parts.length > 1 ? parts[1] : "";
+        Map<String, String> values = argumentParser.parse(indexArguments, "index");
+        int noteIndex = parseNoteIndex(values.get("index"));
+        String note = client.getNote(noteIndex);
+        pendingNoteDeletion = new PendingNoteDeletion(client.getClientId(), noteIndex, note);
+        showNoteDeleteConfirmation();
+    }
+
+    /** Accepts positive whole numbers that fit within Java's integer range. */
+    private int parseNoteIndex(String value) {
+        if (!value.matches("[0-9]+")) {
+            throw new CommandException("Note index must be a positive whole number.");
+        }
+        try {
+            int index = Integer.parseInt(value);
+            if (index < 1) {
+                throw new CommandException("Note index must be a positive whole number.");
+            }
+            return index;
+        } catch (NumberFormatException exception) {
+            throw new CommandException("Note index is too large.", exception);
+        }
+    }
+
+    /** Displays the exact note selected for deletion. */
+    private void showNoteDeleteConfirmation() {
+        ui.showMessage("Delete note " + pendingNoteDeletion.noteIndex()
+                + " from client " + pendingNoteDeletion.clientId()
+                + ": \"" + pendingNoteDeletion.text() + "\"?");
+        ui.showMessage("Type yes to confirm deletion or no to cancel.");
+    }
+
+    /** Removes the selected note only after explicit confirmation. */
+    private void handleNoteDeletionConfirmation(String input) {
+        switch (input.trim()) {
+        case "yes":
+            PendingNoteDeletion selection = pendingNoteDeletion;
+            pendingNoteDeletion = null;
+            clientManager.deleteNote(selection.clientId(), selection.noteIndex());
+            ui.showMessage("Deleted note " + selection.noteIndex()
+                    + " from client " + selection.clientId() + ".");
+            break;
+        case "no":
+            cancelPendingDeletion();
+            break;
+        default:
+            ui.showError("Please type yes to confirm deletion or no to cancel.");
+            showNoteDeleteConfirmation();
+            break;
+        }
     }
 
     /** Displays all projects in their creation order and ignores extra arguments. */

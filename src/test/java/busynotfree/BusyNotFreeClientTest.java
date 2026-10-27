@@ -84,8 +84,8 @@ class BusyNotFreeClientTest {
         assertEquals("C001", projects.getProject("P001").getClientId());
         assertTrue(ui.messages.contains("No clients found."));
         assertTrue(ui.messages.contains("Notes: No notes found."));
-        assertTrue(ui.messages.contains("Notes: Prefers weekly updates"));
-        assertTrue(ui.messages.contains("Notes: Follow up Friday"));
+        assertTrue(ui.messages.contains("Note 1: Prefers weekly updates"));
+        assertTrue(ui.messages.contains("Note 2: Follow up Friday"));
         assertTrue(ui.messages.contains("1. C001 | Acme Studio"));
         assertTrue(ui.messages.contains("2. C002 | Bright Ideas"));
         assertEquals(commands.size() - 1, ui.messages.stream().filter("Enter a command:"::equals).count());

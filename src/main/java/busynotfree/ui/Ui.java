@@ -18,9 +18,11 @@ public class Ui {
         showSeparator();
         showMessage("Welcome to BusyNotFree!");
         showMessage("Commands: client.add, client.note, client.view, client.list, client.find, client.edit, "
+                + "client.delete, client.delete_note, "
                 + "project.add, project.status, project.list, project.filter, project.deadlines, "
                 + "project.overdue, project.view, project.delete, "
-                + "task.add, task.mark, task.unmark, task.edit, event.add, event.edit, help, save, exit");
+                + "task.add, task.mark, task.unmark, task.edit, task.delete, "
+                + "event.add, event.edit, event.delete, trashcan.list, trashcan.restore, help, save, exit");
         showSeparator();
     }
 
@@ -32,6 +34,8 @@ public class Ui {
         showMessage("client.view    |   View a client");
         showMessage("client.find    |   Find clients by name");
         showMessage("client.edit    |   Edit a client's name");
+        showMessage("client.delete  |   Delete a client and its notes");
+        showMessage("client.delete_note |   Delete a client note");
         showMessage("project.add    |   Add a project");
         showMessage("project.delete |   Delete a project");
         showMessage("project.status |   Update a project status");
@@ -44,8 +48,12 @@ public class Ui {
         showMessage("task.mark      |   Mark a task complete");
         showMessage("task.unmark    |   Reopen a task");
         showMessage("task.edit      |   Edit a task");
+        showMessage("task.delete    |   Delete a task");
         showMessage("event.add      |   Add an event");
         showMessage("event.edit     |   Edit an event");
+        showMessage("event.delete   |   Delete an event");
+        showMessage("trashcan.list  |   List deleted projects and clients");
+        showMessage("trashcan.restore |   Restore a deleted project");
         showMessage("help           |   View help");
         showMessage("save           |   Save data and continue");
         showMessage("exit           |   Save data and exit");
@@ -178,6 +186,50 @@ public class Ui {
                 + (removedCount == 1 ? "activity" : "activities") + " removed.");
     }
 
+    /**
+     * Identifies the project and activities affected before requesting confirmation.
+     *
+     * @param project Project proposed for deletion.
+     */
+    public void showProjectDeleteConfirmation(Project project) {
+        int count = project.getItemCount();
+        showMessage("Delete project " + describeProject(project) + " and "
+                + count + " associated " + (count == 1 ? "activity" : "activities") + "?");
+        showMessage("Type yes to confirm deletion or no to cancel.");
+    }
+
+    /** Identifies the client and note count before requesting deletion confirmation. */
+    public void showClientDeleteConfirmation(Client client) {
+        int count = client.getNotes().size();
+        showMessage("Delete client " + client.getClientId() + " \"" + client.getName()
+                + "\" and " + count + " associated " + (count == 1 ? "note" : "notes") + "?");
+        showMessage("Type yes to confirm deletion or no to cancel.");
+    }
+
+    /** Identifies the task and its owning project before requesting confirmation. */
+    public void showTaskDeleteConfirmation(Task task) {
+        showMessage("Delete task " + task.getId() + " \"" + task.getDescription()
+                + "\" from project " + describeProject(task.getProject()) + "?");
+        showMessage("Type yes to confirm deletion or no to cancel.");
+    }
+
+    /** Displays the expected format for deleting a task. */
+    public void showTaskDeleteUsage() {
+        showMessage("Format: task.delete TASK_ID");
+    }
+
+    /** Identifies the event and its owning project before requesting confirmation. */
+    public void showEventDeleteConfirmation(Event event) {
+        showMessage("Delete event " + event.getId() + " \"" + event.getDescription()
+                + "\" from project " + describeProject(event.getProject()) + "?");
+        showMessage("Type yes to confirm deletion or no to cancel.");
+    }
+
+    /** Displays the expected format for deleting an event. */
+    public void showEventDeleteUsage() {
+        showMessage("Format: event.delete EVENT_ID");
+    }
+
     /** Displays the expected format for deleting a project. */
     public void showProjectDeleteUsage() {
         showMessage("Format: project.delete PROJECT_ID");
@@ -238,6 +290,38 @@ public class Ui {
                 showMessage(event.toString());
             }
         }
+    }
+
+    /** Displays retained projects with their activities and deleted clients with their notes. */
+    public void showTrashcan(List<Project> projects, List<Client> clients) {
+        if (projects.isEmpty() && clients.isEmpty()) {
+            showMessage("Trashcan is empty.");
+            return;
+        }
+        showMessage("Deleted projects:");
+        if (projects.isEmpty()) {
+            showMessage("No deleted projects.");
+        }
+        for (Project project : projects) {
+            showMessage("Project: " + describeProject(project) + " | Client: " + project.getClientId()
+                    + " | Status: " + project.getStatus() + " | Due: " + project.getDeadline());
+            showMessage("Tasks:");
+            if (project.getTasks().isEmpty()) {
+                showMessage("No tasks found.");
+            }
+            project.getTasks().forEach(task -> showMessage(task.toString()));
+            showMessage("Events:");
+            if (project.getEvents().isEmpty()) {
+                showMessage("No events found.");
+            }
+            project.getEvents().forEach(event -> showMessage(event.toString()));
+        }
+        showMessage("Deleted clients:");
+        if (clients.isEmpty()) {
+            showMessage("No deleted clients.");
+        }
+        ClientUi clientUi = new ClientUi(this);
+        clients.forEach(clientUi::showClient);
     }
 
     /** Displays the accepted forms of the project view command. */

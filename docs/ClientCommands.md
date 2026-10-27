@@ -45,7 +45,7 @@ it was added. A client without notes displays `Notes: No notes found.`
 ```text
 client.view C001
 C001 | Acme Studio
-Notes: Prefers weekly updates
+Note 1: Prefers weekly updates
 ```
 
 ## List clients
@@ -84,6 +84,33 @@ Renames an existing client and displays
 The ID, notes and project links are preserved, and the updated
 name is saved on `save` or `exit`. The new name must not be blank; missing or unknown IDs
 are rejected. Name arguments follow the prefix rules described above.
+
+## Delete a client
+
+Format: `client.delete CLIENT_ID`
+
+Deletes the client and all its notes after you type `yes` at the confirmation prompt.
+The prompt shows the client's ID, name and note count. Type `no` to cancel.
+Other input repeats the prompt; reaching the end of input cancels deletion.
+Missing, unknown or multiple IDs are rejected. IDs are case-sensitive.
+Deletion is blocked if the client has any projects, regardless of project status.
+Delete those projects first. Changes are saved on `save` or `exit`, and deleted IDs
+are never reused.
+
+The deleted client and its notes remain visible in `trashcan.list`, including
+after saving and restarting. Client restoration is not currently supported.
+
+## Delete a client note
+
+Format: `client.delete_note CLIENT_ID index/NOTE_INDEX`
+
+Use `client.view CLIENT_ID` to see numbered notes. Indexes start at 1.
+The confirmation prompt shows the selected note; type `yes` to delete it or `no`
+to cancel. Other input repeats the prompt. Reaching the end of input cancels deletion.
+Missing or invalid client IDs and missing, nonpositive, nonnumeric or out-of-range
+indexes are rejected. Remaining notes are renumbered after deletion.
+The client and its projects remain available; clients with projects can have notes deleted.
+Changes are saved on `save` or `exit`.
 
 ## Integration and testing
 

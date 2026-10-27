@@ -58,7 +58,7 @@ Displays one client's name and notes. If the client has no notes, the app shows 
 ```text
 client.view C001
 C001 | Acme Studio
-Notes: Prefers weekly updates
+Note 1: Prefers weekly updates
 ```
 
 ### List clients: `client.list`
@@ -87,6 +87,33 @@ example, `client.edit C001 name/Acme Design` displays
 `Updated client C001 from "Acme Studio" to "Acme Design".`
 The new name is saved when you enter `save` or `exit`.
 Missing or unknown client IDs and blank names are rejected.
+
+### Delete a client: `client.delete`
+
+Format: `client.delete CLIENT_ID`
+
+Deletes a client and all its notes. The confirmation prompt shows the client's ID,
+name and note count. Type `yes` to delete or `no` to cancel. Other input repeats
+the prompt; reaching the end of input cancels deletion.
+
+The client must have no associated projects, including completed or cancelled
+projects. Delete those projects first. Missing, unknown or multiple IDs are
+rejected; IDs are case-sensitive. Changes are saved on `save` or `exit`, and
+deleted client IDs are never reused.
+
+### Delete a client note: `client.delete_note`
+
+Format: `client.delete_note CLIENT_ID index/NOTE_INDEX`
+
+Use `client.view CLIENT_ID` to see numbered notes. Indexes start at 1.
+For example, `client.delete_note C001 index/2` requests deletion of the second note.
+The prompt shows the selected note. Type `yes` to delete it or `no` to cancel.
+Other input repeats the prompt; reaching the end of input cancels deletion.
+
+Missing or invalid client IDs and missing, nonpositive, nonnumeric or out-of-range
+indexes are rejected. Remaining notes are renumbered after deletion. The client
+and its projects remain available; having projects does not block note deletion.
+Changes are saved on `save` or `exit`.
 
 ## Projects
 
@@ -190,7 +217,9 @@ Project P001 status changed to PAUSED.
 
 Format: `project.delete PROJECT_ID`
 
-Deletes an existing project and its tasks and events. It does not delete the client. Deleted IDs are not reused.
+Moves an existing project and its tasks and events to the trashcan after confirmation.
+It does not delete the client. Deleted IDs are not reused. Use `trashcan.restore PROJECT_ID`
+to recover the project while its client is still active.
 
 ```text
 project.delete P001
@@ -248,6 +277,19 @@ Updated task in project P001 "Website redesign": [T001] Create mobile homepage w
 
 If the task ID is unknown, a value is blank, or the date is invalid, the app shows an error and the format, and the task is not changed.
 
+### Delete a task: `task.delete`
+
+Format: `task.delete TASK_ID`
+
+Deletes a task after confirmation. The prompt identifies the task and its
+project. Type `yes` to delete or `no` to cancel. Other input repeats the
+prompt; reaching the end of input cancels deletion.
+
+Task IDs are case-sensitive. Missing, unknown or multiple IDs are rejected.
+Completed tasks can also be deleted. The project, its events and other tasks
+remain available. Changes are saved on `save` or `exit`, and deleted task IDs
+are never reused.
+
 ### Add an event: `event.add`
 
 Format: `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD`
@@ -271,6 +313,55 @@ Updated event in project P001 "Website redesign": [E001] Stakeholder meeting (re
 ```
 
 If the event ID is unknown, a value is blank, or the date is invalid, the app shows an error and the format, and the event is not changed.
+
+### Delete an event: `event.delete`
+
+Format: `event.delete EVENT_ID`
+
+Deletes an event after confirmation. The prompt identifies the event and its
+project. Type `yes` to delete or `no` to cancel. Other input repeats the
+prompt; reaching the end of input cancels deletion.
+
+Event IDs are case-sensitive. Missing, unknown or multiple IDs are rejected.
+The project, its tasks and other events remain available. Changes are saved
+on `save` or `exit`, and deleted event IDs are never reused.
+
+## Trashcan
+
+### List deleted items: `trashcan.list`
+
+Format: `trashcan.list`
+
+Shows deleted projects with their tasks and events, including dates, project status
+and task completion state. Also shows deleted clients with all their notes.
+Entries are grouped by type and displayed in ID order. Active items are not listed.
+An empty trashcan displays `Trashcan is empty.` Extra arguments are rejected.
+
+Deleting a project or client retains a snapshot in the trashcan. There is currently
+no expiry or automatic cleanup. Entries are saved on `save` or `exit` and remain
+available after restarting. Individually deleted tasks, events and notes are not
+retained; project snapshots contain only activities present when the project was deleted.
+Items deleted before this feature was installed cannot be recovered.
+
+### Restore a deleted project: `trashcan.restore`
+
+Format: `trashcan.restore PROJECT_ID`
+
+Restores a project immediately, including its tasks and events with their original
+IDs, descriptions, dates, status and task completion states. The restored project
+is removed from the trashcan and appended to the active project list.
+No new IDs are allocated. Changes are saved on `save` or `exit`.
+
+```text
+trashcan.restore P001
+Restored project P001 "Website" with 2 tasks and 1 event.
+```
+
+Missing, unknown, active, lowercase or multiple IDs are rejected. Only projects
+can be restored. The owning client must still be active; a client with the same
+name and a different ID does not satisfy this requirement. If a client was deleted
+after its projects, those projects remain visible in the trashcan but cannot yet
+be restored. Restoration also rejects conflicting IDs without changing any data.
 
 ## Help and saving
 
@@ -321,6 +412,8 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | List clients | `client.list` |
 | Find clients | `client.find NAME` |
 | Edit client name | `client.edit CLIENT_ID name/NEW_NAME` |
+| Delete client | `client.delete CLIENT_ID` |
+| Delete client note | `client.delete_note CLIENT_ID index/NOTE_INDEX` |
 | Add project | `project.add client/CLIENT_ID name/PROJECT_NAME due/YYYY-MM-DD` |
 | List projects | `project.list` |
 | Filter projects by status | `project.filter STATUS` |
@@ -333,8 +426,12 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | Mark task complete | `task.mark TASK_ID` |
 | Reopen task | `task.unmark TASK_ID` |
 | Edit task | `task.edit TASK_ID name/DESCRIPTION date/YYYY-MM-DD` |
+| Delete task | `task.delete TASK_ID` |
+| Delete event | `event.delete EVENT_ID` |
 | Add event | `event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Edit event | `event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Help | `help` |
+| List deleted items | `trashcan.list` |
+| Restore project | `trashcan.restore PROJECT_ID` |
 | Save and continue | `save` |
 | Save and exit | `exit` |

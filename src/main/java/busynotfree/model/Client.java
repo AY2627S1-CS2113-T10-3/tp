@@ -66,4 +66,43 @@ public final class Client {
     public List<String> getNotes() {
         return List.copyOf(notes);
     }
+
+    /**
+     * Returns a note using its displayed, one-based index.
+     *
+     * @param noteIndex Position starting at 1.
+     * @return Selected note.
+     * @throws ClientException If the index does not identify a note.
+     */
+    public String getNote(int noteIndex) {
+        if (noteIndex < 1 || noteIndex > notes.size()) {
+            throw new ClientException("Note index " + noteIndex
+                    + " does not exist for client " + clientId + ".");
+        }
+        return notes.get(noteIndex - 1);
+    }
+
+    /**
+     * Deletes one note while preserving the order of the remaining notes.
+     *
+     * @param noteIndex Position starting at 1.
+     * @return Deleted note text.
+     * @throws ClientException If the index does not identify a note.
+     */
+    public String deleteNote(int noteIndex) {
+        getNote(noteIndex);
+        return notes.remove(noteIndex - 1);
+    }
+
+    /** Removes every note when the owning client is deleted. */
+    void clearNotes() {
+        notes.clear();
+    }
+
+    /** Copies client details so trash entries cannot be changed through old references. */
+    Client copy() {
+        Client copy = new Client(clientId, name);
+        notes.forEach(copy::addNote);
+        return copy;
+    }
 }
