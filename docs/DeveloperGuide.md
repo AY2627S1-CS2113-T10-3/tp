@@ -557,11 +557,16 @@ other Java references can still exist; snapshots are separate objects.
 ## Product scope
 ### Target user profile
 
-{Describe the target user profile}
+BusyNotFree is intended for freelancers and consultants who manage several
+clients and need a lightweight way to track projects, deadlines, tasks, events,
+and client notes from a command line.
 
 ### Value proposition
 
-{Describe the value proposition: what problem does it solve?}
+The application provides a fast, keyboard-driven workflow for keeping client
+work organised without requiring a separate project-management service.
+Projects group dated tasks and events, while stable IDs make related records
+easy to reference from later commands.
 
 ## User Stories
 
@@ -583,12 +588,66 @@ other Java references can still exist; snapshots are separate objects.
 
 ## Non-Functional Requirements
 
-{Give non-functional requirements}
+* The application runs with Java 25 and can be launched from IntelliJ IDEA or a
+  standard terminal.
+* User input is validated before model mutation. Invalid input must not consume
+  a new ID or change existing records.
+* Saved data is loaded from and written to the documented properties file.
+* User-facing output is plain text and remains readable in ordinary terminal
+  windows.
+* Automated tests cover command parsing, routing, model behaviour, persistence,
+  and the application loop.
 
 ## Glossary
 
-* *glossary item* - Definition
+* *Client* - A person or organisation whose work is being managed.
+* *Project* - A body of work belonging to one client.
+* *Task* - A dated piece of work attached to a project.
+* *Event* - A dated meeting or appointment attached to a project.
+* *Trashcan* - Persistent storage for deleted projects and clients that may be
+  restored where supported.
+* *Prefix* - The name before `/` in an argument, such as `name/` or `date/`.
 
 ## Instructions for manual testing
 
-{Give instructions on how to do a manual product testing e.g., how to load sample data to be used for testing}
+Use Java 25 from the repository root. Run the application with
+`.\gradlew.bat run` or run `busynotfree.BusyNotFree.main()` from IntelliJ IDEA.
+The following sequence exercises command discovery, client management, project
+creation and views, task and event updates, project filtering, saving, and
+deletion recovery. Use the IDs printed by the application if data already
+exists:
+
+```text
+help
+client.add name/Acme Studio
+client.note C001 text/Prefers weekly updates
+client.view C001
+client.list
+client.find Acme
+client.edit C001 name/Acme Consulting
+project.add client/C001 name/Website redesign due/2026-11-30
+task.add project/P001 name/Create wireframe date/2026-10-15
+event.add project/P001 name/Stakeholder meeting date/2026-10-20
+task.mark T001
+task.edit T001 name/Revised wireframe date/2026-10-18
+event.edit E001 name/Rescheduled meeting date/2026-10-22
+project.list
+project.filter active
+project.deadlines
+project.overdue
+project.view P001
+save
+task.unmark T001
+project.status P001 completed
+project.delete P001
+yes
+trashcan.list
+trashcan.restore P001
+trashcan.list
+exit
+```
+
+For deletion commands, enter `yes` or `no` when prompted. Invalid commands
+should display an error and leave the affected record unchanged. The automated
+verification suite can be run with `.\gradlew.bat check`; it compiles the
+project, runs the tests, and runs Checkstyle.
