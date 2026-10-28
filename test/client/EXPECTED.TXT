@@ -1,7 +1,14 @@
-------------------------------------------------------------
-Welcome to BusyNotFree!
-Commands: client.add, client.note, client.view, client.list, client.find, client.edit, client.delete, client.delete_note, project.add, project.status, project.list, project.filter, project.deadlines, project.overdue, project.view, project.delete, task.add, task.mark, task.unmark, task.edit, task.delete, event.add, event.edit, event.delete, trashcan.list, trashcan.restore, help, save, exit
-------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
+                                  .       *       .       *       .
+       ____    _   _   ____  __   __  _   _   _____   _____   _____   ____    _____   _____ 
+      | __ )  | | | | / ___| \ \ / / | \ | | |  _  | |_   _| |  ___| |  _ \  | ____| | ____|
+      |  _ \  | | | | \___ \  \ V /  |  \| | | | | |   | |   | |_    | |_) | |  _|   |  _|  
+      | |_) | | |_| |  ___) |  | |   | |\  | | |_| |   | |   |  _|   |  _ <  | |___  | |___ 
+      |____/   \___/  |____/   |_|   |_| \_| |_____|   |_|   |_|     |_| \_\ |_____| |_____|
+                                  .       *       .       *       .
+                                 BusyNotFree // Freelance workspace
+                               Type "help" to see available commands.
+-----------------------------------------------------------------------------------------------------
 Enter a command:
 ------------------------------------------------------------
 Added client C001: Acme Studio.
