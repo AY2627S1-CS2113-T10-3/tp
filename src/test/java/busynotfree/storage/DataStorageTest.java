@@ -340,6 +340,78 @@ class DataStorageTest {
     }
 
     @Test
+    public void load_invalidTaskCompletion_rejectsSavedFile() throws IOException {
+        Path file = directory.resolve("invalid-completion.properties");
+        DataStorage storage = new DataStorage(file);
+        ClientManager clients = new ClientManager();
+        clients.addClient("Acme");
+        ProjectManager projects = new ProjectManager(clients);
+        projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projects.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 15));
+        storage.save(clients, projects);
+        replaceSavedProperty(file, "task.0.completed", "maybe");
+
+        IOException exception = assertThrows(IOException.class, storage::load);
+
+        assertTrue(exception.getMessage().contains("Invalid task.0.completed."));
+    }
+
+    @Test
+    public void load_unsupportedVersion_rejectsSavedFile() throws IOException {
+        Path file = directory.resolve("unsupported-version.properties");
+        Files.writeString(file, "version=2\n", StandardCharsets.UTF_8);
+
+        IOException exception = assertThrows(IOException.class, () -> new DataStorage(file).load());
+
+        assertTrue(exception.getMessage().contains("Unsupported data version."));
+    }
+
+    @Test
+    public void load_negativeCount_rejectsSavedFile() throws IOException {
+        Path file = directory.resolve("negative-count.properties");
+        DataStorage storage = new DataStorage(file);
+        ClientManager clients = new ClientManager();
+        storage.save(clients, new ProjectManager(clients));
+        replaceSavedProperty(file, "client.count", "-1");
+
+        IOException exception = assertThrows(IOException.class, storage::load);
+
+        assertTrue(exception.getMessage().contains("Invalid client.count."));
+    }
+
+    @Test
+    public void load_zeroNextId_rejectsSavedFile() throws IOException {
+        Path file = directory.resolve("zero-counter.properties");
+        DataStorage storage = new DataStorage(file);
+        ClientManager clients = new ClientManager();
+        storage.save(clients, new ProjectManager(clients));
+        replaceSavedProperty(file, "next.client", "0");
+
+        IOException exception = assertThrows(IOException.class, storage::load);
+
+        assertTrue(exception.getMessage().contains("Invalid next.client."));
+    }
+
+    @Test
+    public void load_invalidProjectIds_rejectsSavedFile() throws IOException {
+        Path file = directory.resolve("invalid-project-id.properties");
+        DataStorage storage = new DataStorage(file);
+        ClientManager clients = new ClientManager();
+        clients.addClient("Acme");
+        ProjectManager projects = new ProjectManager(clients);
+        projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+
+        for (String invalidId : List.of("P01", "P000", "P0001")) {
+            storage.save(clients, projects);
+            replaceSavedProperty(file, "project.0.id", invalidId);
+
+            IOException exception = assertThrows(IOException.class, storage::load);
+
+            assertTrue(exception.getMessage().contains("Invalid ID " + invalidId + "."), invalidId);
+        }
+    }
+
+    @Test
     public void load_invalidFile_reportsError() throws IOException {
         Path file = directory.resolve("invalid.properties");
         Files.writeString(file, "version=1\nclient.count=1\n", StandardCharsets.UTF_8);
@@ -347,5 +419,17 @@ class DataStorageTest {
         IOException exception = assertThrows(IOException.class, () -> new DataStorage(file).load());
 
         assertTrue(exception.getMessage().contains("Saved data is invalid"));
+    }
+
+    /** Changes one saved field while keeping the rest of a valid fixture intact. */
+    private void replaceSavedProperty(Path file, String key, String value) throws IOException {
+        Properties data = new Properties();
+        try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            data.load(reader);
+        }
+        data.setProperty(key, value);
+        try (Writer writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
+            data.store(writer, "Modified test data");
+        }
     }
 }

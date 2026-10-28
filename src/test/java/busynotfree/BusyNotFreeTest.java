@@ -146,6 +146,43 @@ class BusyNotFreeTest {
     }
 
     @Test
+    public void run_failedExitThenEndOfInput_retriesSaveBeforeGoodbye() {
+        AtomicInteger saveAttempts = new AtomicInteger();
+        BusyNotFree application = new BusyNotFree(ui,
+                new CommandHandler(new CommandParser(), ui, projectManager), () -> {
+                    if (saveAttempts.incrementAndGet() == 1) {
+                        throw new IOException("Disk unavailable");
+                    }
+                });
+
+        try (Scanner scanner = new Scanner("exit\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(2, saveAttempts.get());
+        assertEquals(List.of("Critical ERROR!!! Unable to save data: Disk unavailable"), ui.errors);
+        assertEquals(1, ui.messages.stream().filter("Data saved. Goodbye!"::equals).count());
+    }
+
+    @Test
+    public void run_failedSaveAtEndOfInput_reportsFailureWithoutSuccessMessage() {
+        AtomicInteger saveAttempts = new AtomicInteger();
+        BusyNotFree application = new BusyNotFree(ui,
+                new CommandHandler(new CommandParser(), ui, projectManager), () -> {
+                    saveAttempts.incrementAndGet();
+                    throw new IOException("Disk full");
+                });
+
+        try (Scanner scanner = new Scanner("")) {
+            application.run(scanner);
+        }
+
+        assertEquals(1, saveAttempts.get());
+        assertEquals(List.of("Critical ERROR!!! Unable to save data: Disk full"), ui.errors);
+        assertEquals(0, ui.messages.stream().filter("Data saved. Goodbye!"::equals).count());
+    }
+
+    @Test
     public void run_saveWithArguments_rejectsCommandWithoutSaving() {
         AtomicInteger saveAttempts = new AtomicInteger();
         BusyNotFree application = new BusyNotFree(ui,
