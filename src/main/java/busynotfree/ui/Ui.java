@@ -11,19 +11,67 @@ import busynotfree.model.Task;
  * Displays command responses and errors for BusyNotFree.
  */
 public class Ui {
+    private static final int STARTUP_WIDTH = 101;
+    private static final int STARTUP_CELL_WIDTH = 7;
+    private static final int STARTUP_GLYPH_GAP = 1;
+    private static final String[][] STARTUP_LOGO = {
+        {" ____  ", "| __ ) ", "|  _ \\ ", "| |_) |", "|____/ "},
+        {" _   _ ", "| | | |", "| | | |", "| |_| |", " \\___/ "},
+        {" ____  ", "/ ___| ", "\\___ \\ ", " ___) |", "|____/ "},
+        {"__   __", "\\ \\ / /", " \\ V / ", "  | |  ", "  |_|  "},
+        {" _   _ ", "| \\ | |", "|  \\| |", "| |\\  |", "|_| \\_|"},
+        {" _____ ", "|  _  |", "| | | |", "| |_| |", "|_____|"},
+        {" _____ ", "|_   _|", "  | |  ", "  | |  ", "  |_|  "},
+        {" _____ ", "|  ___|", "| |_   ", "|  _|  ", "|_|    "},
+        {" ____  ", "|  _ \\ ", "| |_) |", "|  _ < ", "|_| \\_\\"},
+        {" _____ ", "| ____|", "|  _|  ", "| |___ ", "|_____|"},
+        {" _____ ", "| ____|", "|  _|  ", "| |___ ", "|_____|"}
+    };
+
     /**
      * Displays the application name and currently supported commands.
      */
     public void showWelcome() {
-        showSeparator();
-        showMessage("Welcome to BusyNotFree!");
-        showMessage("Commands: client.add, client.note, client.view, client.list, client.find, client.edit, "
-                + "client.delete, client.delete_note, "
-                + "project.add, project.status, project.list, project.filter, project.deadlines, "
-                + "project.overdue, project.view, project.delete, "
-                + "task.add, task.mark, task.unmark, task.edit, task.delete, "
-                + "event.add, event.edit, event.delete, trashcan.list, trashcan.restore, help, save, exit");
-        showSeparator();
+        showStartupSeparator();
+        showStartupCentered(".       *       .       *       .");
+        showStartupLogo();
+        showStartupCentered(".       *       .       *       .");
+        showStartupCentered("BusyNotFree // Freelance workspace");
+        showStartupCentered("Type \"help\" to see available commands.");
+        showStartupSeparator();
+    }
+
+    /** Displays the fixed-width separator used only by the startup screen. */
+    private void showStartupSeparator() {
+        showMessage("-".repeat(STARTUP_WIDTH));
+    }
+
+    /** Displays startup text centered on the same fixed-width canvas. */
+    private void showStartupCentered(String message) {
+        int leftPadding = Math.max(0, (STARTUP_WIDTH - message.length()) / 2);
+        showMessage(" ".repeat(leftPadding) + message);
+    }
+
+    /** Displays every logo row with one shared left offset to preserve alignment. */
+    private void showStartupLogo() {
+        int logoWidth = STARTUP_LOGO.length * STARTUP_CELL_WIDTH
+                + (STARTUP_LOGO.length - 2) * STARTUP_GLYPH_GAP;
+        int leftPadding = Math.max(0, (STARTUP_WIDTH - logoWidth) / 2 - 1);
+        String logoPadding = " ".repeat(leftPadding);
+
+        for (int row = 0; row < STARTUP_LOGO[0].length; row++) {
+            StringBuilder line = new StringBuilder(logoWidth);
+            for (int letterIndex = 0; letterIndex < STARTUP_LOGO.length; letterIndex++) {
+                if (letterIndex > 0) {
+                    int gap = letterIndex == 3 ? 0 : STARTUP_GLYPH_GAP;
+                    line.append(" ".repeat(gap));
+                }
+                String[] letter = STARTUP_LOGO[letterIndex];
+                line.append(letter[row]);
+                line.append(" ".repeat(STARTUP_CELL_WIDTH - letter[row].length()));
+            }
+            showMessage(logoPadding + line);
+        }
     }
 
     /** Displays command names and descriptions with aligned columns. */
@@ -32,6 +80,7 @@ public class Ui {
         showMessage("client.add     |   Add a client");
         showMessage("client.note    |   Add a client note");
         showMessage("client.view    |   View a client");
+        showMessage("client.list    |   List all clients");
         showMessage("client.find    |   Find clients by name");
         showMessage("client.edit    |   Edit a client's name");
         showMessage("client.delete  |   Delete a client and its notes");
@@ -71,29 +120,20 @@ public class Ui {
         showMessage("Data saved.");
     }
 
-    /** Confirms that application data was saved before exiting. */
+    /**
+     * Confirms that application data was saved before exiting.
+     */
     public void showGoodbye() {
         showMessage("Data saved. Goodbye!");
     }
 
-    /**
-     * Displays confirmation after a project is successfully registered, naming its client
-     * so the user can confirm the right client ID was used.
-     *
-     * @param project Project that was created.
-     * @param client Client who owns the project.
-     */
+    /** Displays confirmation after a project is registered, including its client name. */
     public void showProjectAdded(Project project, Client client) {
         showMessage("Created project " + describeProject(project) + " for client " + client.getClientId()
                 + " \"" + client.getName() + "\".");
     }
 
-    /**
-     * Displays confirmation after a project is successfully registered,
-     * when its client's name is unavailable.
-     *
-     * @param project Project that was created.
-     */
+    /** Displays confirmation when only the project's client ID is available. */
     public void showProjectAdded(Project project) {
         showMessage("Created project " + describeProject(project) + " for client "
                 + project.getClientId() + ".");
@@ -102,7 +142,7 @@ public class Ui {
     /**
      * Displays confirmation after a task is successfully attached to its project.
      *
-     * @param task Task that was added.
+     * @param task task that was added
      */
     public void showTaskAdded(Task task) {
         showMessage("Added task " + task.getId() + " \"" + task.getDescription() + "\" to project "
@@ -129,11 +169,7 @@ public class Ui {
         showMessage("Format: task.unmark TASK_ID");
     }
 
-    /**
-     * Displays the edited task's updated details, including its completion state.
-     *
-     * @param task Task that was edited.
-     */
+    /** Displays the edited task's updated details. */
     public void showTaskEdited(Task task) {
         showMessage("Updated task in project " + describeProject(task.getProject()) + ": " + task);
     }
@@ -146,18 +182,14 @@ public class Ui {
     /**
      * Displays confirmation after an event is successfully attached to its project.
      *
-     * @param event Event that was added.
+     * @param event event that was added
      */
     public void showEventAdded(Event event) {
         showMessage("Added event " + event.getId() + " \"" + event.getDescription() + "\" to project "
                 + describeProject(event.getProject()) + ".");
     }
 
-    /**
-     * Displays the edited event's updated details.
-     *
-     * @param event Event that was edited.
-     */
+    /** Displays the edited event's updated details. */
     public void showEventEdited(Event event) {
         showMessage("Updated event in project " + describeProject(event.getProject()) + ": " + event);
     }
@@ -167,7 +199,7 @@ public class Ui {
         showMessage("Format: event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD");
     }
 
-    /** Formats a project as its ID followed by its quoted name, such as P001 "Website redesign". */
+    /** Formats a project as its ID followed by its quoted name. */
     private String describeProject(Project project) {
         return project.getProjectId() + " \"" + project.getName() + "\"";
     }
@@ -186,11 +218,7 @@ public class Ui {
                 + (removedCount == 1 ? "activity" : "activities") + " removed.");
     }
 
-    /**
-     * Identifies the project and activities affected before requesting confirmation.
-     *
-     * @param project Project proposed for deletion.
-     */
+    /** Identifies the project and activities affected before requesting confirmation. */
     public void showProjectDeleteConfirmation(Project project) {
         int count = project.getItemCount();
         showMessage("Delete project " + describeProject(project) + " and "
@@ -292,7 +320,7 @@ public class Ui {
         }
     }
 
-    /** Displays retained projects with their activities and deleted clients with their notes. */
+    /** Displays deleted projects with their activities and deleted clients with their notes. */
     public void showTrashcan(List<Project> projects, List<Client> clients) {
         if (projects.isEmpty() && clients.isEmpty()) {
             showMessage("Trashcan is empty.");
@@ -331,9 +359,9 @@ public class Ui {
 
     /**
      * Displays the expected format for a supported add command after an error.
-     * Unrecognized entity types have no add-command hint.
+     * Unrecognised entity types have no add-command hint.
      *
-     * @param entityType Project, task or event.
+     * @param entityType project, task or event
      */
     public void showAddCommandUsage(String entityType) {
         switch (entityType) {
@@ -381,7 +409,7 @@ public class Ui {
     /**
      * Displays a command response.
      *
-     * @param message Response to display.
+     * @param message response to display
      */
     public void showMessage(String message) {
         System.out.println(message);
@@ -390,7 +418,7 @@ public class Ui {
     /**
      * Displays a user-facing error.
      *
-     * @param message Error to display.
+     * @param message error to display
      */
     public void showError(String message) {
         System.out.println("Error: " + message);
