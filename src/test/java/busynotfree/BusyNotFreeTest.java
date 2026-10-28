@@ -115,9 +115,12 @@ class BusyNotFreeTest {
     public void run_emptyInput_displaysWelcomeAndGoodbye() {
         runWithInput("");
 
-        assertTrue(ui.messages.contains("Welcome to BusyNotFree!"));
-        assertTrue(ui.messages.stream().anyMatch(message -> message.contains("client.add, client.note")));
-        assertTrue(ui.messages.stream().anyMatch(message -> message.contains("project.view")));
+        assertTrue(ui.messages.stream().anyMatch(message ->
+                message.contains("BusyNotFree // Freelance workspace")));
+        assertTrue(ui.messages.stream().anyMatch(message ->
+                message.contains("Type \"help\" to see available commands.")));
+        assertTrue(ui.messages.stream().anyMatch(message ->
+                message.contains(" ____  ") && message.contains(" _   _ ")));
         assertEquals("Data saved. Goodbye!", ui.messages.getLast());
         assertTrue(ui.errors.isEmpty());
     }

@@ -11,16 +11,67 @@ import busynotfree.model.Task;
  * Displays command responses and errors for BusyNotFree.
  */
 public class Ui {
+    private static final int STARTUP_WIDTH = 101;
+    private static final int STARTUP_CELL_WIDTH = 7;
+    private static final int STARTUP_GLYPH_GAP = 1;
+    private static final String[][] STARTUP_LOGO = {
+        {" ____  ", "| __ ) ", "|  _ \\ ", "| |_) |", "|____/ "},
+        {" _   _ ", "| | | |", "| | | |", "| |_| |", " \\___/ "},
+        {" ____  ", "/ ___| ", "\\___ \\ ", " ___) |", "|____/ "},
+        {"__   __", "\\ \\ / /", " \\ V / ", "  | |  ", "  |_|  "},
+        {" _   _ ", "| \\ | |", "|  \\| |", "| |\\  |", "|_| \\_|"},
+        {" _____ ", "|  _  |", "| | | |", "| |_| |", "|_____|"},
+        {" _____ ", "|_   _|", "  | |  ", "  | |  ", "  |_|  "},
+        {" _____ ", "|  ___|", "| |_   ", "|  _|  ", "|_|    "},
+        {" ____  ", "|  _ \\ ", "| |_) |", "|  _ < ", "|_| \\_\\"},
+        {" _____ ", "| ____|", "|  _|  ", "| |___ ", "|_____|"},
+        {" _____ ", "| ____|", "|  _|  ", "| |___ ", "|_____|"}
+    };
+
     /**
      * Displays the application name and currently supported commands.
      */
     public void showWelcome() {
-        showSeparator();
-        showMessage("Welcome to BusyNotFree!");
-        showMessage("Commands: client.add, client.note, client.view, client.list, "
-                + "project.add, project.status, project.list, project.view, project.delete, "
-                + "task.add, event.add, help, exit");
-        showSeparator();
+        showStartupSeparator();
+        showStartupCentered(".       *       .       *       .");
+        showStartupLogo();
+        showStartupCentered(".       *       .       *       .");
+        showStartupCentered("BusyNotFree // Freelance workspace");
+        showStartupCentered("Type \"help\" to see available commands.");
+        showStartupSeparator();
+    }
+
+    /** Displays the fixed-width separator used only by the startup screen. */
+    private void showStartupSeparator() {
+        showMessage("-".repeat(STARTUP_WIDTH));
+    }
+
+    /** Displays startup text centered on the same fixed-width canvas. */
+    private void showStartupCentered(String message) {
+        int leftPadding = Math.max(0, (STARTUP_WIDTH - message.length()) / 2);
+        showMessage(" ".repeat(leftPadding) + message);
+    }
+
+    /** Displays every logo row with one shared left offset to preserve alignment. */
+    private void showStartupLogo() {
+        int logoWidth = STARTUP_LOGO.length * STARTUP_CELL_WIDTH
+                + (STARTUP_LOGO.length - 2) * STARTUP_GLYPH_GAP;
+        int leftPadding = Math.max(0, (STARTUP_WIDTH - logoWidth) / 2 - 1);
+        String logoPadding = " ".repeat(leftPadding);
+
+        for (int row = 0; row < STARTUP_LOGO[0].length; row++) {
+            StringBuilder line = new StringBuilder(logoWidth);
+            for (int letterIndex = 0; letterIndex < STARTUP_LOGO.length; letterIndex++) {
+                if (letterIndex > 0) {
+                    int gap = letterIndex == 3 ? 0 : STARTUP_GLYPH_GAP;
+                    line.append(" ".repeat(gap));
+                }
+                String[] letter = STARTUP_LOGO[letterIndex];
+                line.append(letter[row]);
+                line.append(" ".repeat(STARTUP_CELL_WIDTH - letter[row].length()));
+            }
+            showMessage(logoPadding + line);
+        }
     }
 
     /** Displays command names and descriptions with aligned columns. */
