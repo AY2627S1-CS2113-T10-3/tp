@@ -2,7 +2,9 @@
 
 ## Acknowledgements
 
-{list here sources of all reused/adapted ideas, code, documentation, and third-party libraries -- include links to the original source as well}
+* Documentation structure follows the [AddressBook-Level3 User Guide](https://se-education.org/addressbook-level3/UserGuide.html), [Developer Guide](https://se-education.org/addressbook-level3/DeveloperGuide.html) and [PPP example](https://se-education.org/addressbook-level3/team/johndoe.html), as recommended by the [CS2113 deliverables guidance](https://nus-cs2113-ay2627-s1.github.io/website/admin/tp-deliverables.html).
+* UML notation follows the course's [Modeling (Using UML) chapter](https://nus-cs2113-ay2627-s1.github.io/website/se-book-adapted/chapters/modeling.html).
+* Diagrams are authored and rendered with [PlantUML](https://plantuml.com/).
 
 ## Design & implementation
 
@@ -117,6 +119,12 @@ which classes read or write it. Methods unrelated to this enhancement are omitte
 
 ![Class diagram of task completion and persistence](images/TaskCompletionClassDiagram.png)
 
+The solid arrow from `ProjectManager` to `Project` represents the manager's retained project
+references. The filled diamond at `Project` represents its ownership of tasks: each task belongs
+to one project. Dashed arrows represent temporary use by `DataStorage` and `Ui`, which receive
+these model objects through calls rather than keeping them as fields. The inherited scheduling
+fields of `Task` are omitted; see the creation model above for `ScheduledItem`.
+
 #### Marking and reopening tasks
 
 `Task` owns one `completed` boolean, initially `false`. `task.mark TASK_ID` sets it to `true`;
@@ -155,40 +163,71 @@ avoids a second value that could become stale when a task is marked, reopened or
 `save` lets a user persist current data without ending the session. `BusyNotFree#run` recognises
 this standalone command before sending dotted commands to `CommandHandler`. It rejects extra
 arguments, calls `saveData`, shows `Data saved.` only if the write succeeds, then prompts for
-another command. File I/O stays in the application layer, where the existing save action is
-already available. The sequence diagram shows the success and I/O failure paths.
+another command. `BusyNotFree` coordinates saving, while `DataStorage` performs file I/O.
+The sequence diagram shows a successful standalone save. Callback invocation and filesystem
+calls are summarised in UML notes to keep the scenario focused.
 
 ![Sequence diagram of the save command](images/SaveCommandSequenceDiagram.png)
 
 In `BusyNotFree#main`, the `SaveAction` callback is connected to
 `DataStorage#save(clientManager, projectManager)`. Both `save` and `exit` use `saveData`, which
-reports an `IOException` and returns `false` on failure. The `exit` path additionally shows
-`Data saved. Goodbye!` and leaves the command loop only after a successful write. A failed
-explicit `exit` can be retried, while a failed `save` simply returns to the next prompt.
-`SaveAction` lets tests simulate failed writes without accessing the real filesystem.
+returns `true` only when that action completes normally. On `IOException`, it displays
+`Critical ERROR!!! Unable to save data: ` followed by the cause and returns `false`.
+`SaveAction` lets tests simulate a failed write without accessing the real filesystem.
 
-The following diagram shows how an `exit` save stores task completion and how startup restores
-it. The standalone `save` command calls the same `DataStorage#save` method.
+| Trigger | Successful write | Failed write |
+| --- | --- | --- |
+| `save` without arguments | Show `Data saved.` and continue reading commands. | Show the error and continue reading commands. |
+| `exit`, including extra words | `CommandHandler#execute` returns `true`; `saveAndReportExit` saves, shows `Data saved. Goodbye!` and ends the loop. | Show the error and continue reading commands so the user can retry. |
+| End of input | Cancel any pending deletion, save, show the goodbye message and return. | Show the error and return because no further input is available. |
 
-![Sequence diagram of saving and restoring task completion](images/TaskCompletionPersistenceSequenceDiagram.png)
+`save` with arguments is rejected before the callback is called. While a deletion confirmation
+is pending, `save` and `exit` are treated as confirmation answers rather than commands.
+
+#### Writing and restoring task completion
 
 `DataStorage#save` gathers tasks from every project, sorts them by their application-wide IDs,
 and writes each flag alongside the task's existing fields in the version 1 properties file.
 For example, `task.0.completed=true` records a completed task. It writes a temporary UTF-8
 file in the data directory before replacing the old file. An atomic replacement is attempted
-first, with an ordinary replacement when the filesystem does not support atomic moves.
+first, with an ordinary replacement when the filesystem does not support atomic moves. This
+reduces the risk of a partially written data file; the fallback does not provide the same
+atomicity guarantee. The save also includes client notes, next-ID counters and the team's
+trashcan data.
 
 On the next launch, `DataStorage#load` creates linked client and project managers, restores
-clients and projects first, then reconstructs tasks and events. Once each task exists, a saved
-`true` flag marks it complete. A missing flag defaults to `false`, so data files produced before
-this enhancement still load with their tasks in progress. Only the exact values `true` and
+clients and projects first, then reconstructs tasks and events. `loadTasks` advances the task
+counter to each saved ID before calling `ProjectManager#addTask`, so gaps from deleted IDs are
+preserved. Once each task exists, a saved `true` flag marks it complete. A missing flag defaults
+to `false`, so data files produced before this enhancement still load with their tasks in
+progress. Only the exact values `true` and
 `false` are accepted; an invalid value makes loading fail instead of silently changing a task's
-state. Saved next-ID counters also prevent deleted IDs from being reused after a restart.
+state. Finally, the saved next-ID counters prevent deleted IDs from being reused after a restart.
+
+The following diagram focuses on restoring one task inside `DataStorage#loadTasks`, after
+clients and projects have been loaded. The task is a new object in the new application run;
+its constructor call starts its lifeline. File reading, project registration and counter
+bookkeeping are omitted where noted.
+
+![Sequence diagram of restoring one saved task's completion](images/TaskCompletionPersistenceSequenceDiagram.png)
 
 Marking and reopening change only the in-memory model. The next successful `save` or `exit`
 writes the new state. `BusyNotFree#main` reports a load error and stops if a saved file is
-invalid. On end-of-input, the command loop attempts a save once before returning; an explicit
-`save` or `exit` can be retried after a failed write.
+invalid, before creating the command loop or saving anything over the file. A missing file
+creates empty, linked managers. The path `data/busynotfree.properties` is resolved relative
+to the process working directory, not the JAR's directory.
+
+#### Diagram notation and maintenance
+
+These diagrams use the notation in the course's [Modeling (Using UML) chapter](https://nus-cs2113-ay2627-s1.github.io/website/se-book-adapted/chapters/modeling.html#sequence-diagrams-basic).
+Solid filled-arrow messages represent synchronous Java calls; dashed arrows represent returns.
+Nested activation bars show self-invocation, and an `opt` frame marks the conditional call to
+`Task#markCompleted`. Assigning the boolean is described in a note rather than drawn as a
+method call. Each sequence diagram describes one scenario in one application run.
+
+Editable sources are in `docs/diagrams`. After changing a source, regenerate its matching PNG
+in `docs/images` and inspect it at the guide's reading width. Keep the sources and exported
+images together when preparing a PR. The existing `project.view` diagram is unchanged.
 
 #### Design and verification
 
@@ -198,13 +237,13 @@ invalid. On end-of-input, the command loop attempts a save once before returning
   field avoids changing the file version or rejecting existing v1.0 saves.
 * The application handles `save` because it is a standalone command that needs storage access.
   This avoids giving the general `CommandHandler` responsibility for file I/O.
-* [`CommandHandlerTest`](../src/test/java/busynotfree/command/CommandHandlerTest.java)
-  covers marking, reopening and invalid IDs. [`ProjectViewTest`](../src/test/java/busynotfree/command/ProjectViewTest.java)
+* [`CommandHandlerTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/command/CommandHandlerTest.java)
+  covers marking, reopening and invalid IDs. [`ProjectViewTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/command/ProjectViewTest.java)
   checks empty, partial and complete counts, including `project.view all`.
-  [`DataStorageTest`](../src/test/java/busynotfree/storage/DataStorageTest.java) checks
+  [`DataStorageTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/storage/DataStorageTest.java) checks
   saved and restored flags, the older-file default and malformed saved data.
-  [`BusyNotFreeTest`](../src/test/java/busynotfree/BusyNotFreeTest.java) checks `save` success,
-  failure and continued input. [`BusyNotFreeClientTest`](../src/test/java/busynotfree/BusyNotFreeClientTest.java)
+  [`BusyNotFreeTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/BusyNotFreeTest.java) checks `save` success,
+  failure and continued input. [`BusyNotFreeClientTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/BusyNotFreeClientTest.java)
   checks that an in-session save can be loaded before a later exit.
 
 ### Editing tasks and events: `task.edit` and `event.edit`
@@ -651,3 +690,52 @@ For deletion commands, enter `yes` or `no` when prompted. Invalid commands
 should display an error and leave the affected record unchanged. The automated
 verification suite can be run with `.\gradlew.bat check`; it compiles the
 project, runs the tests, and runs Checkstyle.
+
+### Project views, completion and saving
+
+For an isolated check of these features, launch the JAR from a fresh, writable test directory.
+The following IDs assume there is no existing data in that directory. Use the
+[User Guide's startup instructions](UserGuide.md#quick-start) to launch the application.
+
+1. Create two projects with different task counts:
+
+   ```text
+   client.add name/Acme Studio
+   project.add client/C001 name/Website due/2026-11-30
+   project.add client/C001 name/Logo due/2026-12-15
+   task.add project/P001 name/Wireframe date/2026-10-15
+   task.add project/P001 name/Build homepage date/2026-10-20
+   task.add project/P002 name/Sketch logo date/2026-10-22
+   event.add project/P001 name/Review date/2026-10-25
+   task.mark T001
+   task.mark T003
+   project.view all
+   ```
+
+   Expect `Progress: 1 of 2 tasks completed.` for P001 and `Progress: 1 of 1 task completed.`
+   for P002. The event must appear only under P001's events and must not affect either count.
+   Both project statuses remain `ACTIVE`.
+
+2. Enter `save`. Expect `Data saved.` and another prompt. Before exiting, inspect the saved
+   file without editing it: `task.0.completed=true` and `task.2.completed=true` confirm that
+   the in-session save wrote the completion states. Enter `task.unmark T001` twice, then
+   `project.view P001`. Expect `[In Progress]` for T001 and `Progress: 0 of 2 tasks completed.`
+   after both commands.
+
+3. Enter `exit now`, restart from the same directory, and enter `project.view all`. Expect
+   the same IDs, descriptions, dates and completion states as before exiting. P002 must still
+   show one completed task. Enter `project.view` to check that omitting the argument displays
+   the same summaries as `project.view all`.
+
+4. Enter `project.view P999`, `task.mark T999` and `save now`, one at a time. Each must display
+   an error and leave the session running. Recheck P001 to confirm that its tasks are unchanged.
+
+5. For the empty case, use another fresh test directory and enter `project.view`. Expect
+   `No projects found.`. Add a client and a project without activities, then view that project.
+   Expect `No tasks found.`, `Progress: 0 of 0 tasks completed.` and `No events found.`.
+
+For a controlled save-failure check, use a separate fresh test directory and create a regular
+file named `data` before launching the JAR. Both `save` and `exit` should report a save error,
+show no success message, and accept another command while input remains available. This fixture
+blocks creation of the required data directory. Use it only for this test; do not replace
+the data directory of a normal session.
