@@ -127,6 +127,27 @@ class ProjectViewTest {
     }
 
     @Test
+    public void execute_projectViewOneProject_showsOnlyItsClientAndActivities() {
+        clients.addClient("Acme Studio");
+        clients.addClient("Bright Ideas");
+        projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projects.addProject("C002", "Logo", LocalDate.of(2026, 12, 15));
+        projects.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 15));
+        projects.addTask("P002", "Sketch", LocalDate.of(2026, 10, 16));
+        projects.addEvent("P001", "Review", LocalDate.of(2026, 10, 20));
+        projects.addEvent("P002", "Presentation", LocalDate.of(2026, 10, 21));
+        projects.markTaskComplete("T002");
+
+        handler.execute("project.view P002");
+
+        assertEquals(List.of("Project: P002 - Logo", "Client: C002 - Bright Ideas",
+                "Status: ACTIVE", "Deadline: 2026-12-15", "Tasks:",
+                "[T002] Sketch - 2026-10-16 [COMPLETED]", "Progress: 1 of 1 task completed.",
+                "Events:", "[E002] Presentation - 2026-10-21"), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
     public void execute_projectViewWithNoProjects_displaysEmptyMessage() {
         handler.execute("project.view");
         handler.execute("project.view all");
