@@ -1,39 +1,40 @@
 @startuml
 ' Classes responsible for task completion and its persisted state.
+!pragma layout smetana
 skinparam classAttributeIconSize 0
+hide circle
 hide empty members
 
 class ProjectManager {
-  +getTask(taskId): Task
-  +markTaskComplete(taskId): Task
-  +markTaskIncomplete(taskId): Task
-  +getProjects(): List<Project>
+  +getTask(taskId) : Task
+  +markTaskComplete(taskId) : Task
+  +markTaskIncomplete(taskId) : Task
 }
 
 class Project {
-  +getTasks(): List<Task>
+  +getTasks() : List<Task>
 }
 
 class Task {
-  -completed: boolean
-  +isCompleted(): boolean
-  +markCompleted(): void
-  +markIncomplete(): void
+  -completed : boolean
+  +isCompleted() : boolean
+  +markCompleted() : void
+  +markIncomplete() : void
 }
 
 class DataStorage {
-  +save(clients, projects): void
-  +load(): LoadedData
+  +save(clients, projects) : void
+  +load() : LoadedData
 }
 
 class Ui {
-  +showProjectSummary(project, client): void
+  +showProjectSummary(project, client) : void
 }
 
-ProjectManager "1" o-- "0..*" Project : stores
+ProjectManager --> "0..*" Project : projects
 Project "1" *-- "0..*" Task : contains
-DataStorage ..> ProjectManager : reads / reconstructs
-DataStorage ..> Task : persists completed
+DataStorage .down.> ProjectManager : reads / rebuilds
+DataStorage ..> Task : saves / restores completion
 Ui ..> Project : reads tasks
 Ui ..> Task : counts completed
 

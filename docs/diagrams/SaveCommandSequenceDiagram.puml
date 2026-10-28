@@ -1,40 +1,41 @@
 @startuml
-' A save command persists data and then returns to the command loop.
+' Successful standalone save, followed by the next command prompt.
 hide footbox
 
 actor User
 participant ":BusyNotFree" as App
-participant "saveAction:SaveAction" as Action
 participant ":DataStorage" as Storage
-database "busynotfree.properties" as File
 participant ":Ui" as UI
 
 User -> App : save
 activate App
-note right of App : run() recognises the standalone\ncommand and checks for arguments.
-App -> Action : save()
-Action -> Storage : save(clients, projects)
-Storage -> File : write temporary file and replace data file
-
-alt save succeeds
-    File --> Storage
-    Storage --> Action
-    Action --> App
-    App -> UI : showDataSaved()
-    UI -> User : "Data saved."
-    UI --> App
-else IOException
-    File --> Storage : I/O failure
-    Storage --> Action : throws IOException
-    Action --> App : throws IOException
-    App -> UI : showError(...)
-    UI -> User : error message
-    UI --> App
-end
-
-App -> UI : showPrompt()
-UI -> User : "Enter a command:"
+note over App : run() has recognised save\nand checked that it has no arguments.
+App -> App : saveData()
+activate App
+App -> Storage : save(clients, projects)
+activate Storage
+note over App, Storage
+  The SaveAction callback delegates this call.
+  Its invocation is omitted for clarity.
+end note
+note right of Storage
+  Collect records, completion flags
+  and next-ID counters.
+  Write a temporary UTF-8 file,
+  then replace the data file.
+end note
+Storage --> App
+deactivate Storage
+App --> App : true
+deactivate App
+App -> UI : showDataSaved()
+activate UI
 UI --> App
+deactivate UI
+App -> UI : showPrompt()
+activate UI
+UI --> App
+deactivate UI
 deactivate App
 
 @enduml

@@ -1,54 +1,38 @@
 @startuml
-' Save on exit and restore completion on the next application launch.
+' Restore one saved task during loadTasks; file reading and other records are omitted.
 hide footbox
 
-actor User
-participant ":BusyNotFree" as App
-participant "saveAction:SaveAction" as Action
 participant ":DataStorage" as Storage
 participant ":ProjectManager" as PM
-participant "t:Task" as Task
-database "busynotfree.properties" as File
-participant ":Ui" as UI
 
-User -> App : exit
-activate App
-App -> Action : save()
-activate Action
-note right of Action : At startup, the lambda binds\nthe managers to DataStorage.save.
-Action -> Storage : save(clients, projects)
+[-> Storage : loadTasks(data, projects)
 activate Storage
-Storage -> PM : getProjects()
-PM --> Storage : projects
-loop each project's tasks
-    Storage -> Task : isCompleted()
-    Task --> Storage : true / false
-end
-Storage -> File : write temporary file, then replace data file
-File --> Storage
-Storage --> Action
-deactivate Storage
-Action --> App
-deactivate Action
-App -> UI : showGoodbye()
-UI --> App
-deactivate App
-
-== Next launch ==
-User -> App : start application
-activate App
-App -> Storage : load()
-activate Storage
-Storage -> File : read properties
-File --> Storage : saved values
-Storage -> PM : addTask(projectId, description, date)
+note over Storage, PM
+  The file contains one task, T001, for P001.
+  Clients and projects have already been loaded.
+end note
+Storage -> PM : advanceNextNumbers(...)
+activate PM
+note right of PM : Set the next task number to\nthe numeric part of saved ID T001.
+PM --> Storage
+deactivate PM
+Storage -> PM : addTask("P001", description, date)
+activate PM
+create participant "t:Task" as T
+PM -> T : Task("T001", ...)
+activate T
+T --> PM
+deactivate T
+note over PM, T : Project lookup, task registration and\ncounter increment are omitted.
 PM --> Storage : t
+deactivate PM
 opt saved completed value is true
-    Storage -> Task : markCompleted()
+    Storage -> T : markCompleted()
+    activate T
+    T --> Storage
+    deactivate T
 end
-Storage --> App : LoadedData(clients, projects)
+[<-- Storage
 deactivate Storage
-App --> User : ready for commands
-deactivate App
 
 @enduml

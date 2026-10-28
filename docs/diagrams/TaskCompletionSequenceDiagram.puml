@@ -12,13 +12,17 @@ User -> CH : execute("task.mark T001")
 activate CH
 note right of CH : CommandParser routing and\nseparator output are omitted.
 CH -> CH : handleTaskMark("T001")
+activate CH
 CH -> PM : markTaskComplete("T001")
 activate PM
 PM -> PM : getTask("T001")
-note right of PM : Search tasks across all projects.\nIDs are unique application-wide.
+activate PM
+note right of PM : Searches active projects' tasks.\nReturns the task with ID T001.
+PM --> PM : t
+deactivate PM
 PM -> T : markCompleted()
 activate T
-T -> T : completed = true
+note right of T : completed becomes true.
 T --> PM
 deactivate T
 PM --> CH : t
@@ -27,6 +31,8 @@ CH -> UI : showTaskMarked(t)
 activate UI
 UI --> CH
 deactivate UI
+CH --> CH
+deactivate CH
 CH --> User : false (continue command loop)
 deactivate CH
 
