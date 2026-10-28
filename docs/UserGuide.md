@@ -7,8 +7,8 @@ BusyNotFree is a command-line app for managing clients and their projects. A pro
 ## Quick start
 
 1. Install Java 25.
-2. From the repository root, run `.\gradlew.bat shadowJar` on Windows or `./gradlew shadowJar` on macOS or Linux.
-3. Run `java -jar build/libs/BusyNotFree.jar` from the repository root.
+2. Download `BusyNotFree.jar` from the [latest release](https://github.com/AY2627S1-CS2113-T10-3/tp/releases/latest) and place it in a folder where you have write permission.
+3. Open a terminal in that folder and run `java -jar BusyNotFree.jar`. Use the terminal so you can enter commands and read the output.
 4. Type a command and press Enter. Try the commands below in order:
 
    ```text
@@ -21,7 +21,9 @@ BusyNotFree is a command-line app for managing clients and their projects. A pro
    exit
    ```
 
-The app prints the assigned ID after each addition. The example IDs assume an empty data file; use the IDs shown on your screen if you already have saved data.
+The app prints the assigned ID after each addition. The example IDs assume no existing data; use the IDs shown on your screen if you already have saved data.
+
+If you are building from source, run `.\gradlew.bat shadowJar` on Windows or `./gradlew shadowJar` on macOS or Linux from the repository root. Then run `java -jar build/libs/BusyNotFree.jar` from that directory.
 
 The commands and IDs are case-sensitive. Enter dates as real calendar dates in `YYYY-MM-DD` format, such as `2026-11-30`. Names, descriptions, and notes may contain spaces. Prefixes such as `name/` can be supplied in any order, but each required prefix must appear once with a non-blank value.
 
@@ -183,7 +185,7 @@ project.overdue
 
 Format: `project.view [PROJECT_ID|all]`
 
-Use a project ID to view one project. Use `project.view all` or just `project.view` to view every project, separated by a blank line. A summary shows the client, status, deadline, tasks, and events in separate sections, plus a completed-task count.
+Use a project ID to view one project. Use `project.view all` or just `project.view` to view every project, separated by a blank line. Supply at most one project ID, and use lowercase `all` to request every project. A summary shows the client, status, deadline, tasks, and events in separate sections, plus a completed-task count.
 
 ```text
 project.view P001
@@ -198,9 +200,13 @@ Events:
 [E001] Stakeholder meeting - 2026-10-20
 ```
 
-An empty section says `No tasks found.` or `No events found.` A project without tasks shows `Progress: 0 of 0 tasks completed.` If there are no projects, viewing all says `No projects found.` A missing ID produces `Project PROJECT_ID was not found.` with the requested ID in place of `PROJECT_ID`.
+An empty section says `No tasks found.` or `No events found.` A project without tasks shows `Progress: 0 of 0 tasks completed.` If there are no projects, viewing all says `No projects found.` For example, if `P999` does not exist, `project.view P999` displays `Error: Project P999 was not found.` and the command format. You can then enter another command.
 
 Each task shows `[In Progress]` after its date until it is marked complete, when it shows `[COMPLETED]`.
+The progress count includes only that project's tasks; events do not contribute to it.
+Marking every task complete does not change the project's status automatically. Use
+`project.status` to change that status. Viewing a summary does not change or save data.
+Projects in the trashcan are excluded from `project.view`; use `trashcan.list` to see them.
 
 ### Change a project's status: `project.status`
 
@@ -244,7 +250,7 @@ Added task T001 "Create homepage wireframe" to project P001 "Website redesign".
 
 Format: `task.mark TASK_ID`
 
-Marks an existing task complete. Use the task ID shown by `task.add`; the task keeps its project, description, and date. `project.view` then shows `[COMPLETED]` beside it. An unknown task ID produces an error.
+Marks an existing task complete. Find its ID using `project.view PROJECT_ID` or the confirmation from `task.add`. Task IDs are unique across all projects, so no project ID is needed. The task keeps its project, description, and date. `project.view` then shows `[COMPLETED]` beside it and updates the progress count.
 
 After a successful `save` or `exit`, the task's completion state is restored the next time BusyNotFree starts. Tasks from older data files without a saved completion state start as `[In Progress]`.
 
@@ -253,16 +259,24 @@ task.mark T001
 Task T001 marked as completed.
 ```
 
+Supply exactly one existing task ID. A missing, unknown or multiple ID input displays an error
+without changing any task. Marking an already completed task leaves it completed and displays
+the same confirmation.
+
 ### Reopen a task: `task.unmark`
 
 Format: `task.unmark TASK_ID`
 
-Marks an existing task incomplete again, for example when a client requests more work. The task keeps its ID, project, description, and date. In `project.view`, its `[COMPLETED]` label changes to `[In Progress]`. An unknown task ID produces an error.
+Marks an existing task incomplete again, for example when a client requests more work. The task keeps its ID, project, description, and date. In `project.view`, its `[COMPLETED]` label changes to `[In Progress]` and the completed-task count decreases by one. Save the change with `save` or `exit` to retain it after restarting.
 
 ```text
 task.unmark T001
 Task T001 reopened. Status: [In Progress]
 ```
+
+Supply exactly one existing task ID. Invalid input leaves all tasks unchanged. Reopening a task
+that is already in progress leaves it in progress and displays the same confirmation; the
+completed-task count does not decrease again.
 
 ### Edit a task: `task.edit`
 
@@ -375,32 +389,58 @@ Shows a list of available commands and short descriptions.
 
 Format: `save`
 
-Writes all current clients, projects, tasks, completion states, and events to the same data file
-used by `exit`. The app then accepts another command:
+Writes current clients and their notes, projects, tasks and their completion states, events,
+and trashcan entries to the same data file used by `exit`. The app then accepts another command:
 
 ```text
 save
 Data saved.
 ```
 
-`save` does not accept arguments. If the write fails, the app displays an error, does not show
-`Data saved.`, and lets you try again or continue working. Changes made after a successful
+`save` does not accept arguments. For example, `save now` displays
+`Error: Use save without arguments.` and does not save. If writing fails, the app displays
+`Error: Critical ERROR!!! Unable to save data: ...`, followed by the reason. It does not show
+`Data saved.` and lets you try again or continue working. Changes made after a successful
 `save` need another `save` or `exit` to reach the file.
 
 ### Save and exit: `exit`
 
 Format: `exit`
 
-Saves clients, notes, projects, tasks, task completion, and events, then closes the app:
+Saves the same data as `save`, including trashcan entries, then closes the app:
 
 ```text
 exit
 Data saved. Goodbye!
 ```
 
-Extra words after `exit` are ignored. If saving fails, the app displays an error and lets you try again. Closing the app without exiting normally may lose changes made since the last successful `save`.
+Extra words after `exit` are ignored, so `exit now` also saves and exits. If saving fails,
+the app displays the same save error described above and keeps accepting commands. It shows
+`Data saved. Goodbye!` only after a successful save. Closing the terminal or stopping the
+process from IntelliJ may lose changes made since the last successful `save`.
 
-The save file is `data/busynotfree.properties` relative to the directory from which you start the app. It is created on a successful `save` or `exit` and loaded automatically on the next run from that directory. To move your data to another computer, copy this file and place it in the same `data` directory relative to where you will run BusyNotFree.
+Finish a pending deletion confirmation with `yes` or `no` before entering `save` or `exit`.
+While confirmation is pending, those words are treated as answers to the confirmation prompt.
+
+### Data location and recovery
+
+The save file is `data/busynotfree.properties` relative to the directory from which you start
+the app, which may differ from the folder containing the JAR. For example, running the JAR
+from a terminal in `C:\Work` uses `C:\Work\data\busynotfree.properties`.
+The app creates the data directory and file on a successful save and loads the file automatically
+when launched from the same directory. Without a save file, it starts with no records.
+
+To back up or move your data, exit successfully, then copy this file. On another computer,
+place it in a `data` folder relative to the directory from which you will launch BusyNotFree.
+Keep a backup before replacing a file. The data is stored as readable text; avoid editing it
+manually because invalid values can prevent the app from loading.
+
+If loading fails, the app displays `Error: Unable to load saved data: ...` and stops before
+accepting commands. It does not overwrite that file. Keep a copy of the file and restore a
+known working backup before restarting.
+
+When terminal input ends normally, the app attempts one save and then returns. If that save
+fails, it displays the error but cannot accept another command because input has ended.
 
 ## Command summary
 
@@ -419,7 +459,7 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | Filter projects by status | `project.filter STATUS` |
 | List projects by deadline | `project.deadlines` |
 | List overdue active projects | `project.overdue` |
-| View project(s) | `project.view` `PROJECT_ID/all` |
+| View project(s) | `project.view [PROJECT_ID\|all]` |
 | Change project status | `project.status PROJECT_ID STATUS` |
 | Delete project | `project.delete PROJECT_ID` |
 | Add task | `task.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
