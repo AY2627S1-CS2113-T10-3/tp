@@ -51,6 +51,9 @@ public class CommandHandler {
     /** Event awaiting confirmation; null when no event deletion is pending. */
     private Event pendingEventDeletion;
 
+    /** True while permanent removal of all trashcan entries awaits confirmation. */
+    private boolean pendingTrashcanEmpty;
+
     /** Stores the selected note's client ID, position and preview text. */
     private record PendingNoteDeletion(String clientId, int noteIndex, String text) {
     }
@@ -159,6 +162,14 @@ public class CommandHandler {
 
     /** Delegates client operations and routes project, task and event commands. */
     private void routeCommand(ParsedCommand command) {
+        if (command.getEntityType().equals("trashcan") && command.getAction().equals("empty")) {
+            if (!command.getArgumentText().isBlank()) {
+                throw new CommandException("Use trashcan.empty without arguments.");
+            }
+            pendingTrashcanEmpty = true;
+            ui.showMessage("Permanently delete all items in the trashcan? Type yes or no.");
+            return;
+        }
         if (command.getEntityType().equals("trashcan")) {
             trashcanCommandHandler.execute(command);
             return;
@@ -365,15 +376,20 @@ public class CommandHandler {
     /**
      * Reports whether the next input must answer a deletion confirmation.
      *
-     * @return True while a project, client, note, task or event is awaiting confirmation.
+     * @return True while an item deletion or trashcan emptying is awaiting confirmation.
      */
     public boolean isAwaitingDeletionConfirmation() {
         return pendingDeletion != null || pendingClientDeletion != null
-                || pendingNoteDeletion != null || pendingTaskDeletion != null || pendingEventDeletion != null;
+                || pendingNoteDeletion != null || pendingTaskDeletion != null || pendingEventDeletion != null
+                || pendingTrashcanEmpty;
     }
 
     /** Deletes only after yes; keeps the confirmation pending for other invalid input. */
     private void handleDeletionConfirmation(String input) {
+        if (pendingTrashcanEmpty) {
+            handleTrashcanEmptyConfirmation(input);
+            return;
+        }
         if (pendingEventDeletion != null) {
             handleEventDeletionConfirmation(input);
             return;
@@ -409,6 +425,10 @@ public class CommandHandler {
 
     /** Cancels any pending deletion, including when the input stream ends. */
     public void cancelPendingDeletion() {
+        if (pendingTrashcanEmpty) {
+            pendingTrashcanEmpty = false;
+            ui.showMessage("Trashcan emptying cancelled.");
+        }
         if (pendingEventDeletion != null) {
             pendingEventDeletion = null;
             ui.showMessage("Event deletion cancelled.");
@@ -428,6 +448,24 @@ public class CommandHandler {
         if (pendingDeletion != null) {
             pendingDeletion = null;
             ui.showMessage("Project deletion cancelled.");
+        }
+    }
+
+    /** Empties the trashcan only after yes; invalid answers leave confirmation pending. */
+    private void handleTrashcanEmptyConfirmation(String input) {
+        switch (input.trim()) {
+        case "yes":
+            projectManager.getTrashcanManager().empty();
+            pendingTrashcanEmpty = false;
+            ui.showMessage("Trashcan emptied.");
+            break;
+        case "no":
+            cancelPendingDeletion();
+            break;
+        default:
+            ui.showError("Please type yes to confirm deletion or no to cancel.");
+            ui.showMessage("Permanently delete all items in the trashcan? Type yes or no.");
+            break;
         }
     }
 

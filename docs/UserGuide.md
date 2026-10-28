@@ -377,6 +377,27 @@ name and a different ID does not satisfy this requirement. If a client was delet
 after its projects, those projects remain visible in the trashcan but cannot yet
 be restored. Restoration also rejects conflicting IDs without changing any data.
 
+### Empty the trashcan: `trashcan.empty`
+
+Format: `trashcan.empty`
+
+Permanently removes all deleted projects and clients from the trashcan, including
+their stored tasks, events and notes. Emptied entries cannot be restored.
+Active records remain unchanged, and deleted IDs are not reused.
+Enter `save` or `exit` to persist the change.
+
+```text
+trashcan.empty
+Permanently delete all items in the trashcan? Type yes or no.
+yes
+Trashcan emptied.
+```
+
+Enter `no` to cancel. Other answers keep confirmation pending; finish with `yes`
+or `no` before entering another command. If input ends before confirmation,
+emptying is cancelled. Extra command arguments are rejected without changing data.
+Running the command on an already empty trashcan also succeeds after confirmation.
+
 ## Help and saving
 
 ### Show help: `help`
@@ -473,5 +494,6 @@ fails, it displays the error but cannot accept another command because input has
 | Help | `help` |
 | List deleted items | `trashcan.list` |
 | Restore project | `trashcan.restore PROJECT_ID` |
+| Empty trashcan | `trashcan.empty` |
 | Save and continue | `save` |
 | Save and exit | `exit` |

@@ -30,6 +30,37 @@ class DataStorageTest {
     private Path directory;
 
     @Test
+    public void saveAndLoad_emptiedTrashcan_removesSavedEntriesAndPreservesNextIds() throws IOException {
+        DataStorage storage = new DataStorage(directory.resolve("empty-trash.properties"));
+        ClientManager clients = new ClientManager();
+        ProjectManager projects = new ProjectManager(clients);
+        LocalDate date = LocalDate.of(2026, 11, 30);
+        clients.addClient("Acme");
+        clients.addNote("C001", "Call on Friday");
+        projects.addProject("C001", "Website", date);
+        projects.addTask("P001", "Wireframe", date);
+        projects.addEvent("P001", "Review", date);
+        projects.deleteProject("P001");
+        clients.deleteClient("C001", projects);
+        storage.save(clients, projects);
+
+        // Load saved trash first to verify the next save removes existing entries.
+        DataStorage.LoadedData loaded = storage.load();
+        assertEquals(1, loaded.projectManager().getDeletedProjects().size());
+        assertEquals(1, loaded.clientManager().getDeletedClients().size());
+        loaded.projectManager().getTrashcanManager().empty();
+        storage.save(loaded.clientManager(), loaded.projectManager());
+
+        DataStorage.LoadedData reloaded = storage.load();
+        assertTrue(reloaded.projectManager().getDeletedProjects().isEmpty());
+        assertTrue(reloaded.clientManager().getDeletedClients().isEmpty());
+        assertEquals(2, reloaded.clientManager().getNextClientNumber());
+        assertEquals(2, reloaded.projectManager().getNextProjectNumber());
+        assertEquals(2, reloaded.projectManager().getNextTaskNumber());
+        assertEquals(2, reloaded.projectManager().getNextEventNumber());
+    }
+
+    @Test
     public void saveAndLoad_preservesAllDataAndNextIds() throws IOException {
         DataStorage storage = new DataStorage(directory.resolve("data").resolve("busynotfree.properties"));
         ClientManager clients = new ClientManager();

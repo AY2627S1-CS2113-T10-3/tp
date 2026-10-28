@@ -103,6 +103,7 @@ public class Ui {
         showMessage("event.delete   |   Delete an event");
         showMessage("trashcan.list  |   List deleted projects and clients");
         showMessage("trashcan.restore |   Restore a deleted project");
+        showMessage("trashcan.empty |   Permanently delete all items in the trashcan");
         showMessage("help           |   View help");
         showMessage("save           |   Save data and continue");
         showMessage("exit           |   Save data and exit");

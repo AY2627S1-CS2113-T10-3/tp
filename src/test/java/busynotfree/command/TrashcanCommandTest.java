@@ -232,6 +232,118 @@ class TrashcanCommandTest {
         assertTrue(projects.getDeletedProjects().isEmpty());
     }
 
+    @Test
+    public void execute_emptyTrashcan_removesDeletedItemsAndPreservesActiveData() {
+        addProject();
+        clients.addNote("C001", "Deleted note");
+        projects.deleteProject("P001");
+        clients.deleteClient("C001", projects);
+        clients.addClient("Active client");
+        Project active = projects.addProject("C002", "Active project", LocalDate.of(2026, 12, 1));
+        projects.addTask("P002", "Active task", LocalDate.of(2026, 11, 1));
+        projects.addEvent("P002", "Active event", LocalDate.of(2026, 11, 2));
+        clients.addNote("C002", "Keep this note");
+        int nextClient = clients.getNextClientNumber();
+        int nextProject = projects.getNextProjectNumber();
+        int nextTask = projects.getNextTaskNumber();
+        int nextEvent = projects.getNextEventNumber();
+
+        handler.execute("trashcan.empty");
+
+        assertTrue(handler.isAwaitingDeletionConfirmation());
+        assertEquals(1, projects.getDeletedProjects().size());
+        assertEquals(1, clients.getDeletedClients().size());
+        assertEquals(3, projects.getDeletedProjects().getFirst().getItemCount());
+        assertEquals(List.of("Deleted note"), clients.getDeletedClients().getFirst().getNotes());
+        handler.execute("yes");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertTrue(projects.getDeletedProjects().isEmpty());
+        assertTrue(clients.getDeletedClients().isEmpty());
+        assertEquals(List.of(active), projects.getProjects());
+        assertEquals(1, clients.getClients().size());
+        assertEquals(List.of("Keep this note"), clients.getClient("C002").getNotes());
+        assertEquals(2, active.getItemCount());
+        assertEquals("Active task", projects.getTask("T003").getDescription());
+        assertEquals("Active event", projects.getEvent("E002").getDescription());
+        assertEquals(nextClient, clients.getNextClientNumber());
+        assertEquals(nextProject, projects.getNextProjectNumber());
+        assertEquals(nextTask, projects.getNextTaskNumber());
+        assertEquals(nextEvent, projects.getNextEventNumber());
+        assertEquals(List.of("Permanently delete all items in the trashcan? Type yes or no.",
+                "Trashcan emptied."), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+        assertThrows(ProjectException.class, () -> projects.restoreProject("P001"));
+    }
+
+    @Test
+    public void execute_emptyRepeatedly_succeedsWhenAlreadyEmpty() {
+        for (int i = 0; i < 2; i++) {
+            handler.execute("  trashcan.empty   ");
+            assertTrue(handler.isAwaitingDeletionConfirmation());
+            handler.execute("yes");
+            assertFalse(handler.isAwaitingDeletionConfirmation());
+        }
+
+        assertEquals(List.of("Permanently delete all items in the trashcan? Type yes or no.",
+                "Trashcan emptied.", "Permanently delete all items in the trashcan? Type yes or no.",
+                "Trashcan emptied."), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_emptyWithArguments_preservesTrashcanAndShowsUsage() {
+        addProject();
+        projects.deleteProject("P001");
+        clients.deleteClient("C001", projects);
+
+        handler.execute("trashcan.empty extra");
+
+        assertEquals(1, projects.getDeletedProjects().size());
+        assertEquals(1, clients.getDeletedClients().size());
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of("Use trashcan.empty without arguments."), ui.errors);
+        assertEquals(List.of("Format: trashcan.empty"), ui.messages);
+    }
+
+    @Test
+    public void execute_cancelEmpty_preservesTrashcanAndAllowsAnotherCommand() {
+        addProject();
+        projects.deleteProject("P001");
+        clients.deleteClient("C001", projects);
+
+        handler.execute("trashcan.empty");
+        handler.execute("no");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertEquals(1, projects.getDeletedProjects().size());
+        assertEquals(1, clients.getDeletedClients().size());
+        assertEquals("Trashcan emptying cancelled.", ui.messages.getLast());
+        handler.execute("trashcan.empty");
+        handler.execute("yes");
+        assertTrue(projects.getDeletedProjects().isEmpty());
+        assertTrue(clients.getDeletedClients().isEmpty());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_invalidEmptyConfirmation_keepsTrashAndConfirmationPending() {
+        addProject();
+        projects.deleteProject("P001");
+        handler.execute("trashcan.empty");
+
+        for (String answer : List.of("maybe", "save", "exit", "trashcan.list", "")) {
+            assertFalse(handler.execute(answer));
+            assertTrue(handler.isAwaitingDeletionConfirmation());
+            assertEquals(1, projects.getDeletedProjects().size());
+            assertEquals("Please type yes to confirm deletion or no to cancel.", ui.errors.getLast());
+        }
+
+        handler.execute("yes");
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertTrue(projects.getDeletedProjects().isEmpty());
+    }
+
     /** Captures responses without decorative separators. */
     private static class RecordingUi extends Ui {
         private final List<String> messages = new ArrayList<>();

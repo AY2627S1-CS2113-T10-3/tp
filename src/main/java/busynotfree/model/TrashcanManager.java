@@ -17,6 +17,15 @@ public final class TrashcanManager {
     private final Map<String, Client> deletedClients = new LinkedHashMap<>();
 
     /**
+     * Permanently removes all retained projects and clients, including their activities and notes.
+     * Active records and ID counters are unchanged.
+     */
+    public void empty() {
+        deletedProjects.clear();
+        deletedClients.clear();
+    }
+
+    /**
      * Retains a project and all its activities before active data is removed.
      *
      * @param project Project to copy into the trashcan.

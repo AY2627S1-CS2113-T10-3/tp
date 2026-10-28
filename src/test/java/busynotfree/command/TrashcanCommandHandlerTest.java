@@ -72,9 +72,11 @@ class TrashcanCommandHandlerTest {
     public void showCommandUsage_displaysOnlySupportedActions() {
         handler.showCommandUsage("list");
         handler.showCommandUsage("restore");
+        handler.showCommandUsage("empty");
         handler.showCommandUsage("unknown");
 
-        assertEquals(List.of("Format: trashcan.list", "Format: trashcan.restore PROJECT_ID"), ui.messages);
+        assertEquals(List.of("Format: trashcan.list", "Format: trashcan.restore PROJECT_ID",
+                "Format: trashcan.empty"), ui.messages);
     }
 
     /** Captures delegated responses without printing to the console. */

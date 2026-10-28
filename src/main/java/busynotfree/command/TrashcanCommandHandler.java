@@ -46,6 +46,9 @@ public final class TrashcanCommandHandler {
     /** Displays syntax for supported commands after an error. */
     public void showCommandUsage(String action) {
         switch (action) {
+        case "empty":
+            ui.showMessage("Format: trashcan.empty");
+            break;
         case "list":
             ui.showMessage("Format: trashcan.list");
             break;
