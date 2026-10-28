@@ -419,7 +419,7 @@ The save file is `data/busynotfree.properties` relative to the directory from wh
 | Filter projects by status | `project.filter STATUS` |
 | List projects by deadline | `project.deadlines` |
 | List overdue active projects | `project.overdue` |
-| View project(s) | `project.view [PROJECT_ID|all]` |
+| View project(s) | `project.view` `PROJECT_ID/all` |
 | Change project status | `project.status PROJECT_ID STATUS` |
 | Delete project | `project.delete PROJECT_ID` |
 | Add task | `task.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD` |
