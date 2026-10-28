@@ -52,7 +52,8 @@ Note 1: Prefers weekly updates
 
 Format: `client.list`
 
-The list shows each client's ID and name in creation order. As specified by the
+The list shows each client's ID and name in insertion order. Restored clients are
+appended; after restarting, clients appear in numeric ID order. As specified by the
 draft's general command rules, extra arguments are ignored for this command.
 
 ```text
@@ -70,7 +71,7 @@ Format: `client.find NAME`
 
 Searches for a case-insensitive substring anywhere in a client's name. Multiword
 searches are allowed. A summary such as `Found 2 matching clients.` precedes the
-numbered IDs and names in creation order, using the same format as `client.list`.
+numbered IDs and names in insertion order, using the same format as `client.list`.
 A single match displays `Found 1 matching client.` No matches displays
 `Found 0 matching clients.` followed by `No clients found.` Missing or
 whitespace-only search text is rejected.
@@ -98,7 +99,8 @@ Delete those projects first. Changes are saved on `save` or `exit`, and deleted 
 are never reused.
 
 The deleted client and its notes remain visible in `trashcan.list`, including
-after saving and restarting. Client restoration is not currently supported.
+after saving and restarting. Use `trashcan.restore CLIENT_ID` to restore the client
+and its notes. Restore any deleted projects separately after restoring their client.
 
 ## Delete a client note
 

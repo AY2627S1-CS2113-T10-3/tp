@@ -76,6 +76,29 @@ public final class TrashcanManager {
     }
 
     /**
+     * Restores a client and its notes only after active-ID validation succeeds.
+     * A failed restoration leaves the trash entry available.
+     *
+     * @param clientId Deleted client's case-sensitive ID.
+     * @param clientManager Manager receiving the restored client.
+     * @return Restored client with its original notes.
+     * @throws ClientException If the ID is blank, absent from the trashcan or already active.
+     */
+    public Client restoreClient(String clientId, ClientManager clientManager) {
+        if (clientId == null || clientId.isBlank()) {
+            throw new ClientException("A client ID must not be blank.");
+        }
+        String id = clientId.trim();
+        Client client = deletedClients.get(id);
+        if (client == null) {
+            throw new ClientException("Client " + id + " is not in the trashcan.");
+        }
+        clientManager.registerRestoredClient(client);
+        deletedClients.remove(id);
+        return client;
+    }
+
+    /**
      * Restores a project only after active-data validation succeeds.
      * A failed restoration leaves the trash entry available.
      *

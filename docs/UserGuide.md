@@ -67,7 +67,9 @@ Note 1: Prefers weekly updates
 
 Format: `client.list`
 
-Lists client IDs and names in creation order. If there are none, the app shows `No clients found.` Extra words after this command are ignored.
+Lists client IDs and names in insertion order. A restored client is appended; after
+restarting, clients appear in numeric ID order. If there are none, the app shows
+`No clients found.` Extra words after this command are ignored.
 
 ### Find clients by name: `client.find`
 
@@ -76,7 +78,7 @@ Format: `client.find NAME`
 Finds clients whose names contain `NAME`, ignoring case. For example,
 `client.find acme` matches `Acme Studio`. Multiword searches are allowed.
 A summary such as `Found 2 matching clients.` appears before the matching client
-IDs and names in creation order, using the same format as `client.list`.
+IDs and names in insertion order, using the same format as `client.list`.
 A single match displays `Found 1 matching client.` No matches displays
 `Found 0 matching clients.` followed by `No clients found.` A search must not be blank.
 
@@ -357,13 +359,17 @@ available after restarting. Individually deleted tasks, events and notes are not
 retained; project snapshots contain only activities present when the project was deleted.
 Items deleted before this feature was installed cannot be recovered.
 
-### Restore a deleted project: `trashcan.restore`
+### Restore a deleted project or client: `trashcan.restore`
 
-Format: `trashcan.restore PROJECT_ID`
+Format: `trashcan.restore PROJECT_ID/CLIENT_ID`
+
+Provide exactly one project ID or client ID. The slash means "or"; do not type it.
 
 Restores a project immediately, including its tasks and events with their original
 IDs, descriptions, dates, status and task completion states. The restored project
 is removed from the trashcan and appended to the active project list.
+For a client ID, restores the client's original name, ID and all notes in their
+original order. Its deleted projects remain in the trashcan until restored separately.
 No new IDs are allocated. Changes are saved on `save` or `exit`.
 
 ```text
@@ -371,11 +377,18 @@ trashcan.restore P001
 Restored project P001 "Website" with 2 tasks and 1 event.
 ```
 
-Missing, unknown, active, lowercase or multiple IDs are rejected. Only projects
-can be restored. The owning client must still be active; a client with the same
-name and a different ID does not satisfy this requirement. If a client was deleted
-after its projects, those projects remain visible in the trashcan but cannot yet
-be restored. Restoration also rejects conflicting IDs without changing any data.
+```text
+trashcan.restore C001
+Restored client C001 "Acme" with 2 notes.
+```
+
+Missing, malformed, unknown, active, lowercase or multiple IDs are rejected. IDs must
+start with uppercase `P` or `C` followed by at least three digits, such as `P001`,
+`C001` or `C1000`. Use the exact ID shown by `trashcan.list`.
+For project restoration, the owning client must be active; a client with the same
+name and a different ID does not satisfy this requirement. If both were deleted,
+restore the client first, then restore each project by its own ID. Restoration rejects
+conflicting IDs without replacing active records or removing retained snapshots.
 
 ### Empty the trashcan: `trashcan.empty`
 
@@ -493,7 +506,7 @@ fails, it displays the error but cannot accept another command because input has
 | Edit event | `event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Help | `help` |
 | List deleted items | `trashcan.list` |
-| Restore project | `trashcan.restore PROJECT_ID` |
+| Restore project or client | `trashcan.restore PROJECT_ID/CLIENT_ID` |
 | Empty trashcan | `trashcan.empty` |
 | Save and continue | `save` |
 | Save and exit | `exit` |

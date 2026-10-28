@@ -283,7 +283,7 @@ Client management lets freelancers register clients and keep notes about their p
 * `client.add name/CLIENT_NAME` registers a client and displays the assigned ID.
 * `client.note CLIENT_ID text/NOTE` appends a note to an existing client.
 * `client.view CLIENT_ID` displays a client's ID, name and all recorded notes.
-* `client.list` displays every client's ID and name in creation order.
+* `client.list` displays every client's ID and name in insertion order. Restored clients are appended; after a restart, clients load in numeric ID order.
 
 For example, `client.add name/Acme Studio` can create `C001`, after which `client.note C001 text/Prefers weekly updates` records a preference for that client. IDs are case-sensitive; two clients may have the same name but receive different IDs.
 
@@ -329,7 +329,7 @@ Names and notes preserve internal spaces and ordinary slash-containing text such
 
 `client.view` requires exactly one positional ID. The handler calls `ClientManager#getClient`, then `ClientUi#showClient` prints the ID and name followed by each note in insertion order as `Note 1: ...`, `Note 2: ...` and so on. These one-based positions are used by `client.delete_note`. A client without notes displays `Notes: No notes found.`. Leading and trailing whitespace around an ID is trimmed, but its case and digits must match an existing ID.
 
-`client.list` calls `ClientManager#getClients`, which returns `List.copyOf(clients.values())`. `ClientUi#showClients` prints numbered entries in creation order, or `No clients found.` when the collection is empty. Listing omits notes; users can request them through `client.view`. Extra arguments to `client.list` are ignored, matching the application's convention for commands without parameters.
+`client.list` calls `ClientManager#getClients`, which returns `List.copyOf(clients.values())`. `ClientUi#showClients` prints numbered entries in insertion order, or `No clients found.` when the collection is empty. Listing omits notes; users can request them through `client.view`. Extra arguments to `client.list` are ignored, matching the application's convention for commands without parameters.
 
 Both `getClients()` and `Client#getNotes()` return unmodifiable snapshots of their collections. Callers cannot add or remove entries through these lists. The client snapshot still contains references to the existing `Client` objects; it is not a deep copy of their state.
 
@@ -471,7 +471,7 @@ is allowed; the next project view derives its progress from the remaining task l
 Deletion does not decrease ID counters. This prevents a later record from receiving
 the identifier of a deleted record.
 
-#### Listing and restoring deleted projects
+#### Listing and restoring deleted projects and clients
 
 `trashcan.list` obtains deleted projects and clients from `TrashcanManager`. The returned
 lists contain independent copies, sorted by numeric ID. This protects retained snapshots
@@ -479,7 +479,14 @@ from changes made by callers. `Ui#showTrashcan` displays project details, tasks 
 followed by deleted clients and their notes. If both collections are empty, it displays
 `Trashcan is empty.`
 
-`trashcan.restore P001` requires exactly one project ID. `TrashcanManager#restoreProject`
+`trashcan.restore PROJECT_ID/CLIENT_ID` requires exactly one ID; the slash denotes
+alternatives, not literal input. `TrashcanCommandHandler#handleRestore` rejects missing
+or multiple IDs before checking the case-sensitive `P[0-9]{3,}` or `C[0-9]{3,}` format.
+Malformed IDs produce a `CommandException`; well-formed IDs absent from the trashcan
+produce the corresponding `ProjectException` or `ClientException`. The shared handler
+displays the error and updated usage hint without changing model data.
+
+For a project ID, `TrashcanManager#restoreProject`
 finds the retained snapshot and calls `ProjectManager#registerRestoredProject`.
 
 Registration verifies that the original client is active and that the project, task and
@@ -496,6 +503,20 @@ The sequence diagram focuses on registration. Command argument validation and th
 trash lookup must already have succeeded. Validation failures are summarized as one branch.
 
 ![Sequence diagram of project restoration](images/ProjectRestoreSequenceDiagram.png)
+
+For a client ID, `TrashcanManager#restoreClient` finds the retained client, then calls
+`ClientManager#registerRestoredClient`. Registration rejects an ID that is already
+active before inserting the snapshot into the active map. Only after successful
+registration does the trashcan remove its entry. The original client ID, name, note
+order and duplicate note text are preserved; ID counters do not change. Active clients
+with the same name but different IDs do not prevent restoration.
+
+![Sequence diagram of client restoration](images/ClientRestoreSequenceDiagram.png)
+
+Restoring a client does not automatically restore its projects. If both were deleted,
+restore the client first, then each project. This preserves the existing project
+validation and avoids partially restoring a group when one project has an ID conflict.
+Repeating either restore command fails because its snapshot has already been removed.
 
 #### Permanently emptying the trashcan
 
@@ -544,9 +565,11 @@ before the saved next-ID counters are applied.
 Deleted projects may refer to deleted clients while retained in the trashcan. Loading
 accepts this relationship, but restoration still requires the client to be active.
 
-Older files without a trash section load with an empty trashcan. Active projects are
-written in numeric ID order because restoring an older project can append it after
-newer projects in memory, while the loader reconstructs IDs in ascending order.
+Older files without a trash section load with an empty trashcan. Active clients and
+projects are written in numeric ID order because restoring older records can append
+them after newer records in memory, while the loader reconstructs IDs in ascending
+order. `DataStorage#save` sorts snapshots for serialization without changing the
+in-memory insertion order.
 
 Deletion, restoration and trashcan emptying change in-memory data. The existing `save` and `exit` paths
 persist those changes using the temporary-file replacement described in the persistence
@@ -565,7 +588,7 @@ the storage format needs no changes.
 * **Restore original IDs rather than create replacements:** this preserves project
   ownership and activity identifiers. It requires conflict checks before registration.
 * **Separate trashcan responsibilities:** `TrashcanManager` owns retained data;
-  `TrashcanCommandHandler` handles listing, restoration and usage hints. `CommandHandler`
+  `TrashcanCommandHandler` handles listing, project/client restoration and usage hints. `CommandHandler`
   coordinates emptying because it owns confirmation state. Active-data managers retain
   their validation rules and ID counters.
 * **Explicit confirmation rather than immediate deletion:** the extra interaction gives
@@ -584,12 +607,16 @@ commands needed the same confirmation behavior.
 
 [`TrashcanCommandTest`](../src/test/java/busynotfree/command/TrashcanCommandTest.java) covers
 listing, invalid restoration requests, successful restoration, inactive clients, repeated
-restoration and conflicting IDs. It also covers confirmed emptying, rejected arguments,
+restoration and conflicting IDs. Client restoration tests cover missing/malformed IDs,
+absent or active clients, repeated restoration, note counts and restoring a client
+before its project. It also covers confirmed emptying, rejected arguments,
 repeated emptying, cancellation, invalid confirmation answers and preservation of active
 records and ID counters.
 [`TrashcanManagerTest`](../src/test/java/busynotfree/model/TrashcanManagerTest.java) checks
 shared wiring, snapshot isolation, duplicate retained IDs and failed registration preserving
-the snapshot. [`TrashcanCommandHandlerTest`](../src/test/java/busynotfree/command/TrashcanCommandHandlerTest.java)
+the snapshot. Client restoration checks also cover note preservation, unchanged counters
+and rejection of conflicting active IDs without losing the retained client.
+[`TrashcanCommandHandlerTest`](../src/test/java/busynotfree/command/TrashcanCommandHandlerTest.java)
 verifies delegated parsing and response behavior.
 
 Deletion tests in [`CommandHandlerTest`](../src/test/java/busynotfree/command/CommandHandlerTest.java)
@@ -601,11 +628,13 @@ checks that `save` cannot bypass emptying confirmation.
 [`DataStorageTest`](../src/test/java/busynotfree/storage/DataStorageTest.java) covers persistence,
 older files, restoration of older projects and prevention of ID reuse. Its emptying test
 first loads previously saved trash, clears it, saves again and reloads to verify both
-collections stay empty while next-ID counters are preserved.
+collections stay empty while next-ID counters are preserved. Its client restoration
+test restores an older client after a newer active client, saves and reloads, checks
+note order and counters, and restores the retained project with its activities.
 
 The trashcan has no automatic expiry; users can explicitly clear it with `trashcan.empty`.
-Client restoration is not supported,
-so a project whose client was deleted remains visible but cannot be restored. Individually
+Project restoration requires an active client; a retained client can now be restored
+first. Individually
 deleted activities and notes cannot be recovered. These are current limitations, rather
 than behavior provided by this enhancement.
 
@@ -628,15 +657,16 @@ assertions enabled during development (`java -ea -jar build/libs/BusyNotFree.jar
 
 #### Maintaining the diagrams
 
-The four diagrams in this enhancement use editable PlantUML sources in `docs/diagrams`.
+The six deletion and recovery diagrams use editable PlantUML sources in `docs/diagrams`.
 Export matching PNG files to `docs/images` after source changes and check that their labels
 remain readable alongside the guide text. Sequence diagrams omit repetitive getters and
-formatting calls. Their notes identify the simplified scope. This enhancement uses one
-class diagram and three sequence diagrams.
+formatting calls. Their notes identify the simplified scope. Deletion and recovery use
+one class diagram and five sequence diagrams, including client restoration and emptying.
 
 Notation follows the course's [Modeling (Using UML) chapter](https://nus-cs2113-ay2627-s1.github.io/website/se-book-adapted/chapters/modeling.html#class-diagrams-basics).
-Solid association lines show retained references, the dashed dependency shows temporary
-use of a project manager during restoration, and filled diamonds mark project-owned
+Solid association lines show retained references, dashed dependencies show temporary
+use of active-data managers during restoration and the trashcan during emptying,
+and filled diamonds mark project-owned
 activities. Sequence participants use instance labels such as `:CommandHandler`;
 solid filled-arrow messages represent synchronous calls and dashed messages represent
 returns. `loop` and `alt` frames describe repetition and mutually exclusive paths.
@@ -741,6 +771,23 @@ For deletion commands, enter `yes` or `no` when prompted. Invalid commands
 should display an error and leave the affected record unchanged. The automated
 verification suite can be run with `.\gradlew.bat check`; it compiles the
 project, runs the tests, and runs Checkstyle.
+
+### Client restoration and persistence
+
+Use a fresh test directory. Create a client with two notes and a project containing
+a task and event. Delete the project and then the client, confirming each deletion.
+Create a second client before testing restoration so that ID ordering is exercised.
+
+1. Enter `trashcan.restore`, `trashcan.restore c001`, `trashcan.restore C999` and
+   `trashcan.restore C001 P001`. Each must display an error and the format hint,
+   leaving both retained snapshots available in `trashcan.list`.
+2. Enter `trashcan.restore P001`. It must fail while its client is inactive.
+3. Enter `trashcan.restore C001`, then `client.view C001`. Verify the original name
+   and both notes in order. P001 must still be in the trashcan. Repeating the client
+   restore must fail without changing the active client.
+4. Enter `save`, then `exit`, and restart from the same directory. Both clients
+   must load successfully, including the restored client's notes. Restore P001 and
+   verify its original task and event. Create another client; expect `C003`.
 
 ### Trashcan emptying and persistence
 

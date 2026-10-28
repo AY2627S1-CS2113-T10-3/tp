@@ -87,7 +87,7 @@ public class CommandHandler {
         this.clientManager = clientManager;
         this.clientCommandHandler = new ClientCommandHandler(clientManager, ui);
         this.trashcanCommandHandler = new TrashcanCommandHandler(
-                projectManager.getTrashcanManager(), projectManager, ui);
+                projectManager.getTrashcanManager(), projectManager, clientManager, ui);
     }
 
     /**

@@ -20,9 +20,11 @@ CommandHandler --> TrashcanCommandHandler : delegates
 CommandHandler ..> TrashcanManager : empty() after\nconfirmation
 TrashcanCommandHandler --> TrashcanManager : lists / restores
 TrashcanCommandHandler --> ProjectManager : supplies\nrestore target
+TrashcanCommandHandler --> ClientManager : supplies\nrestore target
 ClientManager --> TrashcanManager : stores deleted\nclients
 ProjectManager --> TrashcanManager : stores deleted\nprojects
 TrashcanManager ..> ProjectManager : registerRestoredProject(...)
+TrashcanManager ..> ClientManager : registerRestoredClient(...)
 
 TrashcanManager --> "0..*" Project : retained snapshots
 TrashcanManager --> "0..*" Client : retained snapshots

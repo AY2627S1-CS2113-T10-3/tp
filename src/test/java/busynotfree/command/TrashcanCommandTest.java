@@ -90,10 +90,12 @@ class TrashcanCommandTest {
         List<String> inputs = List.of("trashcan.restore", "trashcan.restore   ",
                 "trashcan.restore invalid", "trashcan.restore P999", "trashcan.restore p001",
                 "trashcan.restore C001", "trashcan.restore P001 P002");
-        List<String> errors = List.of("A project ID must not be blank.", "A project ID must not be blank.",
-                "Project invalid is not in the trashcan.", "Project P999 is not in the trashcan.",
-                "Project p001 is not in the trashcan.", "Project C001 is not in the trashcan.",
-                "Provide exactly one project ID.");
+        List<String> errors = List.of("A project ID or client ID must not be blank.",
+                "A project ID or client ID must not be blank.",
+                "Provide a valid project ID or client ID, such as P001 or C001.",
+                "Project P999 is not in the trashcan.",
+                "Provide a valid project ID or client ID, such as P001 or C001.",
+                "Client C001 is not in the trashcan.", "Provide exactly one project ID or client ID.");
         List<DynamicTest> tests = new ArrayList<>();
         for (int i = 0; i < inputs.size(); i++) {
             String input = inputs.get(i);
@@ -106,7 +108,7 @@ class TrashcanCommandTest {
                 assertFalse(fixture.handler.execute(input));
 
                 assertEquals(List.of(error), fixture.ui.errors);
-                assertEquals(List.of("Format: trashcan.restore PROJECT_ID"), fixture.ui.messages);
+                assertEquals(List.of("Format: trashcan.restore PROJECT_ID/CLIENT_ID"), fixture.ui.messages);
                 assertTrue(fixture.projects.getProjects().isEmpty());
                 assertEquals(3, fixture.projects.getDeletedProjects().getFirst().getItemCount());
                 assertFalse(fixture.handler.isAwaitingDeletionConfirmation());
@@ -342,6 +344,102 @@ class TrashcanCommandTest {
         handler.execute("yes");
         assertFalse(handler.isAwaitingDeletionConfirmation());
         assertTrue(projects.getDeletedProjects().isEmpty());
+    }
+
+    @Test
+    public void execute_restoreClient_preservesNotesAndAllowsProjectRestoration() {
+        addProject();
+        clients.addNote("C001", "Call on Friday");
+        clients.addNote("C001", "Send proposal");
+        projects.deleteProject("P001");
+        clients.deleteClient("C001", projects);
+        clients.addClient("Other client");
+
+        handler.execute("  trashcan.restore   C001  ");
+
+        assertEquals("Acme", clients.getClient("C001").getName());
+        assertEquals(List.of("Call on Friday", "Send proposal"), clients.getClient("C001").getNotes());
+        assertEquals("Other client", clients.getClient("C002").getName());
+        assertTrue(clients.getDeletedClients().isEmpty());
+        assertEquals(1, projects.getDeletedProjects().size());
+        assertTrue(projects.getProjects().isEmpty());
+        assertEquals(3, clients.getNextClientNumber());
+        assertEquals(List.of("Restored client C001 \"Acme\" with 2 notes."), ui.messages);
+
+        handler.execute("trashcan.restore P001");
+
+        assertEquals(3, projects.getProject("P001").getItemCount());
+        assertTrue(projects.getTask("T001").isCompleted());
+        assertEquals(ProjectStatus.PAUSED, projects.getProject("P001").getStatus());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    /** Invalid client requests must not remove notes or consume IDs. */
+    @TestFactory
+    public List<DynamicTest> execute_restoreInvalidClientId_preservesTrashcan() {
+        List<String> inputs = List.of("trashcan.restore", "trashcan.restore   ",
+                "trashcan.restore C999", "trashcan.restore c001", "trashcan.restore C1",
+                "trashcan.restore C00x", "trashcan.restore T001", "trashcan.restore C001 C002",
+                "trashcan.restore C001/P001", "trashcan.restore C001 P001");
+        return inputs.stream().map(input -> dynamicTest(input, () -> {
+            TrashcanCommandTest fixture = new TrashcanCommandTest();
+            fixture.clients.addClient("Acme");
+            fixture.clients.addNote("C001", "Keep this note");
+            fixture.clients.deleteClient("C001", fixture.projects);
+
+            assertFalse(fixture.handler.execute(input));
+
+            assertEquals(1, fixture.ui.errors.size());
+            assertEquals(List.of("Format: trashcan.restore PROJECT_ID/CLIENT_ID"), fixture.ui.messages);
+            assertTrue(fixture.clients.getClients().isEmpty());
+            assertEquals(List.of("Keep this note"),
+                    fixture.clients.getDeletedClients().getFirst().getNotes());
+            assertEquals(2, fixture.clients.getNextClientNumber());
+            assertFalse(fixture.handler.isAwaitingDeletionConfirmation());
+        })).toList();
+    }
+
+    @Test
+    public void execute_restoreActiveOrAlreadyRestoredClient_reportsErrorWithoutMutation() {
+        clients.addClient("Acme");
+        handler.execute("trashcan.restore C001");
+        assertEquals(List.of("Client C001 is not in the trashcan."), ui.errors);
+
+        clients.deleteClient("C001", projects);
+        handler.execute("trashcan.restore C001");
+        handler.execute("trashcan.restore C001");
+
+        assertEquals(2, ui.errors.size());
+        assertEquals("Client C001 is not in the trashcan.", ui.errors.getLast());
+        assertEquals("Acme", clients.getClient("C001").getName());
+        assertEquals(1, clients.getClients().size());
+        assertTrue(ui.messages.contains("Restored client C001 \"Acme\" with 0 notes."));
+    }
+
+    @Test
+    public void execute_restoreClientWithOneNote_usesSingularResponse() {
+        clients.addClient("Acme");
+        clients.addNote("C001", "Call on Friday");
+        clients.deleteClient("C001", projects);
+
+        handler.execute("trashcan.restore C001");
+
+        assertEquals(List.of("Restored client C001 \"Acme\" with 1 note."), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_restoreClientBeyond999_acceptsFullIdAndPreservesNextNumber() {
+        clients.advanceNextClientNumber(1000);
+        clients.addClient("Acme");
+        clients.deleteClient("C1000", projects);
+
+        handler.execute("trashcan.restore C1000");
+
+        assertEquals("Acme", clients.getClient("C1000").getName());
+        assertEquals(1001, clients.getNextClientNumber());
+        assertTrue(clients.getDeletedClients().isEmpty());
+        assertTrue(ui.errors.isEmpty());
     }
 
     /** Captures responses without decorative separators. */
