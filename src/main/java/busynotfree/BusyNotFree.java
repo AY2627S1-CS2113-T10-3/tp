@@ -35,7 +35,7 @@ public class BusyNotFree {
     /**
      * Starts the application and reads commands from standard input.
      *
-     * @param args command-line arguments, which are not used
+     * @param args Command-line arguments, which are not used.
      */
     public static void main(String[] args) {
         Ui ui = new Ui();
@@ -57,16 +57,31 @@ public class BusyNotFree {
         }
     }
 
-    /** Reads commands and saves before reporting a successful exit. */
+    /** Reads commands, allowing a save during the session or before exit. */
     void run(Scanner scanner) {
         ui.showWelcome();
         while (true) {
-            ui.showPrompt();
+            if (!commandHandler.isAwaitingDeletionConfirmation()) {
+                ui.showPrompt();
+            }
             if (!scanner.hasNextLine()) {
+                commandHandler.cancelPendingDeletion();
                 saveAndReportExit();
                 return;
             }
             String userInput = scanner.nextLine();
+            String[] commandParts = userInput.trim().split("\\s+", 2);
+            if (!commandHandler.isAwaitingDeletionConfirmation()
+                    && commandParts[0].equals("save")) {
+                ui.showSeparator();
+                if (commandParts.length > 1) {
+                    ui.showError("Use save without arguments.");
+                } else if (saveData()) {
+                    ui.showDataSaved();
+                }
+                ui.showSeparator();
+                continue;
+            }
             if (commandHandler.execute(userInput)) {
                 if (saveAndReportExit()) {
                     return;
@@ -77,9 +92,17 @@ public class BusyNotFree {
 
     /** Keeps the command loop running after a failed explicit save. */
     private boolean saveAndReportExit() {
+        if (!saveData()) {
+            return false;
+        }
+        ui.showGoodbye();
+        return true;
+    }
+
+    /** Tries the shared storage action and reports an I/O failure without ending the session. */
+    private boolean saveData() {
         try {
             saveAction.save();
-            ui.showGoodbye();
             return true;
         } catch (IOException exception) {
             ui.showError("Critical ERROR!!! Unable to save data: " + exception.getMessage());

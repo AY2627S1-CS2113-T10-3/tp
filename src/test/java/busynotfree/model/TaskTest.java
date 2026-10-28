@@ -1,8 +1,10 @@
 package busynotfree.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
 
@@ -11,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import busynotfree.exception.TaskException;
 
 /**
- * Tests task data, validation and behaviour through the shared scheduled-item type.
+ * Tests task data, validation and behavior through the shared scheduled-item type.
  */
 class TaskTest {
     private final Project project = new Project("P001", "C001", "Website redesign", LocalDate.of(2026, 11, 30));
@@ -62,6 +64,68 @@ class TaskTest {
         ScheduledItem item = new Task("T001", project, "Create wireframe", date);
 
         assertEquals("task", item.getType());
-        assertEquals("[T001] Create wireframe - 2026-10-15", item.toString());
+        assertEquals("[T001] Create wireframe - 2026-10-15 [In Progress]", item.toString());
+    }
+
+    @Test
+    public void markCompleted_preservesTaskDetailsAndShowsCompletion() {
+        Task task = new Task("T001", project, "Create wireframe", date);
+        assertFalse(task.isCompleted());
+
+        task.markCompleted();
+        task.markCompleted();
+
+        assertTrue(task.isCompleted());
+        assertEquals("T001", task.getId());
+        assertSame(project, task.getProject());
+        assertEquals("Create wireframe", task.getDescription());
+        assertEquals(date, task.getDate());
+        assertEquals("[T001] Create wireframe - 2026-10-15 [COMPLETED]", task.toString());
+    }
+
+    @Test
+    public void markIncomplete_reopensCompletedTaskAndPreservesDetails() {
+        Task task = new Task("T001", project, "Create wireframe", date);
+        task.markCompleted();
+
+        task.markIncomplete();
+        task.markIncomplete();
+
+        assertFalse(task.isCompleted());
+        assertEquals("T001", task.getId());
+        assertSame(project, task.getProject());
+        assertEquals("Create wireframe", task.getDescription());
+        assertEquals(date, task.getDate());
+        assertEquals("[T001] Create wireframe - 2026-10-15 [In Progress]", task.toString());
+    }
+
+    @Test
+    public void edit_validDetails_updatesDetailsAndPreservesIdProjectAndCompletion() {
+        Task task = new Task("T001", project, "Create wireframe", date);
+        task.markCompleted();
+        LocalDate newDate = LocalDate.of(2026, 12, 1);
+
+        task.edit("  Revise  UI/UX wireframe  ", newDate);
+
+        assertEquals("Revise  UI/UX wireframe", task.getDescription());
+        assertEquals(newDate, task.getDate());
+        assertEquals("T001", task.getId());
+        assertSame(project, task.getProject());
+        assertTrue(task.isCompleted());
+        assertEquals("[T001] Revise  UI/UX wireframe - 2026-12-01 [COMPLETED]", task.toString());
+    }
+
+    @Test
+    public void edit_invalidDetails_throwsAndLeavesTaskUnchanged() {
+        Task task = new Task("T001", project, "Create wireframe", date);
+        LocalDate newDate = LocalDate.of(2026, 12, 1);
+
+        assertThrows(TaskException.class, () -> task.edit(" \t ", newDate));
+        assertThrows(TaskException.class, () -> task.edit(null, newDate));
+        assertThrows(TaskException.class, () -> task.edit("Revise wireframe", null));
+
+        assertEquals("Create wireframe", task.getDescription());
+        assertEquals(date, task.getDate());
+        assertFalse(task.isCompleted());
     }
 }

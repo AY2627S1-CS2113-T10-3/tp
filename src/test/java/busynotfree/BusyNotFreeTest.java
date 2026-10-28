@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import busynotfree.command.CommandHandler;
 import busynotfree.command.CommandParser;
+import busynotfree.model.ClientManager;
 import busynotfree.model.PlaceholderClientLookup;
 import busynotfree.model.ProjectManager;
 import busynotfree.ui.Ui;
@@ -33,9 +35,9 @@ class BusyNotFreeTest {
                 + "task.add project/P001 name/Wireframe date/2026-10-15\n"
                 + "event.add project/P001 name/Meeting date/2026-10-20\nexit\n");
 
-        assertTrue(ui.messages.contains("Created project P001 for client C001."));
-        assertTrue(ui.messages.contains("Added task T001 to project P001."));
-        assertTrue(ui.messages.contains("Added event E001 to project P001."));
+        assertTrue(ui.messages.contains("Created project P001 \"Website\" for client C001."));
+        assertTrue(ui.messages.contains("Added task T001 \"Wireframe\" to project P001 \"Website\"."));
+        assertTrue(ui.messages.contains("Added event E001 \"Meeting\" to project P001 \"Website\"."));
         assertEquals(2, projectManager.getProject("P001").getItemCount());
         assertTrue(ui.errors.isEmpty());
         assertEquals(4, ui.messages.stream().filter("Enter a command:"::equals).count());
@@ -46,7 +48,7 @@ class BusyNotFreeTest {
         runWithInput("\ninvalid\nproject.add\nproject.add client/C001 name/Website due/2026-11-30\nexit\n");
 
         assertEquals(3, ui.errors.size());
-        assertTrue(ui.messages.contains("Created project P001 for client C001."));
+        assertTrue(ui.messages.contains("Created project P001 \"Website\" for client C001."));
         assertEquals("Data saved. Goodbye!", ui.messages.getLast());
     }
 
@@ -66,8 +68,8 @@ class BusyNotFreeTest {
         assertTrue(ui.messages.contains(eventFormat));
         assertEquals("Enter a command:", ui.messages.get(ui.messages.indexOf(taskFormat) + 1));
         assertEquals("Enter a command:", ui.messages.get(ui.messages.indexOf(eventFormat) + 1));
-        assertTrue(ui.messages.contains("Added task T001 to project P001."));
-        assertTrue(ui.messages.contains("Added event E001 to project P001."));
+        assertTrue(ui.messages.contains("Added task T001 \"Wireframe\" to project P001 \"Website\"."));
+        assertTrue(ui.messages.contains("Added event E001 \"Meeting\" to project P001 \"Website\"."));
         assertEquals(2, projectManager.getProject("P001").getItemCount());
         assertEquals("Data saved. Goodbye!", ui.messages.getLast());
     }
@@ -103,10 +105,67 @@ class BusyNotFreeTest {
     }
 
     @Test
+    public void run_save_writesCurrentStateAndContinuesReading() {
+        List<Integer> projectCountsAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui,
+                new CommandHandler(new CommandParser(), ui, projectManager),
+                () -> projectCountsAtSave.add(projectManager.getProjects().size()));
+
+        try (Scanner scanner = new Scanner("project.add client/C001 name/Website due/2026-11-30\n"
+                + "save\nproject.add client/C001 name/Logo due/2026-12-15\nexit\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(1, 2), projectCountsAtSave);
+        assertEquals(2, projectManager.getProjects().size());
+        assertEquals(1, ui.messages.stream().filter("Data saved."::equals).count());
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void run_failedSaveCommand_reportsErrorAndAcceptsMoreCommands() {
+        AtomicInteger saveAttempts = new AtomicInteger();
+        BusyNotFree application = new BusyNotFree(ui,
+                new CommandHandler(new CommandParser(), ui, projectManager), () -> {
+                    if (saveAttempts.incrementAndGet() == 1) {
+                        throw new IOException("Disk unavailable");
+                    }
+                });
+
+        try (Scanner scanner = new Scanner("save\nproject.add client/C001 name/Website "
+                + "due/2026-11-30\nsave\nexit\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(3, saveAttempts.get());
+        assertEquals(List.of("Critical ERROR!!! Unable to save data: Disk unavailable"), ui.errors);
+        assertEquals(1, ui.messages.stream().filter("Data saved."::equals).count());
+        assertEquals("Website", projectManager.getProject("P001").getName());
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+    }
+
+    @Test
+    public void run_saveWithArguments_rejectsCommandWithoutSaving() {
+        AtomicInteger saveAttempts = new AtomicInteger();
+        BusyNotFree application = new BusyNotFree(ui,
+                new CommandHandler(new CommandParser(), ui, projectManager), saveAttempts::incrementAndGet);
+
+        try (Scanner scanner = new Scanner("save now\nexit\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(1, saveAttempts.get());
+        assertEquals(List.of("Use save without arguments."), ui.errors);
+        assertEquals(0, ui.messages.stream().filter("Data saved."::equals).count());
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+    }
+
+    @Test
     public void run_endOfInput_exitsCleanly() {
         runWithInput("project.add client/C001 name/Website due/2026-11-30\n");
 
-        assertTrue(ui.messages.contains("Created project P001 for client C001."));
+        assertTrue(ui.messages.contains("Created project P001 \"Website\" for client C001."));
         assertEquals("Data saved. Goodbye!", ui.messages.getLast());
         assertTrue(ui.errors.isEmpty());
     }
@@ -141,7 +200,8 @@ class BusyNotFreeTest {
         runWithInput(String.join("\r\n", commands) + "\r\n");
 
         assertEquals(List.of("Use a valid date in YYYY-MM-DD format.",
-                "Use a valid date in YYYY-MM-DD format.", "Project P999 does not exist."), ui.errors);
+                "Use a valid date in YYYY-MM-DD format.",
+                "Project P999 does not exist. Use project.list to see project IDs."), ui.errors);
         assertEquals(1, projectManager.getProjects().size());
         assertEquals("Create UI/UX redesign", projectManager.getProject("P001").getName());
         assertEquals(List.of("T001", "T002"), projectManager.getProject("P001").getTasks().stream()
@@ -164,6 +224,134 @@ class BusyNotFreeTest {
         assertEquals(2, ui.messages.stream().filter("Enter a command:"::equals).count());
         assertEquals(1, ui.messages.stream().filter("Data saved. Goodbye!"::equals).count());
         assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+    }
+
+    @Test
+    public void run_projectDeleteConfirmation_blocksSaveUntilAnswered() {
+        projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        List<Integer> projectCountsAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui,
+                new CommandHandler(new CommandParser(), ui, projectManager),
+                () -> projectCountsAtSave.add(projectManager.getProjects().size()));
+
+        try (Scanner scanner = new Scanner("project.delete P001\nsave\nyes\nexit\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(0), projectCountsAtSave);
+        assertEquals(List.of("Please type yes to confirm deletion or no to cancel."), ui.errors);
+        assertTrue(ui.messages.contains("Website has been deleted"));
+        assertEquals(2, ui.messages.stream().filter("Enter a command:"::equals).count());
+    }
+
+    @Test
+    public void run_projectDeleteEndOfInput_cancelsBeforeSaving() {
+        projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 30));
+        CommandHandler handler = new CommandHandler(new CommandParser(), ui, projectManager);
+        List<Integer> activityCountsAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui, handler,
+                () -> activityCountsAtSave.add(projectManager.getProject("P001").getItemCount()));
+
+        try (Scanner scanner = new Scanner("project.delete P001\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(1), activityCountsAtSave);
+        assertTrue(!handler.isAwaitingDeletionConfirmation());
+        assertEquals("Project deletion cancelled.", ui.messages.get(ui.messages.size() - 2));
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void run_clientDeleteEndOfInput_cancelsBeforeSaving() {
+        ClientManager clients = new ClientManager();
+        clients.addClient("Acme");
+        clients.addNote("C001", "Keep this note");
+        ProjectManager projects = new ProjectManager(clients);
+        CommandHandler handler = new CommandHandler(new CommandParser(), ui, projects, clients);
+        List<Boolean> clientsPresentAtSave = new ArrayList<>();
+        List<List<String>> notesAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui, handler, () -> {
+            clientsPresentAtSave.add(clients.exists("C001"));
+            notesAtSave.add(clients.getClient("C001").getNotes());
+        });
+
+        try (Scanner scanner = new Scanner("client.delete C001\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(true), clientsPresentAtSave);
+        assertEquals(List.of(List.of("Keep this note")), notesAtSave);
+        assertTrue(!handler.isAwaitingDeletionConfirmation());
+        assertEquals("Client deletion cancelled.", ui.messages.get(ui.messages.size() - 2));
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void run_deleteNoteEndOfInput_cancelsBeforeSaving() {
+        ClientManager clients = new ClientManager();
+        clients.addClient("Acme");
+        clients.addNote("C001", "Keep this note");
+        ProjectManager projects = new ProjectManager(clients);
+        CommandHandler handler = new CommandHandler(new CommandParser(), ui, projects, clients);
+        List<List<String>> notesAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui, handler,
+                () -> notesAtSave.add(clients.getClient("C001").getNotes()));
+
+        try (Scanner scanner = new Scanner("client.delete_note C001 index/1\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(List.of("Keep this note")), notesAtSave);
+        assertTrue(!handler.isAwaitingDeletionConfirmation());
+        assertEquals("Note deletion cancelled.", ui.messages.get(ui.messages.size() - 2));
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void run_deleteTaskEndOfInput_cancelsBeforeSaving() {
+        projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 1));
+        CommandHandler handler = new CommandHandler(new CommandParser(), ui, projectManager);
+        List<List<String>> taskIdsAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui, handler,
+                () -> taskIdsAtSave.add(projectManager.getProject("P001").getTasks()
+                        .stream().map(task -> task.getId()).toList()));
+
+        try (Scanner scanner = new Scanner("task.delete T001\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(List.of("T001")), taskIdsAtSave);
+        assertTrue(!handler.isAwaitingDeletionConfirmation());
+        assertEquals("Task deletion cancelled.", ui.messages.get(ui.messages.size() - 2));
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void run_deleteEventEndOfInput_cancelsBeforeSaving() {
+        projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projectManager.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 1));
+        CommandHandler handler = new CommandHandler(new CommandParser(), ui, projectManager);
+        List<List<String>> eventIdsAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui, handler,
+                () -> eventIdsAtSave.add(projectManager.getProject("P001").getEvents()
+                        .stream().map(event -> event.getId()).toList()));
+
+        try (Scanner scanner = new Scanner("event.delete E001\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(List.of("E001")), eventIdsAtSave);
+        assertTrue(!handler.isAwaitingDeletionConfirmation());
+        assertEquals("Event deletion cancelled.", ui.messages.get(ui.messages.size() - 2));
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
     }
 
     /** Supplies simulated input while closing only the test's scanner. */

@@ -11,7 +11,7 @@ import busynotfree.exception.ClientException;
  */
 public final class Client {
     private final String clientId;
-    private final String name;
+    private String name;
     private final List<String> notes = new ArrayList<>();
 
     /**
@@ -25,11 +25,8 @@ public final class Client {
         if (clientId == null || clientId.isBlank()) {
             throw new ClientException("A client ID must not be blank.");
         }
-        if (name == null || name.isBlank()) {
-            throw new ClientException("A client name must not be blank.");
-        }
         this.clientId = clientId.trim();
-        this.name = name.trim();
+        setName(name);
     }
 
     public String getClientId() {
@@ -38,6 +35,14 @@ public final class Client {
 
     public String getName() {
         return name;
+    }
+
+    /** Updates only the name, rejecting null or blank values before changing the client. */
+    public void setName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new ClientException("A client name must not be blank.");
+        }
+        this.name = name.trim();
     }
 
     /**
@@ -60,5 +65,44 @@ public final class Client {
      */
     public List<String> getNotes() {
         return List.copyOf(notes);
+    }
+
+    /**
+     * Returns a note using its displayed, one-based index.
+     *
+     * @param noteIndex Position starting at 1.
+     * @return Selected note.
+     * @throws ClientException If the index does not identify a note.
+     */
+    public String getNote(int noteIndex) {
+        if (noteIndex < 1 || noteIndex > notes.size()) {
+            throw new ClientException("Note index " + noteIndex
+                    + " does not exist for client " + clientId + ".");
+        }
+        return notes.get(noteIndex - 1);
+    }
+
+    /**
+     * Deletes one note while preserving the order of the remaining notes.
+     *
+     * @param noteIndex Position starting at 1.
+     * @return Deleted note text.
+     * @throws ClientException If the index does not identify a note.
+     */
+    public String deleteNote(int noteIndex) {
+        getNote(noteIndex);
+        return notes.remove(noteIndex - 1);
+    }
+
+    /** Removes every note when the owning client is deleted. */
+    void clearNotes() {
+        notes.clear();
+    }
+
+    /** Copies client details so trash entries cannot be changed through old references. */
+    Client copy() {
+        Client copy = new Client(clientId, name);
+        notes.forEach(copy::addNote);
+        return copy;
     }
 }

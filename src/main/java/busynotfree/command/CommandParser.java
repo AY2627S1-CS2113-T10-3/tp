@@ -11,9 +11,9 @@ public class CommandParser {
      * Parses a dotted command name while preserving spaces within its argument text.
      * Does not check supported operations or parse argument prefixes.
      *
-     * @param userInput non-null raw user input
-     * @return entity type, action and argument text
-     * @throws CommandException if the command name is not in the form target.action
+     * @param userInput Non-null raw user input.
+     * @return Entity type, action and argument text.
+     * @throws CommandException If the command name is not in the form target.action.
      */
     public ParsedCommand parse(String userInput) {
         String[] commandParts = userInput.trim().split("\\s+", 2);

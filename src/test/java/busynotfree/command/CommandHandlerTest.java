@@ -4,22 +4,27 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
 
 import busynotfree.exception.BusyNotFreeException;
 import busynotfree.exception.CommandException;
 import busynotfree.exception.EventException;
 import busynotfree.exception.ProjectException;
 import busynotfree.exception.TaskException;
+import busynotfree.model.Event;
 import busynotfree.model.PlaceholderClientLookup;
 import busynotfree.model.Project;
 import busynotfree.model.ProjectManager;
 import busynotfree.model.ProjectStatus;
+import busynotfree.model.Task;
 import busynotfree.ui.Ui;
 
 /**
@@ -29,6 +34,9 @@ class CommandHandlerTest {
     private static final String PROJECT_FORMAT =
             "Format: project.add client/CLIENT_ID name/PROJECT_NAME due/YYYY-MM-DD";
     private static final String PROJECT_STATUS_FORMAT = "Format: project.status PROJECT_ID STATUS";
+    private static final String PROJECT_FILTER_FORMAT = "Format: project.filter STATUS";
+    private static final String PROJECT_DEADLINES_FORMAT = "Format: project.deadlines";
+    private static final String PROJECT_OVERDUE_FORMAT = "Format: project.overdue";
     private static final String TASK_FORMAT = "Format: task.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD";
     private static final String EVENT_FORMAT = "Format: event.add project/PROJECT_ID name/DESCRIPTION date/YYYY-MM-DD";
 
@@ -57,7 +65,7 @@ class CommandHandlerTest {
         boolean shouldExit = handler.execute("project.add client/C001 name/Website redesign due/2026-11-30");
 
         assertFalse(shouldExit);
-        assertEquals(List.of("Created project P001 for client C001."), ui.messages);
+        assertEquals(List.of("Created project P001 \"Website redesign\" for client C001."), ui.messages);
         Project project = projectManager.getProject("P001");
         assertEquals("Website redesign", project.getName());
         assertEquals(LocalDate.of(2026, 11, 30), project.getDeadline());
@@ -70,10 +78,48 @@ class CommandHandlerTest {
         projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
         assertFalse(handler.execute("task.add project/P001 name/Create wireframe date/2026-10-15"));
 
-        assertEquals(List.of("Added task T001 to project P001."), ui.messages);
+        assertEquals(List.of("Added task T001 \"Create wireframe\" to project P001 \"Website redesign\"."),
+                ui.messages);
         assertEquals("Create wireframe", projectManager.getProject("P001").getTasks().getFirst().getDescription());
         assertEquals(LocalDate.of(2026, 10, 15), projectManager.getProject("P001").getTasks().getFirst().getDate());
         assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_taskMark_confirmsCompletionAndReportsInvalidIds() {
+        projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 15));
+
+        assertFalse(handler.execute("task.mark T001"));
+        assertFalse(handler.execute("task.mark T999"));
+        assertFalse(handler.execute("task.mark T001 extra"));
+        assertFalse(handler.execute("task.mark"));
+
+        assertTrue(projectManager.getTask("T001").isCompleted());
+        assertEquals(List.of("Task T001 marked as completed.",
+                "Format: task.mark TASK_ID", "Format: task.mark TASK_ID",
+                "Format: task.mark TASK_ID"), ui.messages);
+        assertEquals(List.of("Task T999 was not found.",
+                "Provide exactly one task ID.", "Provide exactly one task ID."), ui.errors);
+    }
+
+    @Test
+    public void execute_taskUnmark_reopensTaskAndReportsInvalidIds() {
+        projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 15));
+        projectManager.markTaskComplete("T001");
+
+        assertFalse(handler.execute("task.unmark T001"));
+        assertFalse(handler.execute("task.unmark T999"));
+        assertFalse(handler.execute("task.unmark T001 extra"));
+        assertFalse(handler.execute("task.unmark"));
+
+        assertFalse(projectManager.getTask("T001").isCompleted());
+        assertEquals(List.of("Task T001 reopened. Status: [In Progress]",
+                "Format: task.unmark TASK_ID", "Format: task.unmark TASK_ID",
+                "Format: task.unmark TASK_ID"), ui.messages);
+        assertEquals(List.of("Task T999 was not found.",
+                "Provide exactly one task ID.", "Provide exactly one task ID."), ui.errors);
     }
 
     @Test
@@ -81,7 +127,8 @@ class CommandHandlerTest {
         projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
         assertFalse(handler.execute("event.add project/P001 name/Stakeholder meeting date/2026-10-20"));
 
-        assertEquals(List.of("Added event E001 to project P001."), ui.messages);
+        assertEquals(List.of("Added event E001 \"Stakeholder meeting\" to project P001 \"Website redesign\"."),
+                ui.messages);
         assertEquals("Stakeholder meeting", projectManager.getProject("P001").getEvents().getFirst().getDescription());
         assertEquals(LocalDate.of(2026, 10, 20), projectManager.getProject("P001").getEvents().getFirst().getDate());
         assertTrue(ui.errors.isEmpty());
@@ -148,6 +195,101 @@ class CommandHandlerTest {
     }
 
     @Test
+    public void execute_projectFilter_displaysOnlyMatchingStatus() {
+        projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
+        projectManager.addProject("C002", "Logo design", LocalDate.of(2026, 12, 15));
+        projectManager.changeProjectStatus("P001", ProjectStatus.PAUSED);
+
+        assertFalse(handler.execute("project.filter paused"));
+
+        assertEquals(List.of("1. P001|Website redesign|PAUSED|Due 2026-11-30"), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectFilter_acceptsStatusCapitalisation() {
+        projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
+
+        assertFalse(handler.execute("project.filter AcTiVe"));
+
+        assertEquals(List.of("1. P001|Website redesign|ACTIVE|Due 2026-11-30"), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectFilter_invalidArguments() {
+        projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
+
+        assertFalse(handler.execute("project.filter"));
+        assertFalse(handler.execute("project.filter archived"));
+        assertFalse(handler.execute("project.filter active paused"));
+
+        assertEquals(List.of("Use project.filter STATUS.", "Invalid Project Status.",
+                "Use project.filter STATUS."), ui.errors);
+        assertEquals(List.of(PROJECT_FILTER_FORMAT, PROJECT_FILTER_FORMAT, PROJECT_FILTER_FORMAT), ui.messages);
+    }
+
+    @Test
+    public void execute_projectFilter_noMatches() {
+        projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
+
+        assertFalse(handler.execute("project.filter completed"));
+
+        assertEquals(List.of("No projects found."), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectDeadlines_sortsProjectsByDeadline() {
+        projectManager.addProject("C001", "Latest", LocalDate.of(2026, 12, 15));
+        projectManager.addProject("C002", "Earliest", LocalDate.of(2026, 10, 15));
+
+        assertFalse(handler.execute("project.deadlines"));
+
+        assertEquals(List.of("1. P002|Earliest|ACTIVE|Due 2026-10-15",
+                "2. P001|Latest|ACTIVE|Due 2026-12-15"), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectDeadlines_invalidArguments() {
+        assertFalse(handler.execute("project.deadlines extra"));
+
+        assertEquals(List.of("Use project.deadlines."), ui.errors);
+        assertEquals(List.of(PROJECT_DEADLINES_FORMAT), ui.messages);
+    }
+
+    @Test
+    public void execute_projectOverdue_displaysOnlyOverdueActiveProjects() {
+        LocalDate today = LocalDate.now();
+        projectManager.addProject("C001", "Overdue", today.minusDays(1));
+        projectManager.addProject("C002", "Due today", today);
+        projectManager.addProject("C003", "Paused overdue", today.minusDays(2));
+        projectManager.changeProjectStatus("P003", ProjectStatus.PAUSED);
+
+        assertFalse(handler.execute("project.overdue"));
+
+        assertEquals(List.of("1. P001|Overdue|ACTIVE|Due " + today.minusDays(1)), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectOverdue_noMatches() {
+        assertFalse(handler.execute("project.overdue"));
+
+        assertEquals(List.of("No overdue projects found."), ui.messages);
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectOverdue_invalidArguments() {
+        assertFalse(handler.execute("project.overdue P001"));
+
+        assertEquals(List.of("Use project.overdue."), ui.errors);
+        assertEquals(List.of(PROJECT_OVERDUE_FORMAT), ui.messages);
+    }
+
+    @Test
     public void execute_invalidStatus_preservesStatusAndReportsError() {
         projectManager.addProject("C001", "Website redesign", LocalDate.of(2026, 11, 30));
 
@@ -163,7 +305,8 @@ class CommandHandlerTest {
         assertFalse(handler.execute("project.status"));
         assertFalse(handler.execute("project.status P999 paused"));
 
-        assertEquals(List.of("Use project.status PROJECT_ID STATUS.", "Project P999 does not exist."), ui.errors);
+        assertEquals(List.of("Use project.status PROJECT_ID STATUS.",
+                "Project P999 does not exist. Use project.list to see project IDs."), ui.errors);
         assertEquals(List.of(PROJECT_STATUS_FORMAT, PROJECT_STATUS_FORMAT), ui.messages);
         assertTrue(projectManager.getProjects().isEmpty());
     }
@@ -172,7 +315,7 @@ class CommandHandlerTest {
     public void execute_projectAddWithSlashInName_createsProject() {
         assertFalse(handler.execute("project.add client/C001 name/Create UI/UX redesign due/2026-11-30"));
 
-        assertEquals(List.of("Created project P001 for client C001."), ui.messages);
+        assertEquals(List.of("Created project P001 \"Create UI/UX redesign\" for client C001."), ui.messages);
         assertEquals("Create UI/UX redesign", projectManager.getProject("P001").getName());
         assertTrue(ui.errors.isEmpty());
     }
@@ -183,7 +326,7 @@ class CommandHandlerTest {
 
         assertFalse(handler.execute("task.add project/P001 name/Create UI/UX mockup date/2026-10-15"));
 
-        assertEquals(List.of("Added task T001 to project P001."), ui.messages);
+        assertEquals(List.of("Added task T001 \"Create UI/UX mockup\" to project P001 \"Website\"."), ui.messages);
         assertEquals("Create UI/UX mockup", project.getTasks().getFirst().getDescription());
         assertTrue(ui.errors.isEmpty());
     }
@@ -194,7 +337,7 @@ class CommandHandlerTest {
 
         assertFalse(handler.execute("event.add project/P001 date/2026-10-20 name/Review src/main changes"));
 
-        assertEquals(List.of("Added event E001 to project P001."), ui.messages);
+        assertEquals(List.of("Added event E001 \"Review src/main changes\" to project P001 \"Website\"."), ui.messages);
         assertEquals("Review src/main changes", project.getEvents().getFirst().getDescription());
         assertTrue(ui.errors.isEmpty());
     }
@@ -226,7 +369,13 @@ class CommandHandlerTest {
 
         assertFalse(handler.execute("project.delete P001"));
 
-        assertEquals(List.of("Website redesign has been deleted",
+        assertEquals(2, project.getItemCount());
+        assertTrue(handler.isAwaitingDeletionConfirmation());
+        assertFalse(handler.execute("yes"));
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+
+        assertEquals(List.of("Delete project P001 \"Website redesign\" and 2 associated activities?",
+                "Type yes to confirm deletion or no to cancel.", "Website redesign has been deleted",
                 "2 associated activities removed."), ui.messages);
         assertTrue(ui.errors.isEmpty());
         assertEquals(List.of(other), projectManager.getProjects());
@@ -245,7 +394,10 @@ class CommandHandlerTest {
 
         assertFalse(handler.execute("project.delete P001"));
 
-        assertEquals(List.of("Website has been deleted",
+        assertFalse(handler.execute("yes"));
+
+        assertEquals(List.of("Delete project P001 \"Website\" and 0 associated activities?",
+                "Type yes to confirm deletion or no to cancel.", "Website has been deleted",
                 "0 associated activities removed."), ui.messages);
         assertTrue(ui.errors.isEmpty());
         assertTrue(projectManager.getProjects().isEmpty());
@@ -259,9 +411,47 @@ class CommandHandlerTest {
 
         assertFalse(handler.execute("project.delete P001"));
 
-        assertEquals(List.of("Website has been deleted",
+        assertFalse(handler.execute("  yes\t"));
+
+        assertEquals(List.of("Delete project P001 \"Website\" and 1 associated activity?",
+                "Type yes to confirm deletion or no to cancel.", "Website has been deleted",
                 "1 associated activity removed."), ui.messages);
         assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectDeleteNo_preservesActivitiesAndResumesCommands() {
+        LocalDate date = LocalDate.of(2026, 11, 30);
+        Project project = projectManager.addProject("C001", "Website", date);
+        projectManager.addTask("P001", "Wireframe", date);
+        projectManager.addEvent("P001", "Meeting", date);
+
+        handler.execute("project.delete P001");
+        assertFalse(handler.execute(" no "));
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of(project), projectManager.getProjects());
+        assertEquals(2, project.getItemCount());
+        assertEquals("Project deletion cancelled.", ui.messages.getLast());
+        assertTrue(handler.execute("exit"));
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectDeleteInvalidAnswers_keepsWaitingWithoutExecutingCommands() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        handler.execute("project.delete P001");
+
+        for (String answer : List.of("", "YES", "yes please", "exit", "help", "project.delete P001")) {
+            assertFalse(handler.execute(answer));
+            assertTrue(handler.isAwaitingDeletionConfirmation());
+            assertEquals(List.of(project), projectManager.getProjects());
+            assertEquals("Please type yes to confirm deletion or no to cancel.", ui.errors.getLast());
+            assertEquals("Type yes to confirm deletion or no to cancel.", ui.messages.getLast());
+        }
+
+        handler.execute("no");
+        assertFalse(handler.isAwaitingDeletionConfirmation());
     }
 
     @Test
@@ -276,7 +466,7 @@ class CommandHandlerTest {
 
         assertEquals(List.of("A project ID must not be blank.",
                 "Provide exactly one project ID.",
-                "Project P999 does not exist."), ui.errors);
+                "Project P999 does not exist. Use project.list to see project IDs."), ui.errors);
         assertEquals(List.of("Format: project.delete PROJECT_ID",
                 "Format: project.delete PROJECT_ID",
                 "Format: project.delete PROJECT_ID"), ui.messages);
@@ -318,7 +508,7 @@ class CommandHandlerTest {
         assertEquals(List.of("Use a valid date in YYYY-MM-DD format."), ui.errors);
 
         handler.execute("project.add client/C001 name/Website due/2026-11-30");
-        assertEquals(List.of(PROJECT_FORMAT, "Created project P001 for client C001."), ui.messages);
+        assertEquals(List.of(PROJECT_FORMAT, "Created project P001 \"Website\" for client C001."), ui.messages);
     }
 
     @Test
@@ -326,7 +516,8 @@ class CommandHandlerTest {
         assertFalse(handler.execute("task.add project/P999 name/Wireframe date/2026-10-15"));
         assertFalse(handler.execute("event.add project/P999 name/Meeting date/2026-10-20"));
 
-        assertEquals(List.of("Project P999 does not exist.", "Project P999 does not exist."), ui.errors);
+        String missingProject = "Project P999 does not exist. Use project.list to see project IDs.";
+        assertEquals(List.of(missingProject, missingProject), ui.errors);
         assertEquals(List.of(TASK_FORMAT, EVENT_FORMAT), ui.messages);
         assertTrue(projectManager.getProjects().isEmpty());
     }
@@ -343,7 +534,8 @@ class CommandHandlerTest {
         handler.execute("task.add project/P001 name/Wireframe date/2026-10-15");
         handler.execute("event.add project/P001 name/Meeting date/2026-10-20");
         assertEquals(List.of(TASK_FORMAT, EVENT_FORMAT,
-                "Added task T001 to project P001.", "Added event E001 to project P001."), ui.messages);
+                "Added task T001 \"Wireframe\" to project P001 \"Website\".",
+                "Added event E001 \"Meeting\" to project P001 \"Website\"."), ui.messages);
     }
 
     @Test
@@ -368,7 +560,7 @@ class CommandHandlerTest {
     public void execute_reorderedPrefixes_createsProject() {
         handler.execute("project.add due/2026-11-30 name/Website redesign client/C001");
 
-        assertEquals(List.of("Created project P001 for client C001."), ui.messages);
+        assertEquals(List.of("Created project P001 \"Website redesign\" for client C001."), ui.messages);
         assertEquals("Website redesign", projectManager.getProject("P001").getName());
         assertTrue(ui.errors.isEmpty());
     }
@@ -380,7 +572,7 @@ class CommandHandlerTest {
 
         rejectingHandler.execute("project.add client/C999 name/Website due/2026-11-30");
 
-        assertEquals(List.of("Client C999 does not exist."), ui.errors);
+        assertEquals(List.of("Client C999 does not exist. Use client.list to see client IDs."), ui.errors);
         assertTrue(rejectingManager.getProjects().isEmpty());
         assertEquals(List.of(PROJECT_FORMAT), ui.messages);
     }
@@ -426,6 +618,239 @@ class CommandHandlerTest {
                 () -> failingHandler.execute("project.add")));
         assertTrue(ui.errors.isEmpty());
         assertTrue(ui.messages.isEmpty());
+    }
+
+    /** Invalid IDs must not remove tasks or start confirmation. */
+    @TestFactory
+    public List<DynamicTest> execute_deleteTaskInvalidId_preservesTasks() {
+        List<String> inputs = List.of("task.delete", "task.delete   ", "task.delete invalid",
+                "task.delete T999", "task.delete t001", "task.delete P001", "task.delete T001 T002");
+        List<String> errors = List.of("A task ID must not be blank.", "A task ID must not be blank.",
+                "Task invalid was not found.", "Task T999 was not found.", "Task t001 was not found.",
+                "Task P001 was not found.", "Provide exactly one task ID.");
+        List<DynamicTest> tests = new ArrayList<>();
+        for (int i = 0; i < inputs.size(); i++) {
+            String input = inputs.get(i);
+            String expectedError = errors.get(i);
+            tests.add(dynamicTest(input, () -> {
+                CommandHandlerTest fixture = new CommandHandlerTest();
+                Project project = fixture.projectManager.addProject(
+                        "C001", "Website", LocalDate.of(2026, 11, 30));
+                Task task = fixture.projectManager.addTask(
+                        "P001", "Wireframe", LocalDate.of(2026, 11, 1));
+
+                assertFalse(fixture.handler.execute(input));
+
+                assertEquals(List.of(expectedError), fixture.ui.errors);
+                assertEquals(List.of("Format: task.delete TASK_ID"), fixture.ui.messages);
+                assertFalse(fixture.handler.isAwaitingDeletionConfirmation());
+                assertEquals(List.of(task), project.getTasks());
+            }));
+        }
+        return tests;
+    }
+
+    @Test
+    public void execute_deleteTaskConfirmed_preservesOtherActivitiesAndIds() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        Project otherProject = projectManager.addProject("C001", "Logo", LocalDate.of(2026, 12, 1));
+        Task deleted = projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 1));
+        Task kept = projectManager.addTask("P001", "Review", LocalDate.of(2026, 11, 2));
+        Task other = projectManager.addTask("P002", "Sketch", LocalDate.of(2026, 11, 3));
+        projectManager.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 4));
+
+        handler.execute("task.delete T001");
+
+        assertTrue(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of(deleted, kept), project.getTasks());
+        assertEquals(List.of("Delete task T001 \"Wireframe\" from project P001 \"Website\"?",
+                "Type yes to confirm deletion or no to cancel."), ui.messages);
+
+        handler.execute("yes");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertThrows(TaskException.class, () -> projectManager.getTask("T001"));
+        assertEquals(List.of(kept), project.getTasks());
+        assertEquals(List.of(other), otherProject.getTasks());
+        assertEquals(1, project.getEvents().size());
+        assertEquals(2, projectManager.getProjects().size());
+        assertEquals("Deleted task T001 from project P001.", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+        assertEquals("T004", projectManager.addTask(
+                "P001", "Next task", LocalDate.of(2026, 11, 5)).getId());
+    }
+
+    @Test
+    public void execute_deleteTaskCancelled_preservesTask() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        Task task = projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 1));
+
+        handler.execute("task.delete T001");
+        handler.execute("no");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of(task), project.getTasks());
+        assertEquals("Task deletion cancelled.", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_deleteTaskInvalidAnswers_keepsConfirmationPending() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        Task task = projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 1));
+        handler.execute("task.delete T001");
+
+        for (String answer : List.of("", "YES", "yes please", "exit", "save", "help")) {
+            assertFalse(handler.execute(answer));
+            assertTrue(handler.isAwaitingDeletionConfirmation());
+            assertEquals(List.of(task), project.getTasks());
+            assertEquals("Please type yes to confirm deletion or no to cancel.", ui.errors.getLast());
+            assertEquals("Type yes to confirm deletion or no to cancel.", ui.messages.getLast());
+        }
+        handler.execute("no");
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+    }
+
+    /** Deleting the last task preserves its project and never succeeds twice. */
+    @TestFactory
+    public List<DynamicTest> execute_deleteOnlyTask_handlesBothCompletionStates() {
+        List<DynamicTest> tests = new ArrayList<>();
+        for (boolean completed : List.of(false, true)) {
+            tests.add(dynamicTest(completed ? "completed" : "in progress", () -> {
+                CommandHandlerTest fixture = new CommandHandlerTest();
+                Project project = fixture.projectManager.addProject(
+                        "C001", "Website", LocalDate.of(2026, 11, 30));
+                fixture.projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 1));
+                if (completed) {
+                    fixture.projectManager.markTaskComplete("T001");
+                }
+                fixture.handler.execute("task.delete T001");
+                fixture.handler.execute("yes");
+
+                assertTrue(project.getTasks().isEmpty());
+                assertEquals(List.of(project), fixture.projectManager.getProjects());
+                assertTrue(fixture.ui.errors.isEmpty());
+
+                fixture.ui.messages.clear();
+                fixture.handler.execute("task.delete T001");
+
+                assertFalse(fixture.handler.isAwaitingDeletionConfirmation());
+                assertEquals(List.of("Task T001 was not found."), fixture.ui.errors);
+                assertEquals(List.of("Format: task.delete TASK_ID"), fixture.ui.messages);
+            }));
+        }
+        return tests;
+    }
+
+    /** Invalid IDs must not remove events or start confirmation. */
+    @TestFactory
+    public List<DynamicTest> execute_deleteEventInvalidId_preservesEvents() {
+        List<String> inputs = List.of("event.delete", "event.delete   ", "event.delete invalid",
+                "event.delete E999", "event.delete e001", "event.delete P001", "event.delete E001 E002");
+        List<String> errors = List.of("An event ID must not be blank.", "An event ID must not be blank.",
+                "Event invalid was not found. Use project.view to see event IDs.",
+                "Event E999 was not found. Use project.view to see event IDs.",
+                "Event e001 was not found. Use project.view to see event IDs.",
+                "Event P001 was not found. Use project.view to see event IDs.", "Provide exactly one event ID.");
+        List<DynamicTest> tests = new ArrayList<>();
+        for (int i = 0; i < inputs.size(); i++) {
+            String input = inputs.get(i);
+            String expectedError = errors.get(i);
+            tests.add(dynamicTest(input, () -> {
+                CommandHandlerTest fixture = new CommandHandlerTest();
+                Project project = fixture.projectManager.addProject(
+                        "C001", "Website", LocalDate.of(2026, 11, 30));
+                Event event = fixture.projectManager.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 1));
+
+                assertFalse(fixture.handler.execute(input));
+
+                assertEquals(List.of(expectedError), fixture.ui.errors);
+                assertEquals(List.of("Format: event.delete EVENT_ID"), fixture.ui.messages);
+                assertFalse(fixture.handler.isAwaitingDeletionConfirmation());
+                assertEquals(List.of(event), project.getEvents());
+            }));
+        }
+        return tests;
+    }
+
+    @Test
+    public void execute_deleteEventConfirmed_preservesOtherActivitiesAndIds() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        Project otherProject = projectManager.addProject("C001", "Logo", LocalDate.of(2026, 12, 1));
+        Event deleted = projectManager.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 1));
+        Event kept = projectManager.addEvent("P001", "Review", LocalDate.of(2026, 11, 2));
+        Event other = projectManager.addEvent("P002", "Presentation", LocalDate.of(2026, 11, 3));
+        Task task = projectManager.addTask("P001", "Wireframe", LocalDate.of(2026, 11, 4));
+
+        handler.execute("event.delete E001");
+
+        assertTrue(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of(deleted, kept), project.getEvents());
+        assertEquals(List.of("Delete event E001 \"Meeting\" from project P001 \"Website\"?",
+                "Type yes to confirm deletion or no to cancel."), ui.messages);
+
+        handler.execute("yes");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertThrows(EventException.class, () -> projectManager.getEvent("E001"));
+        assertEquals(List.of(kept), project.getEvents());
+        assertEquals(List.of(other), otherProject.getEvents());
+        assertEquals(List.of(task), project.getTasks());
+        assertEquals(2, projectManager.getProjects().size());
+        assertEquals("Deleted event E001 from project P001.", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+        assertEquals("E004", projectManager.addEvent(
+                "P001", "Next meeting", LocalDate.of(2026, 11, 5)).getId());
+    }
+
+    @Test
+    public void execute_deleteEventCancelled_preservesEvent() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        Event event = projectManager.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 1));
+
+        handler.execute("event.delete E001");
+        handler.execute("no");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of(event), project.getEvents());
+        assertEquals("Event deletion cancelled.", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_deleteEventInvalidAnswers_keepsConfirmationPending() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        Event event = projectManager.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 1));
+        handler.execute("event.delete E001");
+        for (String answer : List.of("", "YES", "yes please", "exit", "save", "help")) {
+            assertFalse(handler.execute(answer));
+            assertTrue(handler.isAwaitingDeletionConfirmation());
+            assertEquals(List.of(event), project.getEvents());
+            assertEquals("Please type yes to confirm deletion or no to cancel.", ui.errors.getLast());
+            assertEquals("Type yes to confirm deletion or no to cancel.", ui.messages.getLast());
+        }
+        handler.execute("no");
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+    }
+
+    @Test
+    public void execute_deleteOnlyEvent_preservesProjectAndRejectsRepeatedDeletion() {
+        Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projectManager.addEvent("P001", "Meeting", LocalDate.of(2026, 11, 1));
+        handler.execute("event.delete E001");
+        handler.execute("yes");
+
+        assertTrue(project.getEvents().isEmpty());
+        assertEquals(List.of(project), projectManager.getProjects());
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertTrue(ui.errors.isEmpty());
+
+        ui.messages.clear();
+        handler.execute("event.delete E001");
+
+        assertFalse(handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of("Event E001 was not found. Use project.view to see event IDs."), ui.errors);
+        assertEquals(List.of("Format: event.delete EVENT_ID"), ui.messages);
     }
 
     /** Simulates parser failures to verify the CLI's exception boundary. */

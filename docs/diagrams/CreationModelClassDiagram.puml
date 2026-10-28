@@ -1,0 +1,58 @@
+@startuml
+' Model classes used by project.add, task.add and event.add.
+' The smetana layout renders class diagrams without a separate Graphviz install.
+!pragma layout smetana
+hide circle
+hide empty members
+skinparam classAttributeIconSize 0
+
+class ProjectManager {
+  -nextProjectNumber : int
+  -nextTaskNumber : int
+  -nextEventNumber : int
+  +addProject(clientId, name, deadline) : Project
+  +addTask(projectId, description, date) : Task
+  +addEvent(projectId, description, date) : Event
+  +getProject(projectId) : Project
+}
+
+interface ClientLookup <<interface>> {
+  +exists(clientId) : boolean
+}
+
+class ClientManager
+
+class Project {
+  -projectId : String
+  -clientId : String
+  -name : String
+  -deadline : LocalDate
+  -status : ProjectStatus
+  +addTask(task)
+  +addEvent(event)
+  +getTasks() : List<Task>
+  +getEvents() : List<Event>
+}
+
+abstract class ScheduledItem {
+  -id : String
+  -description : String
+  -date : LocalDate
+  {abstract} +getType() : String
+}
+
+class Task {
+  -completed : boolean
+}
+
+class Event
+
+ProjectManager --> "1" ClientLookup : clientLookup
+ClientManager ..|> ClientLookup
+ProjectManager *--> "*" Project : projects
+Project *--> "*" Task : tasks
+Project *--> "*" Event : events
+Task -up-|> ScheduledItem
+Event -up-|> ScheduledItem
+ScheduledItem --> "1" Project : project
+@enduml

@@ -4,16 +4,34 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 import busynotfree.exception.ClientException;
+import busynotfree.exception.ClientHasProjectsException;
 
 /**
  * Keeps clients in memory and supplies the client lookup used by project creation.
- * IDs advance only after successful additions; data is not saved between runs.
+ * IDs advance only after successful additions. Storage preserves active and deleted clients.
  */
 public final class ClientManager implements ClientLookup {
     private final Map<String, Client> clients = new LinkedHashMap<>();
+    private final TrashcanManager trashcanManager;
     private int nextClientNumber = 1;
+
+    /** Creates a client manager with its own trashcan for a new application session. */
+    public ClientManager() {
+        this(new TrashcanManager());
+    }
+
+    /** Creates a client manager using the application's shared trashcan. */
+    public ClientManager(TrashcanManager trashcanManager) {
+        this.trashcanManager = Objects.requireNonNull(trashcanManager);
+    }
+
+    /** Returns the trashcan shared with project management and command routing. */
+    public TrashcanManager getTrashcanManager() {
+        return trashcanManager;
+    }
 
     /**
      * Registers a client with an ID padded to at least three digits.
@@ -65,6 +83,94 @@ public final class ClientManager implements ClientLookup {
         Client client = getClient(clientId);
         client.addNote(note);
         return client;
+    }
+
+    /**
+     * Deletes a note belonging to an existing client.
+     *
+     * @param clientId Owning client's ID.
+     * @param noteIndex One-based note position.
+     * @return Deleted note text.
+     * @throws ClientException If the client or note does not exist.
+     */
+    public String deleteNote(String clientId, int noteIndex) {
+        return getClient(clientId).deleteNote(noteIndex);
+    }
+
+    /** Renames an existing client without replacing its ID, notes or project links. */
+    public Client editClient(String clientId, String name) {
+        Client client = getClient(clientId);
+        client.setName(name);
+        return client;
+    }
+
+    /**
+     * Finds a client eligible for deletion, rejecting projects of every status.
+     *
+     * @param clientId ID of the client to check.
+     * @param projectManager Manager containing all current projects.
+     * @return Client with no associated projects.
+     * @throws ClientException If the client ID is blank or the client is missing.
+     * @throws ClientHasProjectsException If the client has any projects.
+     */
+    public Client getDeletableClient(String clientId, ProjectManager projectManager) {
+        Client client = getClient(clientId);
+        boolean hasProjects = projectManager.getProjects().stream()
+                .anyMatch(project -> project.getClientId().equals(client.getClientId()));
+        if (hasProjects) {
+            throw new ClientHasProjectsException(client.getClientId());
+        }
+        return client;
+    }
+
+    /**
+     * Deletes a client and its notes, preserving the next client ID.
+     * Rechecks project links immediately before changing any data.
+     *
+     * @param clientId ID of the client to delete.
+     * @param projectManager Manager containing all current projects.
+     * @return Deleted client, with its notes cleared.
+     * @throws ClientException If the client ID is blank or the client is missing.
+     * @throws ClientHasProjectsException If the client has any projects.
+     */
+    public Client deleteClient(String clientId, ProjectManager projectManager) {
+        Client client = getDeletableClient(clientId, projectManager);
+        trashcanManager.storeClient(client);
+        client.clearNotes();
+        clients.remove(client.getClientId());
+        return client;
+    }
+
+    /** Returns independent copies of deleted clients and their notes in ID order. */
+    public List<Client> getDeletedClients() {
+        return trashcanManager.getDeletedClients();
+    }
+
+    /**
+     * Registers a deleted client read from storage without making it active.
+     * Rejects duplicate IDs and advances the counter to prevent ID reuse.
+     *
+     * @param client Saved deleted client including its notes.
+     * @throws ClientException If its ID already exists in active data or the trashcan.
+     */
+    public void loadDeletedClient(Client client) {
+        String id = client.getClientId();
+        if (clients.containsKey(id)) {
+            throw new ClientException("Duplicate saved client " + id + ".");
+        }
+        trashcanManager.storeClient(client);
+        nextClientNumber = Math.max(nextClientNumber, Integer.parseInt(id.substring(1)) + 1);
+    }
+
+    /** Finds case-insensitive name substrings in creation order, rejecting blank searches. */
+    public List<Client> findClients(String name) {
+        if (name == null || name.isBlank()) {
+            throw new ClientException("A search name must not be blank.");
+        }
+        String search = name.trim().toLowerCase(Locale.ROOT);
+        return clients.values().stream()
+                .filter(client -> client.getName().toLowerCase(Locale.ROOT).contains(search))
+                .toList();
     }
 
     /**

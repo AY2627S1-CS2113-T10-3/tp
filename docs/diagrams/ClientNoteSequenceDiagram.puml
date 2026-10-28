@@ -1,0 +1,52 @@
+@startuml
+' Successful client.note after CommandParser has parsed the input.
+hide footbox
+skinparam defaultFontSize 13
+skinparam maxMessageSize 180
+
+participant ":CommandHandler" as CH
+participant ":ClientCommandHandler" as CCH
+participant ":ArgumentParser" as AP
+participant ":ClientManager" as CM
+participant "client:Client" as C
+participant ":ClientUi" as CUI
+participant ":Ui" as UI
+
+note over CH, CCH
+  Input: client.note C001 text/Prefers weekly updates
+  C001 already exists. Command parsing, separators
+  and formatting getters are omitted.
+end note
+
+CH -> CCH : execute(command)
+activate CCH
+CCH -> CCH : handleNote(arguments)
+note right of CCH : Separate C001 from the prefixed note text.
+CCH -> AP : parse(noteArguments, "text")
+activate AP
+AP --> CCH : values
+deactivate AP
+
+CCH -> CM : addNote("C001", "Prefers weekly updates")
+activate CM
+CM -> CM : getClient("C001")
+note right of CM : Reject a missing client before changing notes.
+CM -> C : addNote("Prefers weekly updates")
+activate C
+C -> C : validate, then notes.add(note.trim())
+C --> CM
+deactivate C
+CM --> CCH : client
+deactivate CM
+
+CCH -> CUI : showNoteAdded(client)
+activate CUI
+CUI -> UI : showMessage("Note added to client C001.")
+activate UI
+UI --> CUI
+deactivate UI
+CUI --> CCH
+deactivate CUI
+CCH --> CH
+deactivate CCH
+@enduml

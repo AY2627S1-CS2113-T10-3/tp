@@ -1,11 +1,13 @@
 package busynotfree.model;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 import busynotfree.exception.EventException;
 import busynotfree.exception.ProjectException;
@@ -14,76 +16,217 @@ import busynotfree.exception.TaskException;
 /**
  * Keeps projects in memory and assigns independent project, task and event IDs.
  * Counters advance only after successful additions and are shared across projects.
- * This manager does not load or save data between application runs.
+ * {@code DataStorage} saves and restores the projects and counters,
+ * so deleted IDs are not reused after a restart.
  */
 public final class ProjectManager {
+    /** Diagnostic creation logs are quiet by default and omit client names and item descriptions. */
+    private static final Logger LOGGER = Logger.getLogger(ProjectManager.class.getName());
+
     private final ClientLookup clientLookup;
     private final Map<String, Project> projects = new LinkedHashMap<>();
+    private final TrashcanManager trashcanManager;
     private int nextProjectNumber = 1;
     private int nextTaskNumber = 1;
     private int nextEventNumber = 1;
 
     /**
      * Creates an empty manager using the supplied client-existence check.
+     * Reuses a client manager's trashcan; other lookups receive a separate trashcan.
      *
-     * @param clientLookup client lookup, temporarily supplied by a placeholder
+     * @param clientLookup Client-existence check, normally the application's {@code ClientManager}.
      */
     public ProjectManager(ClientLookup clientLookup) {
+        this(clientLookup, clientLookup instanceof ClientManager clients
+                ? clients.getTrashcanManager() : new TrashcanManager());
+    }
+
+    /** Creates a project manager using the supplied client lookup and shared trashcan. */
+    public ProjectManager(ClientLookup clientLookup, TrashcanManager trashcanManager) {
         this.clientLookup = Objects.requireNonNull(clientLookup);
+        this.trashcanManager = Objects.requireNonNull(trashcanManager);
+    }
+
+    /** Returns the trashcan shared with client management and command routing. */
+    public TrashcanManager getTrashcanManager() {
+        return trashcanManager;
     }
 
     /**
      * Creates a project for a client accepted by the configured lookup.
      *
-     * @param clientId owning client's ID
-     * @param name non-blank project name
-     * @param deadline project deadline
-     * @return the newly registered project
-     * @throws ProjectException if required data is missing or the client does not exist
+     * @param clientId Owning client's ID.
+     * @param name Non-blank project name.
+     * @param deadline Project deadline.
+     * @return The newly registered project.
+     * @throws ProjectException If required data is missing or the client does not exist.
      */
     public Project addProject(String clientId, String name, LocalDate deadline) {
         Project project = new Project(formatId("P", nextProjectNumber), clientId, name, deadline);
         if (!clientLookup.exists(project.getClientId())) {
-            throw new ProjectException("Client " + project.getClientId() + " does not exist.");
+            LOGGER.fine("Project creation rejected because the client does not exist.");
+            throw new ProjectException("Client " + project.getClientId()
+                    + " does not exist. Use client.list to see client IDs.");
         }
+        // Detects an ID-allocation bug, such as a counter restored too low, rather than invalid user input.
+        assert !projects.containsKey(project.getProjectId())
+                : "A new project ID must not replace an existing project.";
         projects.put(project.getProjectId(), project);
         nextProjectNumber++;
+        LOGGER.fine(() -> "Created project " + project.getProjectId() + ".");
         return project;
     }
 
     /**
      * Creates and attaches a task to an existing project.
      *
-     * @param projectId owning project's ID
-     * @param description non-blank description of the work
-     * @param date task date
-     * @return the newly attached task
-     * @throws ProjectException if the project ID is blank or the project does not exist
-     * @throws TaskException if required task data is missing or the task cannot be attached
+     * @param projectId Owning project's ID.
+     * @param description Non-blank description of the work.
+     * @param date Task date.
+     * @return The newly attached task.
+     * @throws ProjectException If the project ID is blank or the project does not exist.
+     * @throws TaskException If required task data is missing or the task cannot be attached.
      */
     public Task addTask(String projectId, String description, LocalDate date) {
         Project project = getProject(projectId);
         Task task = new Task(formatId("T", nextTaskNumber), project, description, date);
         project.addTask(task);
+        assert project.getTasks().getLast() == task : "A new task must be appended to its own project.";
         nextTaskNumber++;
+        LOGGER.fine(() -> "Added task " + task.getId() + " to project " + project.getProjectId() + ".");
         return task;
+    }
+
+    /** Finds a task by its application-wide ID, regardless of its project. */
+    public Task getTask(String taskId) {
+        if (taskId == null || taskId.isBlank()) {
+            throw new TaskException("A task ID must not be blank.");
+        }
+        String requestedId = taskId.trim();
+        for (Project project : projects.values()) {
+            for (Task task : project.getTasks()) {
+                if (task.getId().equals(requestedId)) {
+                    return task;
+                }
+            }
+        }
+        throw new TaskException("Task " + requestedId + " was not found.");
+    }
+
+    /**
+     * Deletes a task using its application-wide ID.
+     * Preserves the project, other activities and all ID counters.
+     *
+     * @param taskId ID of the task to delete.
+     * @return Deleted task.
+     * @throws TaskException If the ID is blank or the task does not exist.
+     */
+    public Task deleteTask(String taskId) {
+        Task task = getTask(taskId);
+        task.getProject().removeTask(task);
+        return task;
+    }
+
+    /** Marks an existing task complete and returns it for the command response. */
+    public Task markTaskComplete(String taskId) {
+        Task task = getTask(taskId);
+        task.markCompleted();
+        return task;
+    }
+
+    /** Reopens an existing task and returns it for the command response. */
+    public Task markTaskIncomplete(String taskId) {
+        Task task = getTask(taskId);
+        task.markIncomplete();
+        return task;
+    }
+
+    /**
+     * Updates an existing task's description and date.
+     * Leaves ID counters unchanged because no new task is created.
+     *
+     * @param taskId Application-wide ID of the task to edit.
+     * @param description New non-blank description of the work.
+     * @param date New task date.
+     * @return The edited task, with its ID, project and completion state preserved.
+     * @throws TaskException If the task does not exist or the new details are invalid.
+     */
+    public Task editTask(String taskId, String description, LocalDate date) {
+        Task task = getTask(taskId);
+        boolean wasCompleted = task.isCompleted();
+        task.edit(description, date);
+        assert task.isCompleted() == wasCompleted : "Editing a task must not change its completion state.";
+        LOGGER.fine(() -> "Edited task " + task.getId() + ".");
+        return task;
+    }
+
+    /** Finds an event by its application-wide ID, regardless of its project. */
+    public Event getEvent(String eventId) {
+        if (eventId == null || eventId.isBlank()) {
+            throw new EventException("An event ID must not be blank.");
+        }
+        String requestedId = eventId.trim();
+        for (Project project : projects.values()) {
+            for (Event event : project.getEvents()) {
+                if (event.getId().equals(requestedId)) {
+                    return event;
+                }
+            }
+        }
+        LOGGER.fine("Event lookup failed because the event does not exist.");
+        throw new EventException("Event " + requestedId
+                + " was not found. Use project.view to see event IDs.");
+    }
+
+    /**
+     * Deletes an event using its application-wide ID.
+     * Preserves the project, other activities and all ID counters.
+     *
+     * @param eventId ID of the event to delete.
+     * @return Deleted event.
+     * @throws EventException If the ID is blank or the event does not exist.
+     */
+    public Event deleteEvent(String eventId) {
+        Event event = getEvent(eventId);
+        event.getProject().removeEvent(event);
+        return event;
+    }
+
+    /**
+     * Updates an existing event's description and date.
+     * Leaves ID counters unchanged because no new event is created.
+     *
+     * @param eventId Application-wide ID of the event to edit.
+     * @param description New non-blank description of the event.
+     * @param date New event date.
+     * @return The edited event, with its ID and project preserved.
+     * @throws EventException If the event does not exist or the new details are invalid.
+     */
+    public Event editEvent(String eventId, String description, LocalDate date) {
+        Event event = getEvent(eventId);
+        event.edit(description, date);
+        assert event.getDate().equals(date) : "An edited event must hold its new date.";
+        LOGGER.fine(() -> "Edited event " + event.getId() + ".");
+        return event;
     }
 
     /**
      * Creates and attaches an event to an existing project.
      *
-     * @param projectId owning project's ID
-     * @param description non-blank description of the event
-     * @param date event date
-     * @return the newly attached event
-     * @throws ProjectException if the project ID is blank or the project does not exist
-     * @throws EventException if required event data is missing or the event cannot be attached
+     * @param projectId Owning project's ID.
+     * @param description Non-blank description of the event.
+     * @param date Event date.
+     * @return The newly attached event.
+     * @throws ProjectException If the project ID is blank or the project does not exist.
+     * @throws EventException If required event data is missing or the event cannot be attached.
      */
     public Event addEvent(String projectId, String description, LocalDate date) {
         Project project = getProject(projectId);
         Event event = new Event(formatId("E", nextEventNumber), project, description, date);
         project.addEvent(event);
+        assert project.getEvents().getLast() == event : "A new event must be appended to its own project.";
         nextEventNumber++;
+        LOGGER.fine(() -> "Added event " + event.getId() + " to project " + project.getProjectId() + ".");
         return event;
     }
 
@@ -113,6 +256,7 @@ public final class ProjectManager {
      */
     public int deleteProject(String projectId) {
         Project project = getProject(projectId);
+        trashcanManager.storeProject(project);
         int expectedCount = project.getItemCount();
         int removedCount = project.removeAllActivities();
         projects.remove(project.getProjectId());
@@ -125,12 +269,77 @@ public final class ProjectManager {
         return removedCount;
     }
 
+    /** Returns independent copies of deleted projects and activities in ID order. */
+    public List<Project> getDeletedProjects() {
+        return trashcanManager.getDeletedProjects();
+    }
+
+    /**
+     * Restores a deleted project and all its activities using their original IDs.
+     * All checks finish before either the active collection or trashcan is changed.
+     *
+     * @param projectId Deleted project's case-sensitive ID.
+     * @return Restored project.
+     * @throws ProjectException If the ID is blank, unavailable, conflicting or its client is deleted.
+     */
+    public Project restoreProject(String projectId) {
+        return trashcanManager.restoreProject(projectId, this);
+    }
+
+    /**
+     * Registers a restored project after checking its client and active IDs.
+     * Leaves ID counters unchanged.
+     *
+     * @param project Snapshot to register in the active collection.
+     * @throws ProjectException If its client is inactive or an ID conflicts.
+     */
+    void registerRestoredProject(Project project) {
+        if (!clientLookup.exists(project.getClientId())) {
+            throw new ProjectException("Cannot restore project " + project.getProjectId()
+                    + ": client " + project.getClientId() + " is no longer active.");
+        }
+        validateProjectIds(project, projects.values());
+        projects.put(project.getProjectId(), project);
+    }
+
+    /**
+     * Registers a deleted project read from storage and reserves its activity IDs.
+     *
+     * @param project Saved project including tasks and events.
+     * @throws ProjectException If any saved ID conflicts with active data or another deleted project.
+     */
+    public void loadDeletedProject(Project project) {
+        validateProjectIds(project, projects.values());
+        trashcanManager.storeProject(project);
+        nextProjectNumber = Math.max(nextProjectNumber, Integer.parseInt(project.getProjectId().substring(1)) + 1);
+        for (Task task : project.getTasks()) {
+            nextTaskNumber = Math.max(nextTaskNumber, Integer.parseInt(task.getId().substring(1)) + 1);
+        }
+        for (Event event : project.getEvents()) {
+            nextEventNumber = Math.max(nextEventNumber, Integer.parseInt(event.getId().substring(1)) + 1);
+        }
+    }
+
+    /** Rejects project or activity ID collisions before a restore or storage import changes data. */
+    private void validateProjectIds(Project candidate, Iterable<Project> existingProjects) {
+        for (Project existing : existingProjects) {
+            boolean duplicateTask = candidate.getTasks().stream().anyMatch(task -> existing.getTasks().stream()
+                    .anyMatch(other -> other.getId().equals(task.getId())));
+            boolean duplicateEvent = candidate.getEvents().stream().anyMatch(event -> existing.getEvents().stream()
+                    .anyMatch(other -> other.getId().equals(event.getId())));
+            if (existing.getProjectId().equals(candidate.getProjectId()) || duplicateTask || duplicateEvent) {
+                throw new ProjectException("Cannot restore or load project " + candidate.getProjectId()
+                        + ": an ID is already in use.");
+            }
+        }
+    }
+
     /**
      * Looks up a project without creating a missing parent.
      *
-     * @param projectId project ID to look up
-     * @return the existing project
-     * @throws ProjectException if the ID is blank or does not identify an existing project
+     * @param projectId Project ID to look up.
+     * @return The existing project.
+     * @throws ProjectException If the ID is blank or does not identify an existing project.
      */
     public Project getProject(String projectId) {
         if (projectId == null || projectId.isBlank()) {
@@ -138,7 +347,9 @@ public final class ProjectManager {
         }
         Project project = projects.get(projectId.trim());
         if (project == null) {
-            throw new ProjectException("Project " + projectId.trim() + " does not exist.");
+            LOGGER.fine("Project lookup failed because the project does not exist.");
+            throw new ProjectException("Project " + projectId.trim()
+                    + " does not exist. Use project.list to see project IDs.");
         }
         return project;
     }
@@ -146,10 +357,55 @@ public final class ProjectManager {
     /**
      * Returns an unmodifiable snapshot of projects in creation order.
      *
-     * @return the projects currently registered in memory
+     * @return The projects currently registered in memory.
      */
     public List<Project> getProjects() {
         return List.copyOf(projects.values());
+    }
+
+    /**
+     * Returns projects with the requested status in their creation order.
+     *
+     * @param status status to match
+     * @return an unmodifiable snapshot of matching projects
+     * @throws ProjectException if the status is null
+     */
+    public List<Project> getProjectsByStatus(ProjectStatus status) {
+        if (status == null) {
+            throw new ProjectException("A project status is required.");
+        }
+        return projects.values().stream()
+                .filter(project -> project.getStatus() == status)
+                .toList();
+    }
+
+    /**
+     * Returns projects ordered by the earliest deadline first.
+     * Projects with the same deadline retain their creation order.
+     *
+     * @return an unmodifiable snapshot ordered by deadline
+     */
+    public List<Project> getProjectsByDeadline() {
+        return projects.values().stream()
+                .sorted(Comparator.comparing(Project::getDeadline))
+                .toList();
+    }
+
+    /**
+     * Returns active projects whose deadlines are before the supplied date.
+     *
+     * @param today date against which deadlines are compared
+     * @return an unmodifiable snapshot of overdue active projects
+     * @throws ProjectException if the comparison date is null
+     */
+    public List<Project> getOverdueActiveProjects(LocalDate today) {
+        if (today == null) {
+            throw new ProjectException("A comparison date is required.");
+        }
+        return projects.values().stream()
+                .filter(project -> project.getStatus() == ProjectStatus.ACTIVE)
+                .filter(project -> project.getDeadline().isBefore(today))
+                .toList();
     }
 
     /** Returns the next project number for saving the ID sequence. */

@@ -34,7 +34,8 @@ class ProjectViewTest {
 
         assertEquals(List.of("Project: P001 - Website redesign", "Client: C001 - Acme Studio",
                 "Status: PAUSED", "Deadline: 2026-11-30", "Tasks:",
-                "[T001] Create homepage wireframe - 2026-10-15", "Events:",
+                "[T001] Create homepage wireframe - 2026-10-15 [In Progress]",
+                "Progress: 0 of 1 task completed.", "Events:",
                 "[E001] Stakeholder meeting - 2026-10-20"), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
@@ -48,7 +49,58 @@ class ProjectViewTest {
 
         assertEquals(List.of("Project: P001 - Logo design", "Client: C001 - Acme Studio",
                 "Status: ACTIVE", "Deadline: 2026-12-15", "Tasks:", "No tasks found.",
-                "Events:", "No events found."), ui.messages);
+                "Progress: 0 of 0 tasks completed.", "Events:", "No events found."), ui.messages);
+    }
+
+    @Test
+    public void execute_projectViewAfterTaskMark_showsCompletedTask() {
+        clients.addClient("Acme Studio");
+        projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projects.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 15));
+        handler.execute("task.mark T001");
+        ui.messages.clear();
+
+        handler.execute("project.view P001");
+
+        assertTrue(ui.messages.contains("[T001] Wireframe - 2026-10-15 [COMPLETED]"));
+        assertTrue(ui.messages.contains("Progress: 1 of 1 task completed."));
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectViewAfterTaskUnmark_showsInProgressLabel() {
+        clients.addClient("Acme Studio");
+        projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projects.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 15));
+        handler.execute("task.mark T001");
+        handler.execute("task.unmark T001");
+        ui.messages.clear();
+
+        handler.execute("project.view P001");
+
+        assertTrue(ui.messages.contains("[T001] Wireframe - 2026-10-15 [In Progress]"));
+        assertTrue(ui.messages.contains("Progress: 0 of 1 task completed."));
+        assertFalse(ui.messages.stream().anyMatch(line -> line.contains("[COMPLETED]")));
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void execute_projectViewAfterEdits_showsUpdatedActivities() {
+        clients.addClient("Acme Studio");
+        projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projects.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 15));
+        projects.addEvent("P001", "Meeting", LocalDate.of(2026, 10, 20));
+        handler.execute("task.mark T001");
+        handler.execute("task.edit T001 name/Revised wireframe date/2026-12-01");
+        handler.execute("event.edit E001 date/2026-12-02 name/Rescheduled meeting");
+        ui.messages.clear();
+
+        handler.execute("project.view P001");
+
+        assertTrue(ui.messages.contains("[T001] Revised wireframe - 2026-12-01 [COMPLETED]"));
+        assertTrue(ui.messages.contains("[E001] Rescheduled meeting - 2026-12-02"));
+        assertFalse(ui.messages.stream().anyMatch(line -> line.contains("] Wireframe") || line.contains("] Meeting")));
+        assertTrue(ui.errors.isEmpty());
     }
 
     @Test
@@ -56,6 +108,10 @@ class ProjectViewTest {
         clients.addClient("Acme Studio");
         projects.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
         projects.addProject("C001", "Logo", LocalDate.of(2026, 12, 15));
+        projects.addTask("P001", "Wireframe", LocalDate.of(2026, 10, 15));
+        projects.addTask("P001", "Review", LocalDate.of(2026, 10, 16));
+        projects.addTask("P002", "Sketch", LocalDate.of(2026, 10, 17));
+        projects.markTaskComplete("T001");
 
         handler.execute("project.view all");
         List<String> allMessages = List.copyOf(ui.messages);
@@ -66,6 +122,8 @@ class ProjectViewTest {
         assertEquals(1, ui.messages.stream().filter(String::isEmpty).count());
         assertTrue(ui.messages.contains("Project: P001 - Website"));
         assertTrue(ui.messages.contains("Project: P002 - Logo"));
+        assertTrue(ui.messages.contains("Progress: 1 of 2 tasks completed."));
+        assertTrue(ui.messages.contains("Progress: 0 of 1 task completed."));
     }
 
     @Test
