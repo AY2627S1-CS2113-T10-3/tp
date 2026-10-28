@@ -356,7 +356,8 @@ Assertions check internal assumptions: only client commands reach `ClientCommand
 
 This enhancement lets users remove unwanted records while protecting against accidental
 deletion and broken relationships. It covers `project.delete`, `client.delete`,
-`client.delete_note`, `task.delete`, `event.delete`, `trashcan.list` and `trashcan.restore`.
+`client.delete_note`, `task.delete`, `event.delete`, `trashcan.list`, `trashcan.restore`
+and `trashcan.empty`.
 
 Deletion has two stages: selecting and validating a record, then waiting for confirmation.
 Deleted projects and clients are retained as independent snapshots. Individually deleted
@@ -367,15 +368,18 @@ tasks, events and notes are removed without entering the trashcan.
 `CommandHandler` coordinates deletion confirmation because subsequent input must answer
 the pending operation before normal command processing resumes. It stores the selected
 project, client, task or event. For a note, the private `PendingNoteDeletion` record stores
-the client ID, one-based index and preview text.
+the client ID, one-based index and preview text. The boolean `pendingTrashcanEmpty`
+tracks confirmation for clearing the entire trashcan, which has no individual target ID.
 
 `ClientManager` manages active clients and their notes. `ProjectManager` manages active
 projects and their tasks and events. Both managers send deleted records to the same
 `TrashcanManager`, which owns the deleted snapshots.
 
-`TrashcanCommandHandler` validates and executes trashcan commands. The main handler
-delegates these commands while retaining responsibility for catching application exceptions
-and showing errors. `Ui` and `ClientUi` format the responses.
+`TrashcanCommandHandler` validates and executes listing and restoration commands and supplies
+usage hints for all trashcan commands. `CommandHandler` routes `trashcan.empty` before
+general trashcan delegation so it can reuse the application's confirmation lifecycle.
+The main handler also catches application exceptions and shows errors.
+`Ui` and `ClientUi` format the responses.
 
 At startup, `DataStorage#load` creates one `TrashcanManager` and supplies it to both
 active-data managers. The command handler obtains that same instance through
@@ -407,7 +411,8 @@ prompt or handling `save`. `CommandHandler#execute` makes the same check before 
 commands. Together, these checks prevent another CLI command from replacing the selected
 record while confirmation is pending.
 
-The lifecycle is implemented using nullable pending fields. The sequence diagram below
+The lifecycle uses nullable pending fields for individual records and a boolean for
+trashcan emptying. The sequence diagram below
 shows how the application handles confirmation answers and end of input. Input reading
 is simplified; validation and model deletion details are shown in the project deletion
 section. The single-threaded command loop allows only one pending deletion at a time.
@@ -492,6 +497,38 @@ trash lookup must already have succeeded. Validation failures are summarized as 
 
 ![Sequence diagram of project restoration](images/ProjectRestoreSequenceDiagram.png)
 
+#### Permanently emptying the trashcan
+
+`trashcan.empty` accepts no arguments. `CommandHandler#routeCommand` rejects extra
+arguments with a `CommandException` before setting any pending state. The shared error
+handler then displays `Use trashcan.empty without arguments.` and the usage hint
+`Format: trashcan.empty`, supplied by `TrashcanCommandHandler#showCommandUsage`.
+
+For a valid request, the handler sets `pendingTrashcanEmpty` and asks
+`Permanently delete all items in the trashcan? Type yes or no.`. No model data changes
+at this point. `isAwaitingDeletionConfirmation()` includes this flag, so the existing
+command loop prevents other commands, including `save` and `exit`, from bypassing
+confirmation.
+
+`handleDeletionConfirmation` routes the answer to `handleTrashcanEmptyConfirmation`:
+
+* `yes` calls `TrashcanManager#empty`, resets the flag and displays `Trashcan emptied.`.
+* `no` calls `cancelPendingDeletion`, resets the flag and displays
+  `Trashcan emptying cancelled.` without changing retained entries.
+* Other answers display an error and repeat the prompt, leaving the flag and entries unchanged.
+* End of input invokes `cancelPendingDeletion` before the command loop attempts to save.
+
+The sequence diagram shows a valid request followed by confirmation. The application
+input loop, parsing, separators and invalid-answer retries are omitted; those follow
+the shared confirmation lifecycle.
+
+![Sequence diagram of trashcan.empty confirmation and removal](images/TrashcanEmptySequenceDiagram.png)
+
+`TrashcanManager#empty` clears both `deletedProjects` and `deletedClients`. Retained
+project activities and client notes disappear with their owning snapshots. Active managers,
+their records and their ID counters are unchanged. Clearing an already empty trashcan
+succeeds after the same confirmation. Emptied entries cannot subsequently be restored.
+
 #### Persistence and compatibility
 
 `DataStorage` saves trashcan records in the existing properties file under keys beginning
@@ -511,9 +548,14 @@ Older files without a trash section load with an empty trashcan. Active projects
 written in numeric ID order because restoring an older project can append it after
 newer projects in memory, while the loader reconstructs IDs in ascending order.
 
-Deletion and restoration change in-memory data. The existing `save` and `exit` paths
+Deletion, restoration and trashcan emptying change in-memory data. The existing `save` and `exit` paths
 persist those changes using the temporary-file replacement described in the persistence
 section. No command-specific file writes are introduced.
+
+After emptying, the next save writes zero trashcan counts and omits the former entry keys
+because `DataStorage#save` builds a fresh `Properties` object. Loading that file therefore
+does not resurrect old entries. Saved next-ID counters still prevent reuse of deleted IDs;
+the storage format needs no changes.
 
 #### Design choices and alternatives
 
@@ -523,10 +565,13 @@ section. No command-specific file writes are introduced.
 * **Restore original IDs rather than create replacements:** this preserves project
   ownership and activity identifiers. It requires conflict checks before registration.
 * **Separate trashcan responsibilities:** `TrashcanManager` owns retained data;
-  `TrashcanCommandHandler` owns command parsing. Active-data managers retain their
-  validation rules and ID counters.
+  `TrashcanCommandHandler` handles listing, restoration and usage hints. `CommandHandler`
+  coordinates emptying because it owns confirmation state. Active-data managers retain
+  their validation rules and ID counters.
 * **Explicit confirmation rather than immediate deletion:** the extra interaction gives
-  users an opportunity to inspect the selected record before changing data.
+  users an opportunity to inspect the selected record before changing data. Emptying also
+  requires confirmation because all retained entries become unavailable for restoration.
+  Immediate clearing would need less command state but would provide no cancellation step.
 * **Indexed string notes rather than note entities:** this is sufficient for the current
   feature. Stable note IDs would be more suitable if notes later support independent
   editing, reordering or concurrent changes.
@@ -539,7 +584,9 @@ commands needed the same confirmation behavior.
 
 [`TrashcanCommandTest`](../src/test/java/busynotfree/command/TrashcanCommandTest.java) covers
 listing, invalid restoration requests, successful restoration, inactive clients, repeated
-restoration and conflicting IDs.
+restoration and conflicting IDs. It also covers confirmed emptying, rejected arguments,
+repeated emptying, cancellation, invalid confirmation answers and preservation of active
+records and ID counters.
 [`TrashcanManagerTest`](../src/test/java/busynotfree/model/TrashcanManagerTest.java) checks
 shared wiring, snapshot isolation, duplicate retained IDs and failed registration preserving
 the snapshot. [`TrashcanCommandHandlerTest`](../src/test/java/busynotfree/command/TrashcanCommandHandlerTest.java)
@@ -549,11 +596,15 @@ Deletion tests in [`CommandHandlerTest`](../src/test/java/busynotfree/command/Co
 and [`ClientCommandHandlerTest`](../src/test/java/busynotfree/command/ClientCommandHandlerTest.java)
 cover invalid IDs, invalid note indexes, confirmation, cancellation and preservation of
 unrelated records. [`BusyNotFreeTest`](../src/test/java/busynotfree/BusyNotFreeTest.java) checks
-cancellation before saving at end of input.
+cancellation before saving at end of input, including pending trashcan emptying, and
+checks that `save` cannot bypass emptying confirmation.
 [`DataStorageTest`](../src/test/java/busynotfree/storage/DataStorageTest.java) covers persistence,
-older files, restoration of older projects and prevention of ID reuse.
+older files, restoration of older projects and prevention of ID reuse. Its emptying test
+first loads previously saved trash, clears it, saves again and reloads to verify both
+collections stay empty while next-ID counters are preserved.
 
-The trashcan currently has no expiry or cleanup command. Client restoration is not supported,
+The trashcan has no automatic expiry; users can explicitly clear it with `trashcan.empty`.
+Client restoration is not supported,
 so a project whose client was deleted remains visible but cannot be restored. Individually
 deleted activities and notes cannot be recovered. These are current limitations, rather
 than behavior provided by this enhancement.
@@ -690,6 +741,31 @@ For deletion commands, enter `yes` or `no` when prompted. Invalid commands
 should display an error and leave the affected record unchanged. The automated
 verification suite can be run with `.\gradlew.bat check`; it compiles the
 project, runs the tests, and runs Checkstyle.
+
+### Trashcan emptying and persistence
+
+Use a fresh, writable test directory so the following IDs start at `C001` and `P001`.
+Create a client with a note, then a project with a task and event. Delete the project
+and client, confirming each deletion, and enter `save`. `trashcan.list` should show
+both snapshots and their retained contents.
+
+1. Enter `trashcan.empty extra`. Expect an error and `Format: trashcan.empty`.
+   `trashcan.list` must still show both snapshots.
+2. Enter `trashcan.empty`, then `maybe` and `save`. Each answer must report a
+   confirmation error without clearing or saving. Enter `no`, then `trashcan.list`;
+   both snapshots must remain.
+3. Add a second client and project, which should receive `C002` and `P002`. Enter
+   `trashcan.empty`, then `yes`. Expect `Trashcan emptied.`. `trashcan.list` should
+   now display `Trashcan is empty.`, while `client.view C002` and `project.view P002`
+   still show the active records. `trashcan.restore P001` must fail.
+4. Enter `save`, then `exit`, and restart from the same directory. The trashcan must
+   remain empty and active records must remain available. Create another client and
+   project; expect `C003` and `P003`, confirming that clearing did not reset counters.
+5. Enter `trashcan.empty`, then `yes` again. Emptying an empty trashcan must succeed.
+
+For cancellation at end of input, use the automated `BusyNotFreeTest` fixture, which
+ends a simulated input stream immediately after `trashcan.empty` and verifies that
+the retained entries are still present when saving occurs.
 
 ### Project views, completion and saving
 

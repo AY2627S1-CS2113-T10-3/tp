@@ -1,0 +1,49 @@
+@startuml
+' Valid emptying request and confirmation; parsing and decorative output are omitted.
+hide footbox
+skinparam defaultFontSize 14
+skinparam maxMessageSize 165
+
+actor User
+participant ":CommandHandler" as CH
+participant ":ProjectManager" as PM
+participant ":TrashcanManager" as TM
+participant ":Ui" as UI
+
+User -> CH : execute("trashcan.empty")
+CH -> CH : routeCommand(command)
+CH -> CH : validate no arguments\npendingTrashcanEmpty = true
+CH -> UI : showMessage(confirmation prompt)
+CH --> User : false
+
+note over CH, TM
+  No entries are removed before confirmation.
+  Normal commands wait until yes or no.
+end note
+
+alt user confirms
+  User -> CH : execute("yes")
+  CH -> CH : handleDeletionConfirmation("yes")
+  CH -> CH : handleTrashcanEmptyConfirmation("yes")
+  CH -> PM : getTrashcanManager()
+  PM --> CH : shared trashcan
+  CH -> TM : empty()
+  TM -> TM : deletedProjects.clear()\ndeletedClients.clear()
+  TM --> CH : complete
+  CH -> CH : pendingTrashcanEmpty = false
+  CH -> UI : showMessage("Trashcan emptied.")
+  CH --> User : false
+else user cancels
+  User -> CH : execute("no")
+  CH -> CH : handleDeletionConfirmation("no")
+  CH -> CH : handleTrashcanEmptyConfirmation("no")
+  CH -> CH : cancelPendingDeletion()\npendingTrashcanEmpty = false
+  CH -> UI : showMessage("Trashcan emptying cancelled.")
+  CH --> User : false
+end
+
+note over PM, TM
+  Active records and ID counters are unchanged.
+  Removal reaches the data file on save or exit.
+end note
+@enduml
