@@ -134,7 +134,9 @@ Created project P001 "Website redesign" for client C001 "Acme Studio".
 
 Format: `project.list`
 
-Shows each project's ID, name, status, and deadline in creation order. If there are no projects, the app shows `No projects found.` Extra words after this command are ignored.
+Shows each project's ID, name, status, and deadline in creation order without
+changing project data. If there are no projects, the app shows
+`No projects found.` Extra words after this command are ignored.
 
 ```text
 project.list
@@ -145,9 +147,10 @@ project.list
 
 Format: `project.filter STATUS`
 
-Displays only projects with the selected status. The status must be one of
-`active`, `paused`, `completed`, or `cancelled`, and is not case-sensitive.
-If no projects match, the app shows `No projects found.`
+Displays only projects with the selected status without changing their saved
+details. The status must be one of `active`, `paused`, `completed`, or
+`cancelled`, and is not case-sensitive. If no projects match, the app shows
+`No projects found.`
 
 ```text
 project.filter active
@@ -158,9 +161,9 @@ project.filter active
 
 Format: `project.deadlines`
 
-Displays projects from the earliest deadline to the latest deadline. Projects
-with the same deadline remain in their creation order. If there are no projects,
-the app shows `No projects found.`
+Displays projects from the earliest deadline to the latest deadline without
+changing their saved details. Projects with the same deadline remain in their
+creation order. If there are no projects, the app shows `No projects found.`
 
 ```text
 project.deadlines
@@ -172,14 +175,19 @@ project.deadlines
 
 Format: `project.overdue`
 
-Displays active projects whose deadlines are earlier than today's date. Projects
-that are paused, completed, or cancelled are not included. If there are no
-overdue active projects, the app shows `No overdue projects found.`
+Displays active projects whose deadlines are earlier than today's date without
+changing their saved details. Projects that are paused, completed, or cancelled
+are not included. If there are no overdue active projects, the app shows
+`No overdue projects found.`
 
 ```text
 project.overdue
 1. P001|Website redesign|ACTIVE|Due 2026-10-01
 ```
+
+`project.list`, `project.filter`, `project.deadlines`, and `project.overdue`
+only display information; they do not modify or save project data.
+`project.status` changes only the selected project's status.
 
 ### View a project summary: `project.view`
 
@@ -212,7 +220,10 @@ Projects in the trashcan are excluded from `project.view`; use `trashcan.list` t
 
 Format: `project.status PROJECT_ID STATUS`
 
-The status must be one of `active`, `paused`, `completed`, or `cancelled` in lowercase. The project must exist.
+Changes the status of an existing project. The status must be one of `active`,
+`paused`, `completed`, or `cancelled`, and is not case-sensitive. The project
+ID must belong to an existing project. Only the project's status is changed;
+its name, deadline and activities remain unchanged.
 
 ```text
 project.status P001 paused

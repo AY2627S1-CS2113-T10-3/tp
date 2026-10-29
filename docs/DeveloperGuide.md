@@ -111,6 +111,64 @@ collection produces `No projects found.`. An unknown single ID produces a user-f
 and usage hint without ending the command loop. Diagnostics at `FINE` level record the requested
 ID or number of projects, not client names or task descriptions.
 
+### Project tracking and status views: `project.list`, `project.status`, `project.filter`, `project.deadlines` and `project.overdue`
+
+These commands let a freelancer inspect projects, update a project's status and
+identify work that needs attention. The listing and query commands are read-only;
+`project.status` changes only the selected project's status.
+
+#### Command routing and validation
+
+`CommandParser` separates the `project` target, action and remaining argument
+text. `CommandHandler#routeCommand` then delegates the five actions to their
+corresponding handlers:
+
+* `project.list` obtains all projects in creation order. Extra arguments
+  are ignored, so the command remains convenient to use interactively.
+* `project.status PROJECT_ID STATUS` requires exactly one project ID and one
+  status. `CommandHandler#parseProjectStatus` accepts `active`, `paused`,
+  `completed` and `cancelled` without considering capitalisation.
+* `project.filter STATUS` requires exactly one valid status and displays only
+  matching projects.
+* `project.deadlines` and `project.overdue` reject unexpected arguments. The
+  latter displays only active projects whose deadlines are before today's date.
+
+Malformed input, an unknown status or an unknown project ID raises a command or
+model exception. `CommandHandler#execute` catches these expected exceptions,
+shows the relevant usage format and continues accepting commands.
+
+#### Model and UI responsibilities
+
+`ProjectManager` stores projects in insertion order. Its query methods return
+new list snapshots rather than exposing the internal collection:
+
+* `getProjects()` supports the creation-order output of `project.list`.
+* `changeProjectStatus()` changes only the status of an existing project.
+* `getProjectsByStatus()` filters projects without modifying them.
+* `getProjectsByDeadline()` sorts by the earliest deadline while preserving
+  creation order for projects with the same deadline.
+* `getOverdueActiveProjects()` selects active projects whose deadlines are
+  before the supplied date.
+
+`Ui#showProjects` formats the results consistently and displays
+`No projects found.` for an empty query result. `project.overdue` uses the
+overloaded method to display `No overdue projects found.` instead. This keeps
+result formatting in the UI rather than duplicating it in each command handler.
+
+#### Design considerations and verification
+
+The status parser is shared by `project.status` and `project.filter`, so both
+commands accept the same values and capitalisation rules. Deadline sorting and
+overdue detection are implemented in `ProjectManager`, keeping date comparisons
+out of the command-routing layer. Status updates are kept separate from the
+read-only queries so listing or filtering cannot accidentally mutate project
+data.
+
+`CommandHandlerTest` and `ProjectManagerTest` cover project listing, status
+changes, invalid input, status filtering, deadline ordering and overdue active
+projects. The manual testing sequence in the Developer Guide also exercises all
+five commands together with project creation and viewing.
+
 ### Task completion, project progress and persistence
 
 This v2.0 enhancement lets users finish or reopen tasks, see progress in `project.view`, and
