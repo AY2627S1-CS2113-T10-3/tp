@@ -47,12 +47,14 @@ class Task {
 
 class Event
 
-ProjectManager --> "1" ClientLookup : clientLookup
-ClientManager ..|> ClientLookup
-ProjectManager *--> "*" Project : projects
-Project *--> "*" Task : tasks
-Project *--> "*" Event : events
+' Each association enters Project from a different side so its role name and
+' multiplicity stay visible; role names sit beside the multiplicity at the target end.
+ProjectManager -left-> "clientLookup 1" ClientLookup
+ClientManager .up.|> ClientLookup
+ProjectManager *-right-> "projects *" Project
+Project *-down-> "tasks *" Task
+Project *-down-> "events *" Event
+ScheduledItem -left-> "project 1" Project
 Task -up-|> ScheduledItem
 Event -up-|> ScheduledItem
-ScheduledItem --> "1" Project : project
 @enduml

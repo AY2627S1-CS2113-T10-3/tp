@@ -65,6 +65,8 @@ public Project addProject(String clientId, String name, LocalDate deadline) {
 }
 ```
 
+After the project is created, `CommandHandler` looks up the client in `ClientManager` so that the confirmation can show both names, e.g. `Created project P001 "Website" for client C001 "Acme Studio".`
+
 #### Adding a task or an event
 
 The sequence diagram below shows how `task.add project/P001 name/Wireframe date/2026-10-15` is executed. `event.add` follows the same steps, using `addEvent`, `Event`, `Project#addEvent` and the `E` ID prefix.
