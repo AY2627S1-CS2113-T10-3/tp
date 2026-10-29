@@ -302,6 +302,46 @@ class BusyNotFreeTest {
     }
 
     @Test
+    public void run_trashcanEmptyEndOfInput_cancelsBeforeSaving() {
+        projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projectManager.deleteProject("P001");
+        CommandHandler handler = new CommandHandler(new CommandParser(), ui, projectManager);
+        List<Integer> trashCountsAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui, handler,
+                () -> trashCountsAtSave.add(projectManager.getDeletedProjects().size()));
+
+        try (Scanner scanner = new Scanner("trashcan.empty\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(1), trashCountsAtSave);
+        assertTrue(!handler.isAwaitingDeletionConfirmation());
+        assertEquals("Trashcan emptying cancelled.", ui.messages.get(ui.messages.size() - 2));
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void run_trashcanEmptyConfirmation_blocksSaveUntilAnswered() {
+        projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
+        projectManager.deleteProject("P001");
+        CommandHandler handler = new CommandHandler(new CommandParser(), ui, projectManager);
+        List<Integer> trashCountsAtSave = new ArrayList<>();
+        BusyNotFree application = new BusyNotFree(ui, handler,
+                () -> trashCountsAtSave.add(projectManager.getDeletedProjects().size()));
+
+        try (Scanner scanner = new Scanner("trashcan.empty\nsave\nyes\nsave\nexit\n")) {
+            application.run(scanner);
+        }
+
+        assertEquals(List.of(0, 0), trashCountsAtSave);
+        assertTrue(!handler.isAwaitingDeletionConfirmation());
+        assertEquals(List.of("Please type yes to confirm deletion or no to cancel."), ui.errors);
+        assertEquals(1, ui.messages.stream().filter("Trashcan emptied."::equals).count());
+        assertEquals("Data saved. Goodbye!", ui.messages.getLast());
+    }
+
+    @Test
     public void run_clientDeleteEndOfInput_cancelsBeforeSaving() {
         ClientManager clients = new ClientManager();
         clients.addClient("Acme");

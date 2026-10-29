@@ -30,6 +30,75 @@ class DataStorageTest {
     private Path directory;
 
     @Test
+    public void saveAndLoad_restoredOlderClient_preservesNotesAndAllowsProjectRestoration() throws IOException {
+        DataStorage storage = new DataStorage(directory.resolve("restored-client.properties"));
+        ClientManager clients = new ClientManager();
+        ProjectManager projects = new ProjectManager(clients);
+        LocalDate date = LocalDate.of(2026, 11, 30);
+        clients.addClient("Acme");
+        clients.addNote("C001", "First note");
+        clients.addNote("C001", "Second note");
+        projects.addProject("C001", "Website", date);
+        projects.addTask("P001", "Wireframe", date);
+        projects.markTaskComplete("T001");
+        projects.addEvent("P001", "Review", date);
+        projects.deleteProject("P001");
+        clients.deleteClient("C001", projects);
+        clients.addClient("Newer client");
+        storage.save(clients, projects);
+
+        DataStorage.LoadedData loaded = storage.load();
+        loaded.clientManager().getTrashcanManager().restoreClient("C001", loaded.clientManager());
+        assertEquals(List.of("C002", "C001"), loaded.clientManager().getClients().stream()
+                .map(client -> client.getClientId()).toList());
+        storage.save(loaded.clientManager(), loaded.projectManager());
+
+        DataStorage.LoadedData reloaded = storage.load();
+        assertEquals(List.of("C001", "C002"), reloaded.clientManager().getClients().stream()
+                .map(client -> client.getClientId()).toList());
+        assertEquals(List.of("First note", "Second note"), reloaded.clientManager().getClient("C001").getNotes());
+        assertEquals("Newer client", reloaded.clientManager().getClient("C002").getName());
+        assertTrue(reloaded.clientManager().getDeletedClients().isEmpty());
+        assertEquals(3, reloaded.clientManager().getNextClientNumber());
+        reloaded.projectManager().restoreProject("P001");
+        assertTrue(reloaded.projectManager().getTask("T001").isCompleted());
+        assertEquals(2, reloaded.projectManager().getProject("P001").getItemCount());
+        storage.save(reloaded.clientManager(), reloaded.projectManager());
+        assertEquals(2, storage.load().projectManager().getProject("P001").getItemCount());
+    }
+
+    @Test
+    public void saveAndLoad_emptiedTrashcan_removesSavedEntriesAndPreservesNextIds() throws IOException {
+        DataStorage storage = new DataStorage(directory.resolve("empty-trash.properties"));
+        ClientManager clients = new ClientManager();
+        ProjectManager projects = new ProjectManager(clients);
+        LocalDate date = LocalDate.of(2026, 11, 30);
+        clients.addClient("Acme");
+        clients.addNote("C001", "Call on Friday");
+        projects.addProject("C001", "Website", date);
+        projects.addTask("P001", "Wireframe", date);
+        projects.addEvent("P001", "Review", date);
+        projects.deleteProject("P001");
+        clients.deleteClient("C001", projects);
+        storage.save(clients, projects);
+
+        // Load saved trash first to verify the next save removes existing entries.
+        DataStorage.LoadedData loaded = storage.load();
+        assertEquals(1, loaded.projectManager().getDeletedProjects().size());
+        assertEquals(1, loaded.clientManager().getDeletedClients().size());
+        loaded.projectManager().getTrashcanManager().empty();
+        storage.save(loaded.clientManager(), loaded.projectManager());
+
+        DataStorage.LoadedData reloaded = storage.load();
+        assertTrue(reloaded.projectManager().getDeletedProjects().isEmpty());
+        assertTrue(reloaded.clientManager().getDeletedClients().isEmpty());
+        assertEquals(2, reloaded.clientManager().getNextClientNumber());
+        assertEquals(2, reloaded.projectManager().getNextProjectNumber());
+        assertEquals(2, reloaded.projectManager().getNextTaskNumber());
+        assertEquals(2, reloaded.projectManager().getNextEventNumber());
+    }
+
+    @Test
     public void saveAndLoad_preservesAllDataAndNextIds() throws IOException {
         DataStorage storage = new DataStorage(directory.resolve("data").resolve("busynotfree.properties"));
         ClientManager clients = new ClientManager();

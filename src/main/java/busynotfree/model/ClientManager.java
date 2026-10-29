@@ -147,6 +147,20 @@ public final class ClientManager implements ClientLookup {
     }
 
     /**
+     * Registers a restored client with its original ID and notes, leaving the counter unchanged.
+     *
+     * @param client Retained snapshot to make active.
+     * @throws ClientException If the ID is already active.
+     */
+    void registerRestoredClient(Client client) {
+        String id = client.getClientId();
+        if (clients.containsKey(id)) {
+            throw new ClientException("Cannot restore client " + id + ": an ID is already in use.");
+        }
+        clients.put(id, client);
+    }
+
+    /**
      * Registers a deleted client read from storage without making it active.
      * Rejects duplicate IDs and advances the counter to prevent ID reuse.
      *

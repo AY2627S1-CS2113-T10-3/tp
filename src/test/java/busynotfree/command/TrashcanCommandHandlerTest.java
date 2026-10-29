@@ -23,7 +23,7 @@ class TrashcanCommandHandlerTest {
     private final ClientManager clients = new ClientManager(trashcan);
     private final ProjectManager projects = new ProjectManager(clients, trashcan);
     private final RecordingUi ui = new RecordingUi();
-    private final TrashcanCommandHandler handler = new TrashcanCommandHandler(trashcan, projects, ui);
+    private final TrashcanCommandHandler handler = new TrashcanCommandHandler(trashcan, projects, clients, ui);
 
     @Test
     public void execute_wrongEntity_detectsIncorrectRouting() {
@@ -72,9 +72,11 @@ class TrashcanCommandHandlerTest {
     public void showCommandUsage_displaysOnlySupportedActions() {
         handler.showCommandUsage("list");
         handler.showCommandUsage("restore");
+        handler.showCommandUsage("empty");
         handler.showCommandUsage("unknown");
 
-        assertEquals(List.of("Format: trashcan.list", "Format: trashcan.restore PROJECT_ID"), ui.messages);
+        assertEquals(List.of("Format: trashcan.list", "Format: trashcan.restore PROJECT_ID/CLIENT_ID",
+                "Format: trashcan.empty"), ui.messages);
     }
 
     /** Captures delegated responses without printing to the console. */

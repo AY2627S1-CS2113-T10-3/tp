@@ -1,0 +1,46 @@
+@startuml
+' Restore after client-ID validation; input loop and decorative output are omitted.
+hide footbox
+skinparam defaultFontSize 14
+skinparam maxMessageSize 145
+
+participant ":CommandHandler" as CH
+participant ":TrashcanCommandHandler" as TCH
+participant ":TrashcanManager" as TM
+participant ":ClientManager" as CM
+participant ":Ui" as UI
+
+CH -> TCH : execute(restoreCommand)
+TCH -> TCH : validate one client ID
+TCH -> TM : restoreClient("C001", clientManager)
+TM -> TM : find retained client
+
+alt retained client exists
+  TM -> CM : registerRestoredClient(client)
+  CM -> CM : check active client ID
+  alt ID is available
+    CM -> CM : add client with original notes
+    CM --> TM : registration complete
+    TM -> TM : remove retained client entry
+    TM --> TCH : restored client
+    TCH -> UI : show restoration message
+  else ID conflicts
+    CM --> TM : ClientException
+    TM --> TCH : propagate exception
+    TCH --> CH : propagate exception
+    CH -> UI : show error and usage
+    note over TM, CM
+      Active client and retained snapshot are unchanged.
+    end note
+  end
+else no retained client
+  TM --> TCH : ClientException
+  TCH --> CH : propagate exception
+  CH -> UI : show error and usage
+end
+
+note over TM, CM
+  ID counters are unchanged.
+  Deleted projects require separate restore commands.
+end note
+@enduml

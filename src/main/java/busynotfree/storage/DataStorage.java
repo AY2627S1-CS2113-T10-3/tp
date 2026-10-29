@@ -84,8 +84,9 @@ public final class DataStorage {
     public void save(ClientManager clients, ProjectManager projects) throws IOException {
         Properties data = new Properties();
         data.setProperty("version", VERSION);
-        // Restoring an older project appends it to memory; storage loaders require ID order.
-        saveClients(data, clients.getClients());
+        // Restoring older records appends them to memory; storage loaders require ID order.
+        saveClients(data, clients.getClients().stream()
+                .sorted(Comparator.comparingInt(client -> idNumber(client.getClientId(), "C"))).toList());
         saveProjects(data, projects.getProjects().stream()
                 .sorted(Comparator.comparingInt(project -> idNumber(project.getProjectId(), "P"))).toList());
         Properties trash = new Properties();
@@ -203,7 +204,7 @@ public final class DataStorage {
         }
     }
 
-    /** Stores clients and all notes in their creation order. */
+    /** Stores clients in the supplied ID order and their notes in insertion order. */
     private void saveClients(Properties data, List<Client> clientList) {
         data.setProperty("client.count", Integer.toString(clientList.size()));
         for (int index = 0; index < clientList.size(); index++) {
