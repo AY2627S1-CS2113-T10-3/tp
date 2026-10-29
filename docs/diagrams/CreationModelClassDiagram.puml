@@ -49,8 +49,8 @@ class Event
 
 ' Each association enters Project from a different side so its role name and
 ' multiplicity stay visible; role names sit beside the multiplicity at the target end.
-ProjectManager -left-> "clientLookup 1" ClientLookup
-ClientManager .up.|> ClientLookup
+ProjectManager -down-> "clientLookup 1" ClientLookup
+ClientManager .left.|> ClientLookup
 ProjectManager *-right-> "projects *" Project
 Project *-down-> "tasks *" Task
 Project *-down-> "events *" Event
