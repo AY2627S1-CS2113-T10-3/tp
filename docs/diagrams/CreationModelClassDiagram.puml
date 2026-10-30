@@ -1,10 +1,42 @@
 @startuml
 ' Model classes used by project.add, task.add and event.add.
+' Layout, top to bottom: superclass, its subclasses, Project, then the managers.
+' This keeps the superclass above its subclasses and stops any lines from crossing.
 ' The smetana layout renders class diagrams without a separate Graphviz install.
 !pragma layout smetana
 hide circle
 hide empty members
 skinparam classAttributeIconSize 0
+skinparam nodesep 60
+skinparam ranksep 70
+
+' The back-reference to Project is shown as a field, not an arrow,
+' because an arrow from ScheduledItem down to Project would cross the compositions.
+abstract class ScheduledItem {
+  -id : String
+  -project : Project
+  -description : String
+  -date : LocalDate
+  {abstract} +getType() : String
+}
+
+class Task {
+  -completed : boolean
+}
+
+class Event
+
+class Project {
+  -projectId : String
+  -clientId : String
+  -name : String
+  -deadline : LocalDate
+  -status : ProjectStatus
+  +addTask(task)
+  +addEvent(event)
+  +getTasks() : List<Task>
+  +getEvents() : List<Event>
+}
 
 class ProjectManager {
   -nextProjectNumber : int
@@ -22,39 +54,17 @@ interface ClientLookup <<interface>> {
 
 class ClientManager
 
-class Project {
-  -projectId : String
-  -clientId : String
-  -name : String
-  -deadline : LocalDate
-  -status : ProjectStatus
-  +addTask(task)
-  +addEvent(event)
-  +getTasks() : List<Task>
-  +getEvents() : List<Event>
-}
-
-abstract class ScheduledItem {
-  -id : String
-  -description : String
-  -date : LocalDate
-  {abstract} +getType() : String
-}
-
-class Task {
-  -completed : boolean
-}
-
-class Event
-
-' Each association enters Project from a different side so its role name and
-' multiplicity stay visible; role names sit beside the multiplicity at the target end.
-ProjectManager -down-> "clientLookup 1" ClientLookup
-ClientManager .left.|> ClientLookup
-ProjectManager *-right-> "projects *" Project
-Project *-down-> "tasks *" Task
-Project *-down-> "events *" Event
-ScheduledItem -left-> "project 1" Project
+' Generalization: both subclasses point up to the shared superclass.
 Task -up-|> ScheduledItem
 Event -up-|> ScheduledItem
+
+' Project owns its tasks and events.
+' The spaces inside each label keep the multiplicity clear of the arrowhead.
+Project *-up-> "tasks *   " Task
+Project *-up-> "   events *" Event
+
+' ProjectManager owns every project and checks clients through the ClientLookup interface.
+ProjectManager *-up-> "projects *   " Project
+ProjectManager -down-> "clientLookup 1   " ClientLookup
+ClientManager .left.|> ClientLookup
 @enduml
