@@ -1,5 +1,5 @@
 @startuml
-' Restore after argument validation and retained-project lookup succeed.
+' Restoration outcomes after ID validation; input loop and decorative output are omitted.
 hide footbox
 skinparam defaultFontSize 14
 skinparam maxMessageSize 145
@@ -10,26 +10,69 @@ participant ":TrashcanManager" as TM
 participant ":ProjectManager" as PM
 participant ":Ui" as UI
 
-CH -> TCH : execute(restoreCommand)
-TCH -> TCH : validate one project ID
-TCH -> TM : restoreProject("P001", projectManager)
-TM -> TM : find retained project
-TM -> PM : registerRestoredProject(project)
-PM -> PM : check active client and ID conflicts
-
 alt registration succeeds
+  CH -> TCH : execute(restoreCommand)
+  activate CH
+  activate TCH
+  TCH -> TCH : validate one project ID
+  activate TCH
+  deactivate TCH
+  TCH -> TM : restoreProject("P001", projectManager)
+  activate TM
+  TM -> TM : find retained project
+  activate TM
+  deactivate TM
+  TM -> PM : registerRestoredProject(project)
+  activate PM
+  PM -> PM : check active client and ID conflicts
+  activate PM
+  deactivate PM
   PM -> PM : add project to active collection
+  activate PM
+  deactivate PM
   PM --> TM : registration complete
-  TM -> TM : remove retained entry
+  deactivate PM
+  TM -> TM : remove retained project entry
+  activate TM
+  deactivate TM
   TM --> TCH : restored project
+  deactivate TM
   TCH -> UI : show restoration message
+  activate UI
+  deactivate UI
+  TCH --> CH
+  deactivate TCH
+  deactivate CH
+
 else registration fails
+  CH -> TCH : execute(restoreCommand)
+  activate CH
+  activate TCH
+  TCH -> TCH : validate one project ID
+  activate TCH
+  deactivate TCH
+  TCH -> TM : restoreProject("P001", projectManager)
+  activate TM
+  TM -> TM : find retained project
+  activate TM
+  deactivate TM
+  TM -> PM : registerRestoredProject(project)
+  activate PM
+  PM -> PM : check active client and ID conflicts
+  activate PM
+  deactivate PM
   PM --> TM : validation exception
+  deactivate PM
   TM --> TCH : propagate exception
+  deactivate TM
   TCH --> CH : propagate exception
+  deactivate TCH
   CH -> UI : show error and usage
-  note over TM
+  activate UI
+  deactivate UI
+  note over TM, PM
     Retained project remains available.
   end note
+  deactivate CH
 end
 @enduml

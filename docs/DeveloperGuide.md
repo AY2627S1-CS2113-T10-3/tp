@@ -474,12 +474,22 @@ record while confirmation is pending.
 The lifecycle uses nullable pending fields for individual records and a boolean for
 trashcan emptying. The sequence diagram below
 shows how the application handles confirmation answers and end of input. Input reading
-is simplified; validation and model deletion details are shown in the project deletion
+is simplified; validation and model deletion details are shown in the deletion operations
 section. The single-threaded command loop allows only one pending deletion at a time.
 
 ![Sequence diagram of deletion confirmation](images/DeletionConfirmationSequenceDiagram.png)
 
-#### Project deletion
+#### Project, client, note, task and event deletion
+
+| Command | Validation and resulting model change |
+| --- | --- |
+| `project.delete PROJECT_ID` | Requires an existing project. Stores a snapshot with its tasks and events, clears the original activities and removes the active project. |
+| `client.delete CLIENT_ID` | Rejects clients with any active project, regardless of project status. Stores a client snapshot with its notes, clears the original notes and removes the active client. |
+| `client.delete_note CLIENT_ID index/NOTE_INDEX` | Validates the client and a positive, in-range integer index. Removes exactly that note after confirmation. |
+| `task.delete TASK_ID` | Finds the task across active projects and removes it from its owning project. Other tasks and events remain unchanged. |
+| `event.delete EVENT_ID` | Finds the event across active projects and removes it from its owning project. Other events and tasks remain unchanged. |
+
+All five commands follow the confirmation lifecycle above before changing model data.
 
 For `project.delete P001`, `handleProjectDelete` requires exactly one ID, looks up the
 project and requests confirmation. After `yes`, `ProjectManager#deleteProject` first
@@ -501,15 +511,6 @@ lookup self-calls and decorative separators are omitted. If snapshot validation 
 the manager does not reach the active-data removal steps.
 
 ![Sequence diagram of confirmed project deletion](images/ProjectDeletionSequenceDiagram.png)
-
-#### Client, note, task and event deletion
-
-| Command | Validation and resulting model change |
-| --- | --- |
-| `client.delete CLIENT_ID` | Rejects clients with any active project, regardless of project status. Stores a client snapshot with its notes, clears the original notes and removes the active client. |
-| `client.delete_note CLIENT_ID index/NOTE_INDEX` | Validates the client and a positive, in-range integer index. Removes exactly that note after confirmation. |
-| `task.delete TASK_ID` | Finds the task across active projects and removes it from its owning project. Other tasks and events remain unchanged. |
-| `event.delete EVENT_ID` | Finds the event across active projects and removes it from its owning project. Other events and tasks remain unchanged. |
 
 Client deletion rechecks project relationships when confirmation is accepted. A
 `ClientHasProjectsException` reports this business-rule failure without a usage hint,
@@ -730,7 +731,9 @@ and filled diamonds mark project-owned
 activities. Sequence participants use instance labels such as `:CommandHandler`;
 solid filled-arrow messages represent synchronous calls and dashed messages represent
 returns. `loop` and `alt` frames describe repetition and mutually exclusive paths.
-Optional activation bars and returns are omitted where they add no relevant information.
+Activation bars in the deletion and recovery sequence diagrams show when each participant
+is executing an operation; nested bars show self-calls. Returns are omitted where they
+add no relevant information.
 Removing a record from a collection is not shown with an object-destruction cross because
 other Java references can still exist; snapshots are separate objects.
 
