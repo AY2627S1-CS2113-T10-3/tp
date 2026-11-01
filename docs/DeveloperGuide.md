@@ -842,8 +842,25 @@ easy to reference from later commands.
 * *Project* - A body of work belonging to one client.
 * *Task* - A dated piece of work attached to a project.
 * *Event* - A dated meeting or appointment attached to a project.
-* *Trashcan* - Persistent storage for deleted projects and clients that may be
-  restored where supported.
+* *Trashcan* - Holds snapshots of deleted projects and clients for restoration.
+  Its contents are written to the data file when saving succeeds.
+* *Active record* - A record currently registered in an active-data manager,
+  rather than retained in the trashcan. An active project record may have any
+  project status, including completed or cancelled.
+* *Snapshot* - An independent copy of a deleted record retained for recovery.
+  Project snapshots include their tasks and events; client snapshots include
+  their ordered notes. Changes through old references do not alter the copy.
+* *Restoration* - Returning a retained snapshot to the active records with its
+  original ID and contents. The trash entry is removed only after registration
+  succeeds; a project requires its client to be active first.
+* *Pending confirmation* - The state in which the next input must confirm or
+  cancel a selected deletion or trashcan emptying before commands can resume.
+* *ID conflict* - A duplicate identifier detected when storing, loading or
+  restoring a record. Conflicting project, task, event or client IDs are rejected
+  before existing records are replaced.
+* *ID counter* - The next number used to allocate an ID for a client, project,
+  task or event. Deletion, restoration and trashcan emptying do not reset these
+  counters, so deleted IDs are not reused.
 * *Prefix* - The name before `/` in an argument, such as `name/` or `date/`.
 
 ## Instructions for manual testing

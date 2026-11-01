@@ -10,6 +10,11 @@ participant ":ProjectManager" as PM
 participant ":TrashcanManager" as TM
 participant ":Ui" as UI
 
+note over User, CH
+  Actor messages are user input passed to execute().
+  The application input loop is omitted.
+end note
+
 User -> CH : trashcan.empty
 activate CH
 CH -> CH : routeCommand(command)
@@ -56,7 +61,7 @@ alt user confirms
   deactivate CH
   deactivate CH
 else user cancels
-  User -> CH : execute("no")
+  User -> CH : no
   activate CH
   CH -> CH : handleDeletionConfirmation("no")
   activate CH

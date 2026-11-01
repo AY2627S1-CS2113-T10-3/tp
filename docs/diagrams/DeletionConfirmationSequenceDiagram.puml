@@ -53,7 +53,6 @@ alt user confirms
 
   CH -> CH : handleDeletionConfirmation("yes")
   activate CH
-  deactivate CH
 
   note right of CH
     Model interactions are omitted here.
@@ -63,6 +62,7 @@ alt user confirms
   CH -> UI : show deletion result
   activate UI
   deactivate UI
+  deactivate CH
 
   CH --> App : false
   deactivate CH
@@ -74,11 +74,11 @@ else user cancels
 
   CH -> CH : cancelPendingDeletion()
   activate CH
-  deactivate CH
 
   CH -> UI : show cancellation message
   activate UI
   deactivate UI
+  deactivate CH
 
   CH --> App : false
   deactivate CH
@@ -94,10 +94,11 @@ else input ends
   CH --> App
   deactivate CH
 
-  App -> App : attempt save and return
+  App -> App : saveAndReportExit()
   activate App
+  App --> App : save result
   deactivate App
-  App --> App
+  note right of App : run() returns after the save attempt\nbecause no further input is available.
 end
 deactivate App
 @enduml

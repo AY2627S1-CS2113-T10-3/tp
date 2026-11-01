@@ -1,5 +1,5 @@
 @startuml
-' Restoration outcomes after ID validation; input loop and decorative output are omitted.
+' Restoration outcomes for well-formed client IDs; input loop and decorative output are omitted.
 hide footbox
 skinparam defaultFontSize 14
 skinparam maxMessageSize 145

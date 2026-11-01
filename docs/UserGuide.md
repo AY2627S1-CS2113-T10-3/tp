@@ -27,6 +27,10 @@ If you are building from source, run `.\gradlew.bat shadowJar` on Windows or `./
 
 The commands and IDs are case-sensitive. Enter dates as real calendar dates in `YYYY-MM-DD` format, such as `2026-11-30`. Names, descriptions, and notes may contain spaces. Prefixes such as `name/` can be supplied in any order, but each required prefix must appear once with a non-blank value.
 
+Reserved prefixes such as `name/` cannot appear after whitespace inside a value.
+Ordinary slash-containing text such as `UI/UX` is accepted. Quoting or escaping
+reserved prefixes is not supported.
+
 ## Clients
 
 ### Add a client: `client.add`
@@ -240,8 +244,13 @@ Moves an existing project and its tasks and events to the trashcan after confirm
 It does not delete the client. Deleted IDs are not reused. Use `trashcan.restore PROJECT_ID`
 to recover the project while its client is still active.
 
+Type `yes` to confirm or `no` to cancel. Other input repeats the confirmation prompt.
+
 ```text
 project.delete P001
+Delete project P001 "Website redesign" and 2 associated activities?
+Type yes to confirm deletion or no to cancel.
+yes
 Website redesign has been deleted
 2 associated activities removed.
 ```
