@@ -30,6 +30,9 @@ alt registration succeeds
   PM -> PM : add project to active collection
   activate PM
   deactivate PM
+  PM -> PM : sortProjectsById()
+  activate PM
+  deactivate PM
   PM --> TM : registration complete
   deactivate PM
   TM -> TM : remove retained project entry

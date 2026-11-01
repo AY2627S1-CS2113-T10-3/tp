@@ -26,7 +26,7 @@ The class diagram below shows the model classes involved.
 
 ![Class diagram of projects, tasks and events](images/CreationModelClassDiagram.png)
 
-* `ProjectManager` keeps active projects in insertion order and assigns IDs. A restored project is appended; after a restart, projects are loaded in numeric ID order. It has a separate counter for each ID type: `P001` for projects, `T001` for tasks and `E001` for events. Task and event IDs are unique across the whole application, not just within one project, so later commands such as `task.mark T001` do not need a project ID.
+* `ProjectManager` keeps active projects in a `LinkedHashMap` and assigns IDs. New projects are appended; restoration reorders the map by numeric project ID, and saved projects are loaded in that order. It has a separate counter for each ID type: `P001` for projects, `T001` for tasks and `E001` for events. Task and event IDs are unique across the whole application, not just within one project, so later commands such as `task.mark T001` do not need a project ID.
 * `Project` owns two separate lists, one of `Task` objects and one of `Event` objects. `getTasks()` and `getEvents()` return unmodifiable copies, so other classes cannot change a project's items without going through `Project`.
 * `Task` and `Event` extend the abstract class `ScheduledItem`, which holds the fields they share: ID, owning project, description and date.
 * `ProjectManager` checks that a client exists through the `ClientLookup` interface, which `ClientManager` implements.
@@ -107,7 +107,7 @@ and client IDs; these assertions check internal lookup consistency, while except
 invalid user input. `Ui` reads the task and event lists and formats them separately. Neither
 viewing nor counting changes the model.
 
-With no ID or with `all`, the handler obtains the projects in insertion order from
+With no ID or with `all`, the handler obtains the projects in numeric ID order from
 `ProjectManager#getProjects` and prints each summary with one blank line between them. An empty
 collection produces `No projects found.`. An unknown single ID produces a user-facing error
 and usage hint without ending the command loop. Diagnostics at `FINE` level record the requested
@@ -125,7 +125,7 @@ identify work that needs attention. The listing and query commands are read-only
 text. `CommandHandler#routeCommand` then delegates the five actions to their
 corresponding handlers:
 
-* `project.list` obtains all projects in creation order. Extra arguments
+* `project.list` obtains all projects in numeric ID order. Extra arguments
   are ignored, so the command remains convenient to use interactively.
 * `project.status PROJECT_ID STATUS` requires exactly one project ID and one
   status. `CommandHandler#parseProjectStatus` accepts `active`, `paused`,
@@ -141,14 +141,15 @@ shows the relevant usage format and continues accepting commands.
 
 #### Model and UI responsibilities
 
-`ProjectManager` stores projects in insertion order. Its query methods return
+`ProjectManager` stores projects in a `LinkedHashMap`, reordered by numeric ID after
+restoration. Its query methods return
 new list snapshots rather than exposing the internal collection:
 
-* `getProjects()` supports the creation-order output of `project.list`.
+* `getProjects()` supports the numeric-ID-order output of `project.list`.
 * `changeProjectStatus()` changes only the status of an existing project.
 * `getProjectsByStatus()` filters projects without modifying them.
 * `getProjectsByDeadline()` sorts by the earliest deadline while preserving
-  creation order for projects with the same deadline.
+  numeric ID order for projects with the same deadline.
 * `getOverdueActiveProjects()` selects active projects whose deadlines are
   before the supplied date.
 
@@ -343,7 +344,7 @@ Client management lets freelancers register clients and keep notes about their p
 * `client.add name/CLIENT_NAME` registers a client and displays the assigned ID.
 * `client.note CLIENT_ID text/NOTE` appends a note to an existing client.
 * `client.view CLIENT_ID` displays a client's ID, name and all recorded notes.
-* `client.list` displays every client's ID and name in insertion order. Restored clients are appended; after a restart, clients load in numeric ID order.
+* `client.list` displays every client's ID and name in numeric ID order. Restoration reorders the active map by numeric client ID, and clients load in that order after a restart.
 
 For example, `client.add name/Acme Studio` can create `C001`, after which `client.note C001 text/Prefers weekly updates` records a preference for that client. IDs are case-sensitive; two clients may have the same name but receive different IDs.
 
@@ -351,8 +352,8 @@ For example, `client.add name/Acme Studio` can create `C001`, after which `clien
 
 * `CommandHandler` parses the command through `CommandParser` and delegates client addition, viewing, listing, search, editing and note addition to `ClientCommandHandler`. Client and note deletion remain in `CommandHandler` because they use its pending-confirmation state. It also handles errors through the shared `Ui`.
 * `ClientCommandHandler` selects the client operation, validates its argument structure and calls `ClientManager`. It reuses `ArgumentParser` for the `name/` and `text/` arguments.
-* `ClientManager` owns a `LinkedHashMap<String, Client>` and the next client number. It creates clients, looks them up by ID and directs notes to their owner. The map preserves creation order while supporting ID lookup without scanning every client.
-* `Client` holds an immutable ID and name, and an append-only list of notes. Its constructor and `addNote` method reject null or blank values and trim surrounding whitespace.
+* `ClientManager` owns a `LinkedHashMap<String, Client>` and the next client number. It creates clients, looks them up by ID and directs notes to their owner. New clients are appended, and restoration reorders the map by numeric ID. ID lookup does not require scanning every client.
+* `Client` holds an immutable ID, an editable name and an ordered list of notes. Notes can be appended or deleted by position; deleting the client clears its original notes after retaining a snapshot. Its constructor, `setName` and `addNote` reject null or blank values and trim surrounding whitespace.
 * `ClientUi` formats client responses and sends them through the shared `Ui#showMessage`, keeping output formatting separate from command parsing and model changes.
 
 `ClientManager` implements `ClientLookup`, allowing `ProjectManager` to check whether a client exists without depending on client command handling. The application uses the same client manager for command handling and project lookup, so a newly registered client can immediately be used by `project.add`. Callers that need this integration should use the four-argument `CommandHandler` constructor with the shared manager; the three-argument constructor creates an independent client manager.
@@ -389,7 +390,7 @@ Names and notes preserve internal spaces and ordinary slash-containing text such
 
 `client.view` requires exactly one positional ID. The handler calls `ClientManager#getClient`, then `ClientUi#showClient` prints the ID and name followed by each note in insertion order as `Note 1: ...`, `Note 2: ...` and so on. These one-based positions are used by `client.delete_note`. A client without notes displays `Notes: No notes found.`. Leading and trailing whitespace around an ID is trimmed, but its case and digits must match an existing ID.
 
-`client.list` calls `ClientManager#getClients`, which returns `List.copyOf(clients.values())`. `ClientUi#showClients` prints numbered entries in insertion order, or `No clients found.` when the collection is empty. Listing omits notes; users can request them through `client.view`. Extra arguments to `client.list` are ignored, matching the application's convention for commands without parameters.
+`client.list` calls `ClientManager#getClients`, which returns `List.copyOf(clients.values())`. `ClientUi#showClients` prints numbered entries in numeric client ID order, or `No clients found.` when the collection is empty. Listing omits notes; users can request them through `client.view`. Extra arguments to `client.list` are ignored, matching the application's convention for commands without parameters.
 
 Both `getClients()` and `Client#getNotes()` return unmodifiable snapshots of their collections. Callers cannot add or remove entries through these lists. The client snapshot still contains references to the existing `Client` objects; it is not a deep copy of their state.
 
@@ -466,6 +467,11 @@ While confirmation is pending:
 * Commands such as `help`, `save` and `exit` are treated as confirmation answers.
 * End of input cancels the operation before the application attempts to save.
 
+Answers are trimmed but case-sensitive: ` yes ` is accepted, while `YES`, `Yes` and
+`yes please` are invalid. For individual records, the pending selection is cleared
+before calling the model. If that call fails, the error is reported and the user must
+issue a new deletion command; the failed operation does not remain pending.
+
 `BusyNotFree#run` checks `isAwaitingDeletionConfirmation()` before displaying the normal
 prompt or handling `save`. `CommandHandler#execute` makes the same check before parsing
 commands. Together, these checks prevent another CLI command from replacing the selected
@@ -499,6 +505,13 @@ calls `TrashcanManager#storeProject`.
 project. `Project#copy` constructs a new project and new task and event objects. It
 preserves identifiers, descriptions, dates, project status and task completion flags.
 Each copied activity refers to the copied project.
+
+The package-private `ProjectIdValidator#validate` performs the shared collision check.
+`TrashcanManager#storeProject` checks against retained projects, while
+`ProjectManager#validateProjectIds` delegates to the same utility for restoration and
+storage import against active projects. A duplicate project, task or event ID raises
+`ProjectException` before either collection changes. This utility is omitted from the
+class diagram, which focuses on retained references and restoration dependencies.
 
 Only after snapshot storage succeeds does deletion clear the original project's
 activities and remove it from the active map. This ordering avoids removing active data
@@ -540,6 +553,10 @@ from changes made by callers. `Ui#showTrashcan` displays project details, tasks 
 followed by deleted clients and their notes. If both collections are empty, it displays
 `Trashcan is empty.`
 
+`trashcan.list` rejects extra arguments before reading or displaying entries and shows
+`Format: trashcan.list`. Listing and restoration do not request confirmation; only
+deletion and permanent emptying use the pending-confirmation state.
+
 `trashcan.restore PROJECT_ID/CLIENT_ID` requires exactly one ID; the slash denotes
 alternatives, not literal input. `TrashcanCommandHandler#handleRestore` rejects missing
 or multiple IDs before checking the case-sensitive `P[0-9]{3,}` or `C[0-9]{3,}` format.
@@ -556,12 +573,15 @@ collection. Only after registration succeeds does the trashcan remove its entry.
 failed registration therefore leaves the project available for a later restoration attempt.
 
 The restored project retains its original activities and their ownership references.
-Restoration appends the project to the active collection without allocating new IDs or
-advancing counters. A second restore request for the same ID fails because the entry is
-no longer in the trashcan.
+`ProjectManager#sortProjectsById` reorders the active map by the numeric portion of each
+project ID after registration, without allocating new IDs or advancing counters. This
+puts a restored P001 before P002 immediately, including in `project.list`, `project.view all`
+and equal-deadline results. Numeric comparison also puts P999 before P1000. A second
+restore request for the same ID fails because the entry is no longer in the trashcan.
 
-The sequence diagram focuses on registration. Command argument validation and the initial
-trash lookup must already have succeeded. Validation failures are summarized as one branch.
+The sequence diagram shows successful registration and a registration failure as separate
+alternatives. Both include the validated command and retained-project lookup; failures such
+as an inactive client or conflicting ID are summarized as one branch.
 
 ![Sequence diagram of project restoration](images/ProjectRestoreSequenceDiagram.png)
 
@@ -571,6 +591,11 @@ active before inserting the snapshot into the active map. Only after successful
 registration does the trashcan remove its entry. The original client ID, name, note
 order and duplicate note text are preserved; ID counters do not change. Active clients
 with the same name but different IDs do not prevent restoration.
+
+`ClientManager#sortClientsById` reorders the active client map after registration.
+`client.list` and `client.find` therefore show a restored C001 before C002 immediately,
+and numeric comparison puts C999 before C1000. The restoration message includes the
+number of retained notes; project restoration reports task and event counts.
 
 ![Sequence diagram of client restoration](images/ClientRestoreSequenceDiagram.png)
 
@@ -627,10 +652,11 @@ Deleted projects may refer to deleted clients while retained in the trashcan. Lo
 accepts this relationship, but restoration still requires the client to be active.
 
 Older files without a trash section load with an empty trashcan. Active clients and
-projects are written in numeric ID order because restoring older records can append
-them after newer records in memory, while the loader reconstructs IDs in ascending
-order. `DataStorage#save` sorts snapshots for serialization without changing the
-in-memory insertion order.
+projects are written in numeric ID order, matching the loader's reconstruction of IDs
+in ascending order. Restoration already sorts the active maps; `DataStorage#save`
+also sorts the lists it serializes without changing the in-memory collections.
+Malformed saved data, including conflicting IDs, is wrapped in an `IOException`;
+`BusyNotFree#main` reports the load error and returns without starting a command loop.
 
 Deletion, restoration and trashcan emptying change in-memory data. The existing `save` and `exit` paths
 persist those changes using the temporary-file replacement described in the persistence
@@ -680,6 +706,12 @@ and rejection of conflicting active IDs without losing the retained client.
 [`TrashcanCommandHandlerTest`](../src/test/java/busynotfree/command/TrashcanCommandHandlerTest.java)
 verifies delegated parsing and response behavior.
 
+[`ProjectRestoreOrderingTest`](../src/test/java/busynotfree/model/ProjectRestoreOrderingTest.java)
+and [`ClientRestoreOrderingTest`](../src/test/java/busynotfree/model/ClientRestoreOrderingTest.java)
+verify immediate numeric ordering after restoring an older record, IDs beyond three
+digits, preserved record state and counters, and ordering after saving and loading.
+Project checks include equal-deadline ordering; client checks include name-search ordering.
+
 Deletion tests in [`CommandHandlerTest`](../src/test/java/busynotfree/command/CommandHandlerTest.java)
 and [`ClientCommandHandlerTest`](../src/test/java/busynotfree/command/ClientCommandHandlerTest.java)
 cover invalid IDs, invalid note indexes, confirmation, cancellation and preservation of
@@ -705,6 +737,12 @@ The standalone `help` command is recognized by `CommandHandler#execute` before d
 parsing and delegates to `Ui#showHelp`. The UI lists command names and short descriptions
 without changing application data. While deletion confirmation is pending, `help` is handled
 as a confirmation answer, preserving the selected operation.
+
+Recognition requires the exact lowercase word after trimming whitespace: ` help ` is
+accepted, but `HELP` or `help extra` reaches dotted-command parsing and produces an error.
+`Ui#showHelp` includes deletion, trashcan, save and exit commands. Confirmation tests in
+`CommandHandlerTest` and `ClientCommandHandlerTest` verify that `help` cannot replace
+a pending deletion.
 
 Assertions document internal assumptions, including consistent activity-removal counts and
 the absence of a deleted project from the active map. They help expose implementation errors
@@ -768,6 +806,12 @@ easy to reference from later commands.
 |v2.0|user|find a to-do item by name|locate a to-do without having to go through the entire list|
 |v2.0|freelancer responding to changes in client requirements|edit an existing task's description and date without changing its ID or project|keep the work plan accurate|
 |v2.0|freelance consultant arranging client meetings|edit an existing event's description and date without changing its ID or project|update a rescheduled meeting without deleting and recreating it|
+|v2.0|freelancer|confirm or cancel deletion of a project, client, task, event or note|avoid removing records accidentally|
+|v2.0|freelancer|prevent deletion of a client with active projects|preserve the projects' client relationships|
+|v2.0|freelancer|list and restore deleted projects and clients with their original contents and IDs|recover removed work without recreating its relationships|
+|v2.0|freelancer|keep restored clients and projects in numeric ID order|find older records in a predictable position|
+|v2.0|freelancer|retain deleted projects and clients across restarts|recover them in a later session|
+|v2.0|freelancer|permanently empty the trashcan after confirmation|discard retained records I no longer need|
 
 ## Non-Functional Requirements
 
@@ -834,6 +878,46 @@ For deletion commands, enter `yes` or `no` when prompted. Invalid commands
 should display an error and leave the affected record unchanged. The automated
 verification suite can be run with `.\gradlew.bat check`; it compiles the
 project, runs the tests, and runs Checkstyle.
+
+### Deletion validation, confirmation and recovery
+
+Use a fresh, writable test directory and the [User Guide's startup instructions](UserGuide.md#quick-start).
+Create client C001 with two identical notes and two projects, P001 and P002. Add tasks
+T001 and T002 and events E001 and E002 to P001. Add task T003 to P002. Mark T001 complete.
+The following checks use these IDs; substitute the displayed IDs if needed.
+
+1. Enter `help` and verify that all five deletion commands and all three trashcan commands
+   appear. Enter `project.delete`, `task.delete T999`, `event.delete E999`,
+   `client.delete C999` and `client.delete_note C001 index/0`. Each must show an error
+   and the relevant format without requesting confirmation or changing data. Also try
+   note indexes `abc`, `3` and `999999999999`; all must be rejected.
+2. Enter `client.delete C001`. It must fail without requesting confirmation because
+   the client has active projects. Change both project statuses to `completed` and retry;
+   deletion must still fail, since completed projects remain active records.
+3. Enter `task.delete T001`. Check that the prompt identifies T001 and P001. Enter
+   `YES`, `help`, `save` and `exit`; each must report an invalid confirmation answer and
+   repeat the prompt. Enter `no`, then view P001; both tasks and events must remain.
+   Repeat `task.delete T001`, followed by `yes`. Only T001 must disappear, and progress
+   must become `0 of 1 task completed.`. T003 in P002 must remain unchanged.
+4. Enter `event.delete E001`, then `no`; both events must remain. Repeat with `yes`;
+   only E001 must disappear. Enter `client.delete_note C001 index/1`, then `no`; both
+   identical notes must remain. Repeat with `yes`; one copy must remain as `Note 1`.
+   `trashcan.list` must still report an empty trashcan: individual activities and notes
+   are not retained.
+5. Enter `project.delete P001`, then `no`; P001 must remain. Repeat with `yes`; P001
+   must leave the active list, while P002 and T003 remain. `trashcan.list` must show P001
+   with T002 and E002. Enter `trashcan.list extra`; expect an error and format hint.
+   Restore P001 and verify that it appears before P002 immediately and retains only
+   T002 and E002. Restoration must not bring back T001, E001 or the removed client note.
+6. Delete both projects with confirmation. Enter `client.delete C001`, then `no`;
+   the client and remaining note must stay active. Repeat with `yes`; the retained client
+   must contain that note. Create client C002, restore C001, then run `client.list`;
+   C001 must appear before C002 immediately. Restore P001 and P002, then enter `save`
+   and restart. Verify the restored records and absence of individually deleted items.
+
+The following restoration and emptying scenarios cover additional persistence and
+confirmation paths. End-of-input cancellation is exercised by `BusyNotFreeTest`, which
+can close a simulated input stream immediately after requesting deletion.
 
 ### Client restoration and persistence
 

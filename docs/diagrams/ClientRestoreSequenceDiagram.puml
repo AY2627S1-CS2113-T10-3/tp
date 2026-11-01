@@ -30,6 +30,9 @@ alt retained client exists and ID is available
   CM -> CM : add client with original notes
   activate CM
   deactivate CM
+  CM -> CM : sortClientsById()
+  activate CM
+  deactivate CM
   CM --> TM : registration complete
   deactivate CM
   TM -> TM : remove retained client entry
