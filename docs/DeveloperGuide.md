@@ -908,34 +908,34 @@ easy to reference from later commands.
 
 ## User Stories
 
-|Version| As a ... | I want to ...                                                                      | So that I can ...|
-|--------|----------|------------------------------------------------------------------------------------|------------------|
-|v1.0|new user| see usage instructions                                                             |refer to them when I forget how to use the application|
-|v1.0|freelancer| register clients and keep notes about them                                         |retain client details alongside their projects|
-|v1.0|freelancer| create a project for an existing client with a deadline                            |organise and plan the client's work|
-|v1.0|freelancer| add a dated internal task to a project                                             |track the work that needs to be completed|
-|v1.0|freelancer| add a scheduled event to a project                                                 |keep track of meetings, reviews and presentations|
-|v1.0|freelancer| view one or all project summaries                                                  |check clients, deadlines, tasks and events together|
-|v1.0|freelancer| save my work when I exit                                                           |continue from the same data on the next run|
-|v2.0|freelancer| mark a task complete or reopen it                                                  |keep its status aligned with the work left to do|
-|v2.0|freelancer| see a completed-task count for each project                                        |assess progress at a glance|
-|v2.0|freelancer| retain task completion after restarting                                            |avoid marking the same tasks again|
-|v2.0|freelancer| save my work without exiting                                                       |protect recent changes during a long session|
-|v2.0|freelancer| find clients by part of their name                                                 |locate a client without reading the entire client list|
-|v2.0|freelancer| edit a client's name while keeping their ID and notes                              |update client details without breaking project links|
-|v2.0|freelancer| change project statuses and filter projects by status                              |focus on work in the relevant stage|
-|v2.0|freelancer| list projects by deadline and identify overdue active projects                     |prioritise time-sensitive work|
-|v2.0|freelancer| confirm or cancel deletion of unwanted records                                     |remove data deliberately while preserving unrelated work|
-|v2.0|freelancer| restore a deleted client and their deleted projects with the original details      |recover from accidental deletion|
-|v2.0|freelancer| permanently empty the trashcan after confirmation                                  |remove retained records I no longer need|
-|v2.0|freelancer| responding to changes in client requirements                                       |edit an existing task's description and date without changing its ID or project|keep the work plan accurate|
-|v2.0|freelance | consultant arranging client meetings                                               | edit an existing event's description and date without changing its ID or project   |update a rescheduled meeting without deleting and recreating it|
-|v2.0|freelancer| confirm or cancel deletion of a project, client, task, event or note               |avoid removing records accidentally|
-|v2.0|freelancer| prevent deletion of a client with active projects                                  |preserve the projects' client relationships|
-|v2.0|freelancer| list and restore deleted projects and clients with their original contents and IDs |recover removed work without recreating its relationships|
-|v2.0|freelancer| keep restored clients and projects in numeric ID order                             |find older records in a predictable position|
-|v2.0|freelancer| retain deleted projects and clients across restarts                                |recover them in a later session|
-|v2.0|freelancer| permanently empty the trashcan after confirmation                                  |discard retained records I no longer need|
+| Version | As a ... | I want to ... | So that I can ... |
+| --- | --- | --- | --- |
+| v1.0 | new user | see usage instructions | refer to them when I forget how to use the application |
+| v1.0 | freelancer | register clients and keep notes about them | retain client details alongside their projects |
+| v1.0 | freelancer | view a client's details and notes or list all clients | find client records using their IDs |
+| v1.0 | freelancer | create a project for an existing client with a deadline | organise and plan the client's work |
+| v1.0 | freelancer | add a dated internal task to a project | track the work that needs to be completed |
+| v1.0 | freelancer | add a scheduled event to a project | keep track of meetings, reviews and presentations |
+| v1.0 | freelancer | list projects with their status and deadline | review my projects at a glance |
+| v1.0 | freelancer | view one or all project summaries | check clients, deadlines, tasks and events together |
+| v1.0 | freelancer | save my work when I exit | continue from the same data on the next run |
+| v2.0 | freelancer | change a project's status | keep its recorded stage aligned with the work |
+| v2.0 | freelancer | mark a task complete or reopen it | keep its status aligned with the work left to do |
+| v2.0 | freelancer | see a completed-task count for each project | assess progress at a glance |
+| v2.0 | freelancer | retain task completion after restarting | avoid marking the same tasks again |
+| v2.0 | freelancer | save my work without exiting | protect recent changes during a long session |
+| v2.0 | freelancer | find clients by part of their name | locate a client without reading the entire client list |
+| v2.0 | freelancer | edit a client's name while keeping their ID and notes | update client details without breaking project links |
+| v2.0 | freelancer | filter projects by status | focus on work in the relevant stage |
+| v2.0 | freelancer | list projects by deadline and identify overdue active projects | prioritise time-sensitive work |
+| v2.0 | freelancer responding to changes in client requirements | edit an existing task's description and date without changing its ID or project | keep the work plan accurate |
+| v2.0 | freelance consultant arranging client meetings | edit an existing event's description and date without changing its ID or project | update a rescheduled meeting without deleting and recreating it |
+| v2.0 | freelancer | confirm or cancel deletion of a project, client, task, event or note | avoid removing records accidentally while preserving unrelated work |
+| v2.0 | freelancer | prevent deletion of a client with active projects | preserve the projects' client relationships |
+| v2.0 | freelancer | list deleted projects and clients and restore them individually with their original contents and IDs | recover from accidental deletion without recreating their relationships |
+| v2.0 | freelancer | keep restored clients and projects in numeric ID order | find older records in a predictable position |
+| v2.0 | freelancer | retain deleted projects and clients across restarts | recover them in a later session |
+| v2.0 | freelancer | permanently empty the trashcan after confirmation | discard retained records I no longer need |
 
 ## Non-Functional Requirements
 
