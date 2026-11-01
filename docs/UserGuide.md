@@ -67,8 +67,8 @@ Note 1: Prefers weekly updates
 
 Format: `client.list`
 
-Lists client IDs and names in insertion order. A restored client is appended; after
-restarting, clients appear in numeric ID order. If there are none, the app shows
+Lists client IDs and names in ascending numeric ID order, including after restoration
+and restarting. If there are none, the app shows
 `No clients found.` Extra words after this command are ignored.
 
 ### Find clients by name: `client.find`
@@ -78,7 +78,7 @@ Format: `client.find NAME`
 Finds clients whose names contain `NAME`, ignoring case. For example,
 `client.find acme` matches `Acme Studio`. Multiword searches are allowed.
 A summary such as `Found 2 matching clients.` appears before the matching client
-IDs and names in insertion order, using the same format as `client.list`.
+IDs and names in ascending numeric ID order, using the same format as `client.list`.
 A single match displays `Found 1 matching client.` No matches displays
 `Found 0 matching clients.` followed by `No clients found.` A search must not be blank.
 
@@ -378,9 +378,10 @@ Provide exactly one project ID or client ID. The slash means "or"; do not type i
 
 Restores a project immediately, including its tasks and events with their original
 IDs, descriptions, dates, status and task completion states. The restored project
-is removed from the trashcan and appended to the active project list.
+is removed from the trashcan, and active projects are sorted by numeric project ID.
 For a client ID, restores the client's original name, ID and all notes in their
-original order. Its deleted projects remain in the trashcan until restored separately.
+original order. Active clients are then sorted by numeric client ID. Its deleted
+projects remain in the trashcan until restored separately.
 No new IDs are allocated. Changes are saved on `save` or `exit`.
 
 ```text

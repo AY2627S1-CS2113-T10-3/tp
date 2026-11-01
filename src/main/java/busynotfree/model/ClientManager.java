@@ -1,5 +1,6 @@
 package busynotfree.model;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -147,7 +148,8 @@ public final class ClientManager implements ClientLookup {
     }
 
     /**
-     * Registers a restored client with its original ID and notes, leaving the counter unchanged.
+     * Registers a restored client with its original ID and notes.
+     * Keeps clients in numeric ID order without changing the ID counter.
      *
      * @param client Retained snapshot to make active.
      * @throws ClientException If the ID is already active.
@@ -158,6 +160,20 @@ public final class ClientManager implements ClientLookup {
             throw new ClientException("Cannot restore client " + id + ": an ID is already in use.");
         }
         clients.put(id, client);
+        sortClientsById();
+    }
+
+    /** Reorders active clients by the numeric portion of their IDs. */
+    private void sortClientsById() {
+        List<Client> sortedClients = clients.values().stream()
+                .sorted(Comparator.comparingInt(
+                        client -> Integer.parseInt(client.getClientId().substring(1))))
+                .toList();
+
+        clients.clear();
+        for (Client client : sortedClients) {
+            clients.put(client.getClientId(), client);
+        }
     }
 
     /**
