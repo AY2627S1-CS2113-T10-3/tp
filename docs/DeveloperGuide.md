@@ -525,10 +525,21 @@ the manager does not reach the active-data removal steps.
 
 ![Sequence diagram of confirmed project deletion](images/ProjectDeletionSequenceDiagram.png)
 
-Client deletion rechecks project relationships when confirmation is accepted. A
-`ClientHasProjectsException` reports this business-rule failure without a usage hint,
-because the command's syntax may already be correct. Missing or invalid IDs continue
-to receive usage hints. Failed lookups do not create placeholder records.
+Client deletion checks project relationships twice: `CommandHandler#handleClientDelete`
+calls `ClientManager#getDeletableClient` before requesting confirmation, and
+`ClientManager#deleteClient` repeats that check after `yes`. Any active project blocks
+deletion, including projects marked completed or cancelled.
+
+After validation, `deleteClient` calls `TrashcanManager#storeClient`, which checks for
+a conflicting retained client ID and copies the client's ID, name and ordered notes.
+Only after snapshot storage succeeds does the manager clear the original client's
+notes and remove it from the active map. This ordering preserves recoverable data
+before removing active data. The next client ID counter remains unchanged.
+
+A `ClientHasProjectsException` reports the relationship restriction without a usage
+hint because the command's syntax may already be correct. Missing or unknown client
+IDs receive the relevant usage hint. Failed validation leaves the active client and
+trashcan unchanged.
 
 Note deletion reuses `ArgumentParser` for `index/`. `parseNoteIndex` rejects nonnumeric
 values, nonpositive values and integer overflow. `Client#getNote` checks the index
