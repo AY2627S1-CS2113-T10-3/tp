@@ -288,6 +288,7 @@ public final class ProjectManager {
 
     /**
      * Registers a restored project after checking its client and active IDs.
+     * Keeps active projects in numeric project ID order.
      * Leaves ID counters unchanged.
      *
      * @param project Snapshot to register in the active collection.
@@ -300,6 +301,20 @@ public final class ProjectManager {
         }
         validateProjectIds(project, projects.values());
         projects.put(project.getProjectId(), project);
+        sortProjectsById();
+    }
+
+    /** Reorders active projects by the numeric portion of their IDs. */
+    private void sortProjectsById() {
+        List<Project> sortedProjects = projects.values().stream()
+                .sorted(Comparator.comparingInt(
+                        project -> Integer.parseInt(project.getProjectId().substring(1))))
+                .toList();
+
+        projects.clear();
+        for (Project project : sortedProjects) {
+            projects.put(project.getProjectId(), project);
+        }
     }
 
     /**
