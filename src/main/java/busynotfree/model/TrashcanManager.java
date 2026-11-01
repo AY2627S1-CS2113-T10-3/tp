@@ -32,18 +32,7 @@ public final class TrashcanManager {
      * @throws ProjectException If a project or activity ID is already retained.
      */
     void storeProject(Project project) {
-        for (Project existing : deletedProjects.values()) {
-            boolean duplicateTask = project.getTasks().stream()
-                    .anyMatch(task -> existing.getTasks().stream()
-                            .anyMatch(other -> other.getId().equals(task.getId())));
-            boolean duplicateEvent = project.getEvents().stream()
-                    .anyMatch(event -> existing.getEvents().stream()
-                            .anyMatch(other -> other.getId().equals(event.getId())));
-            if (existing.getProjectId().equals(project.getProjectId()) || duplicateTask || duplicateEvent) {
-                throw new ProjectException("Cannot restore or load project "
-                        + project.getProjectId() + ": an ID is already in use.");
-            }
-        }
+        ProjectIdValidator.validate(project, deletedProjects.values());
         deletedProjects.put(project.getProjectId(), project.copy());
     }
 

@@ -337,16 +337,7 @@ public final class ProjectManager {
 
     /** Rejects project or activity ID collisions before a restore or storage import changes data. */
     private void validateProjectIds(Project candidate, Iterable<Project> existingProjects) {
-        for (Project existing : existingProjects) {
-            boolean duplicateTask = candidate.getTasks().stream().anyMatch(task -> existing.getTasks().stream()
-                    .anyMatch(other -> other.getId().equals(task.getId())));
-            boolean duplicateEvent = candidate.getEvents().stream().anyMatch(event -> existing.getEvents().stream()
-                    .anyMatch(other -> other.getId().equals(event.getId())));
-            if (existing.getProjectId().equals(candidate.getProjectId()) || duplicateTask || duplicateEvent) {
-                throw new ProjectException("Cannot restore or load project " + candidate.getProjectId()
-                        + ": an ID is already in use.");
-            }
-        }
+        ProjectIdValidator.validate(candidate, existingProjects);
     }
 
     /**
