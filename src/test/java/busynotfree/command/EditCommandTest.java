@@ -163,10 +163,14 @@ class EditCommandTest {
     public void execute_help_listsEditCommands() {
         CommandFixture fixture = new CommandFixture();
 
-        fixture.handler.execute("help");
+        assertFalse(fixture.handler.execute("help"));
 
-        assertTrue(fixture.ui.messages.contains("task.edit      |   Edit a task"));
-        assertTrue(fixture.ui.messages.contains("event.edit     |   Edit an event"));
+        assertTrue(fixture.ui.errors.isEmpty());
+        // Check complete command entries without depending on cosmetic column padding.
+        assertTrue(fixture.ui.messages.stream()
+                .anyMatch(message -> message.matches("\\s*task\\.edit\\s+\\|\\s+Edit a task")));
+        assertTrue(fixture.ui.messages.stream()
+                .anyMatch(message -> message.matches("\\s*event\\.edit\\s+\\|\\s+Edit an event")));
     }
 
     /** Verifies the error, the usage hint, that nothing changed, and that a corrected command still works. */
