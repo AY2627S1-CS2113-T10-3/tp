@@ -17,9 +17,9 @@ CH -> PM : getProject("P001")
 activate PM
 PM --> CH : project
 deactivate PM
-CH -> CH : retain pending selection
-activate CH
-deactivate CH
+note right of CH
+  retain pending selection
+end note
 CH -> UI : showProjectDeleteConfirmation(project)
 activate UI
 deactivate UI
@@ -31,9 +31,9 @@ end note
 
 User -> CH : execute("yes")
 activate CH
-CH -> CH : clear pending selection
-activate CH
-deactivate CH
+note right of CH
+  clear pending selection
+end note
 CH -> PM : deleteProject("P001")
 activate PM
 PM -> TM : storeProject(project)
@@ -42,18 +42,18 @@ TM -> P : copy()
 activate P
 P --> TM : independent project and activities
 deactivate P
-TM -> TM : retain snapshot
-activate TM
-deactivate TM
+note right of TM
+  retain snapshot
+end note
 TM --> PM : snapshot stored
 deactivate TM
 PM -> P : removeAllActivities()
 activate P
 P --> PM : removedCount
 deactivate P
-PM -> PM : remove active project
-activate PM
-deactivate PM
+note right of PM
+  remove active project
+end note
 PM --> CH : removedCount
 deactivate PM
 CH -> UI : showProjectDeleted(...)

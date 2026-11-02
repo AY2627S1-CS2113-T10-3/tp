@@ -14,30 +14,30 @@ alt registration succeeds
   CH -> TCH : execute(restoreCommand)
   activate CH
   activate TCH
-  TCH -> TCH : validate one project ID
-  activate TCH
-  deactivate TCH
+  note right of TCH
+    validate one project ID
+  end note
   TCH -> TM : restoreProject("P001", projectManager)
   activate TM
-  TM -> TM : find retained project
-  activate TM
-  deactivate TM
+  note right of TM
+    find retained project
+  end note
   TM -> PM : registerRestoredProject(project)
   activate PM
-  PM -> PM : check active client and ID conflicts
-  activate PM
-  deactivate PM
-  PM -> PM : add project to active collection
-  activate PM
-  deactivate PM
+  note right of PM
+    check active client and ID conflicts
+  end note
+  note right of PM
+    add project to active collection
+  end note
   PM -> PM : sortProjectsById()
   activate PM
   deactivate PM
   PM --> TM : registration complete
   deactivate PM
-  TM -> TM : remove retained project entry
-  activate TM
-  deactivate TM
+  note right of TM
+    remove retained project entry
+  end note
   TM --> TCH : restored project
   deactivate TM
   TCH -> UI : show restoration message
@@ -51,19 +51,19 @@ else registration fails
   CH -> TCH : execute(restoreCommand)
   activate CH
   activate TCH
-  TCH -> TCH : validate one project ID
-  activate TCH
-  deactivate TCH
+  note right of TCH
+    validate one project ID
+  end note
   TCH -> TM : restoreProject("P001", projectManager)
   activate TM
-  TM -> TM : find retained project
-  activate TM
-  deactivate TM
+  note right of TM
+    find retained project
+  end note
   TM -> PM : registerRestoredProject(project)
   activate PM
-  PM -> PM : check active client and ID conflicts
-  activate PM
-  deactivate PM
+  note right of PM
+    check active client and ID conflicts
+  end note
   PM --> TM : validation exception
   deactivate PM
   TM --> TCH : propagate exception

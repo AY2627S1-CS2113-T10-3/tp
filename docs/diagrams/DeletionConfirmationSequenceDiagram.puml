@@ -15,9 +15,9 @@ activate App
 App -> CH : execute(request)
 activate CH
 
-CH -> CH : validate and retain pending selection
-activate CH
-deactivate CH
+note right of CH
+  validate and retain pending selection
+end note
 
 CH -> UI : show deletion confirmation
 activate UI
@@ -46,7 +46,7 @@ loop zero or more invalid confirmation answers
 end
 
 alt user confirms
-  User -> App : yes
+  User -> App : "yes"
 
   App -> CH : execute("yes")
   activate CH
@@ -67,7 +67,7 @@ alt user confirms
   CH --> App : false
   deactivate CH
 else user cancels
-  User -> App : no
+  User -> App : "no"
 
   App -> CH : execute("no")
   activate CH

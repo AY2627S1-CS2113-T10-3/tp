@@ -14,30 +14,30 @@ alt retained client exists and ID is available
   CH -> TCH : execute(restoreCommand)
   activate CH
   activate TCH
-  TCH -> TCH : validate one client ID
-  activate TCH
-  deactivate TCH
+  note right of TCH
+    validate one client ID
+  end note
   TCH -> TM : restoreClient("C001", clientManager)
   activate TM
-  TM -> TM : find retained client
-  activate TM
-  deactivate TM
+  note right of TM
+    find retained client
+  end note
   TM -> CM : registerRestoredClient(client)
   activate CM
-  CM -> CM : check active client ID
-  activate CM
-  deactivate CM
-  CM -> CM : add client with original notes
-  activate CM
-  deactivate CM
+  note right of CM
+    check active client ID
+  end note
+  note right of CM
+    add client with original notes
+  end note
   CM -> CM : sortClientsById()
   activate CM
   deactivate CM
   CM --> TM : registration complete
   deactivate CM
-  TM -> TM : remove retained client entry
-  activate TM
-  deactivate TM
+  note right of TM
+    remove retained client entry
+  end note
   TM --> TCH : restored client
   deactivate TM
   TCH -> UI : show restoration message
@@ -51,19 +51,19 @@ else active client ID conflicts
   CH -> TCH : execute(restoreCommand)
   activate CH
   activate TCH
-  TCH -> TCH : validate one client ID
-  activate TCH
-  deactivate TCH
+  note right of TCH
+    validate one client ID
+  end note
   TCH -> TM : restoreClient("C001", clientManager)
   activate TM
-  TM -> TM : find retained client
-  activate TM
-  deactivate TM
+  note right of TM
+    find retained client
+  end note
   TM -> CM : registerRestoredClient(client)
   activate CM
-  CM -> CM : check active client ID
-  activate CM
-  deactivate CM
+  note right of CM
+    check active client ID
+  end note
   CM --> TM : ClientException
   deactivate CM
   TM --> TCH : propagate exception
@@ -82,14 +82,14 @@ else no retained client
   CH -> TCH : execute(restoreCommand)
   activate CH
   activate TCH
-  TCH -> TCH : validate one client ID
-  activate TCH
-  deactivate TCH
+  note right of TCH
+    validate one client ID
+  end note
   TCH -> TM : restoreClient("C001", clientManager)
   activate TM
-  TM -> TM : find retained client
-  activate TM
-  deactivate TM
+  note right of TM
+    find retained client
+  end note
   TM --> TCH : ClientException
   deactivate TM
   TCH --> CH : propagate exception
