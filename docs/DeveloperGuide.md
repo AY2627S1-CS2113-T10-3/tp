@@ -44,9 +44,11 @@ another. It omits individual model relationships, which are shown in the feature
 | Parsing | `CommandParser`, `ArgumentParser` | Separate command words and arguments, and validate prefixed values and dates. |
 | Model | `ClientManager`, `ProjectManager`, `TrashcanManager` and their records | Maintain active/deleted data, relationships, completion states and ID counters. |
 | User interface | `Ui`, `ClientUi` | Format prompts, confirmations, results and errors using the supplied model records. |
-| Storage | `DataStorage` | Convert managers to and from the UTF-8 properties file, including trashcan records and ID counters. |
+| Storage | `DataStorage`, `DataDirectoryLock` | Reserve the data folder for one session and convert managers to and from the UTF-8 properties file, including trashcan records and ID counters. |
 
-At startup, `DataStorage#load` returns client and project managers that share one
+At startup, `BusyNotFree` reserves the data folder through `DataDirectoryLock` before
+loading anything, and holds the reservation until the session ends. `DataStorage#load`
+returns client and project managers that share one
 trashcan. `BusyNotFree` supplies those managers and one `Ui` to `CommandHandler`,
 which creates its specialised handlers. A save callback captures the same managers
 for both `save` and `exit`; commands and persistence therefore use the same session data.
@@ -88,7 +90,8 @@ The [saving section](#saving-during-a-session-or-on-exit) explains the callback 
 | Missing record or invalid model data | The model throws a subclass of `BusyNotFreeException`; `CommandHandler#execute` catches it. | Display the error and the supported command's usage hint. Rejected input leaves existing data and ID counters unchanged. |
 | Client deletion blocked by associated projects | `CommandHandler#execute` catches `ClientHasProjectsException` separately. | Display the relationship error without an additional usage hint. |
 | Failed write during `save` or `exit` | `BusyNotFree#saveData` catches `IOException`. | Report the failure and retain the session so an explicit save/exit can be retried. At end of input, report the failure and return. |
-| Invalid or unreadable file at startup | `DataStorage#load` reports `IOException`; `BusyNotFree#main` catches it. | Display a load error and stop before accepting commands or overwriting the file. |
+| Data folder already in use or inaccessible | `DataDirectoryLock#acquire` reports `IOException`; `BusyNotFree#main` catches it. | Display a startup error and stop before loading data or accepting commands. |
+| Invalid or unreadable file at startup | `DataStorage#load` reports `IOException`; `BusyNotFree#startApplication` catches it. | Display a load error and stop before accepting commands or overwriting the file. |
 
 If parsing fails before a `ParsedCommand` is available, the shared handler displays
 the error without trying to infer a command-specific usage hint. Deletion confirmations
@@ -352,6 +355,24 @@ returns `true` only when that action completes normally. On `IOException`, it di
 `save` with arguments is rejected before the callback is called. While a deletion confirmation
 is pending, `save` and `exit` are treated as confirmation answers rather than commands.
 
+Before loading data, `BusyNotFree#main` acquires a `DataDirectoryLock` for the working directory's
+`data` folder. A non-blocking, exclusive `FileChannel` lock on `.busynotfree.lock` stays held
+through loading, every command, save retries and the final save. A second instance using that
+folder reports a startup error and returns without reading commands or writing data. Different
+data folders can be used independently. This prevents a session with an older in-memory snapshot
+from overwriting another session's successfully saved work.
+
+The lock uses a separate file because `DataStorage#save` replaces the properties file during
+atomic saving. Try-with-resources closes the lock channel on exit or a startup failure; JVM
+termination also releases its operating-system lock. The lock file is deliberately retained
+so another process cannot acquire a replacement file while the original file is locked.
+Canonical directory paths and a synchronised registry prevent duplicate reservations in the
+same JVM without opening another channel to the lock file. All instances must use the updated
+startup guard; older releases and external file editors do not participate in this protocol.
+`DataDirectoryLockTest` checks reservations and cleanup, while `BusyNotFreeIntegrationTest`
+uses separate Java processes to verify rejection, saved-data preservation, independent folders
+and restarting after normal exit or forced termination.
+
 #### Writing and restoring task completion
 
 `DataStorage#save` gathers tasks from every project, sorts them by their application-wide IDs,
@@ -380,7 +401,7 @@ bookkeeping are omitted where noted.
 ![Sequence diagram of restoring one saved task's completion](images/TaskCompletionPersistenceSequenceDiagram.png)
 
 Marking and reopening change only the in-memory model. The next successful `save` or `exit`
-writes the new state. `BusyNotFree#main` reports a load error and stops if a saved file is
+writes the new state. `BusyNotFree#startApplication` reports a load error and stops if a saved file is
 invalid, before creating the command loop or saving anything over the file. A missing file
 creates empty, linked managers. The path `data/busynotfree.properties` is resolved relative
 to the process working directory, not the JAR's directory.
@@ -951,6 +972,8 @@ easy to reference from later commands.
   text file.
 * **Reliability:** Invalid saved data must be reported without overwriting the
   original file. Startup must stop before accepting commands in this case.
+* **Session safety:** The application must reserve its data folder before loading
+  and reject another instance that tries to use the same folder concurrently.
 * **Interface:** Commands and results must use terminal text without requiring
   mouse interaction.
 
@@ -1152,8 +1175,20 @@ The following IDs assume there is no existing data in that directory. Use the
    `No projects found.`. Add a client and a project without activities, then view that project.
    Expect `No tasks found.`, `Progress: 0 of 0 tasks completed.` and `No events found.`.
 
-For a controlled save-failure check, use a separate fresh test directory and create a regular
-file named `data` before launching the JAR. Both `save` and `exit` should report a save error,
-show no success message, and accept another command while input remains available. This fixture
-blocks creation of the required data directory. Use it only for this test; do not replace
-the data directory of a normal session.
+For a controlled save-failure check, launch the JAR from a separate fresh test directory.
+Before the first save, use another terminal to create a non-empty directory at
+`data/busynotfree.properties`. Both `save` and `exit` should report a save error, show no success
+message, and accept another command while input remains available. Remove only that disposable
+blocking directory, then retry `save` and `exit`; both should succeed. This fixture prevents
+replacement of the save path. Do not modify the data directory of a normal session.
+
+For a startup-access failure, use another fresh directory and create a regular file named
+`data` before launching. Expect `Error: Unable to access application data: ...` and no command
+prompt or save. The original file must remain unchanged.
+
+To check the single-instance rule, keep one instance running in a fresh test directory and
+launch another updated copy from a second terminal in the same directory. The second copy
+must report that the data folder is already in use and stop without saving. Create records
+and save in the first copy, then repeat the rejected launch and confirm the saved file is
+unchanged. Exit the first copy and restart from that directory; the saved records must load.
+A concurrent copy launched from a different working directory must work independently.
