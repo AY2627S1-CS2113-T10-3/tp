@@ -409,4 +409,28 @@ class ProjectManagerTest {
         assertEquals("Meeting", event.getDescription());
         assertEquals(date, event.getDate());
     }
+
+    @Test
+    public void addTaskAndEvent_counterAtMaximum_rejectsWithoutChangingData() {
+        Project project = manager.addProject("C001", "Website", date);
+        manager.advanceNextNumbers(2, Integer.MAX_VALUE, Integer.MAX_VALUE);
+
+        assertThrows(TaskException.class, () -> manager.addTask("P001", "Work", date));
+        assertThrows(EventException.class, () -> manager.addEvent("P001", "Meeting", date));
+
+        assertTrue(project.getTasks().isEmpty());
+        assertTrue(project.getEvents().isEmpty());
+        assertEquals(Integer.MAX_VALUE, manager.getNextTaskNumber());
+        assertEquals(Integer.MAX_VALUE, manager.getNextEventNumber());
+    }
+
+    @Test
+    public void addProject_counterAtMaximum_rejectsWithoutChangingData() {
+        manager.advanceNextNumbers(Integer.MAX_VALUE, 1, 1);
+
+        assertThrows(ProjectException.class, () -> manager.addProject("C001", "Website", date));
+
+        assertTrue(manager.getProjects().isEmpty());
+        assertEquals(Integer.MAX_VALUE, manager.getNextProjectNumber());
+    }
 }
