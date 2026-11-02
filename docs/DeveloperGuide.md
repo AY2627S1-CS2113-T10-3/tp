@@ -855,8 +855,10 @@ parsing and delegates to `Ui#showHelp`. The UI lists command names and short des
 without changing application data. While deletion confirmation is pending, `help` is handled
 as a confirmation answer, preserving the selected operation.
 
-Recognition requires the exact lowercase word after trimming whitespace: ` help ` is
-accepted, but `HELP` or `help extra` reaches dotted-command parsing and produces an error.
+Recognition requires the lowercase command word `help`: ` help ` is accepted,
+while `HELP` reaches dotted-command parsing and produces an error. Extra arguments,
+such as `help extra`, are rejected with `Use help without arguments.` before
+dotted-command parsing.
 `Ui#showHelp` includes deletion, trashcan, save and exit commands. Confirmation tests in
 `CommandHandlerTest` and `ClientCommandHandlerTest` verify that `help` cannot replace
 a pending deletion.

@@ -440,6 +440,9 @@ Format: `help`
 
 Shows a list of available commands and short descriptions.
 
+`help` does not accept arguments. For example, `help now` displays
+`Error: Use help without arguments.`
+
 ### Save without exiting: `save`
 
 Format: `save`

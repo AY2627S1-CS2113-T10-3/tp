@@ -44,6 +44,36 @@ class CommandHandlerTest {
     private final ProjectManager projectManager = new ProjectManager(new PlaceholderClientLookup());
     private final CommandHandler handler = new CommandHandler(new CommandParser(), ui, projectManager);
 
+    @TestFactory
+    public List<DynamicTest> execute_helpWithWhitespace_displaysHelp() {
+        return List.of("help", " help ", "\thelp\t").stream()
+                .map(input -> dynamicTest(input, () -> {
+                    CommandHandlerTest fixture = new CommandHandlerTest();
+
+                    assertFalse(fixture.handler.execute(input));
+
+                    assertTrue(fixture.ui.errors.isEmpty());
+                    assertTrue(fixture.ui.messages.contains("Available commands:"));
+                })).toList();
+    }
+
+    @TestFactory
+    public List<DynamicTest> execute_helpWithArguments_reportsSpecificErrorAndAcceptsCorrection() {
+        return List.of("help now", "help now please", "  help\tnow  ").stream()
+                .map(input -> dynamicTest(input, () -> {
+                    CommandHandlerTest fixture = new CommandHandlerTest();
+
+                    assertFalse(fixture.handler.execute(input));
+
+                    assertEquals(List.of("Use help without arguments."), fixture.ui.errors);
+                    assertTrue(fixture.ui.messages.isEmpty());
+
+                    assertFalse(fixture.handler.execute("help"));
+                    assertTrue(fixture.ui.messages.contains("Available commands:"));
+                    assertEquals(1, fixture.ui.errors.size());
+                })).toList();
+    }
+
     @Test
     public void execute_exit_requestsShutdown() {
         assertTrue(handler.execute("  exit\t"));
@@ -442,7 +472,7 @@ class CommandHandlerTest {
         Project project = projectManager.addProject("C001", "Website", LocalDate.of(2026, 11, 30));
         handler.execute("project.delete P001");
 
-        for (String answer : List.of("", "YES", "yes please", "exit", "help", "project.delete P001")) {
+        for (String answer : List.of("", "YES", "yes please", "exit", "help", "help now", "project.delete P001")) {
             assertFalse(handler.execute(answer));
             assertTrue(handler.isAwaitingDeletionConfirmation());
             assertEquals(List.of(project), projectManager.getProjects());
