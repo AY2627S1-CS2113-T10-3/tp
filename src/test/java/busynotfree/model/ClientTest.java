@@ -32,6 +32,31 @@ class ClientTest {
     }
 
     @Test
+    public void constructor_valuesEmptyAfterTrimming_throwsExistingValidationMessage() {
+        String controls = "\u0000\u001f";
+
+        ClientException idError = assertThrows(ClientException.class, () -> new Client(controls, "Acme"));
+        ClientException nameError = assertThrows(ClientException.class, () -> new Client("C001", controls));
+
+        assertEquals("A client ID must not be blank.", idError.getMessage());
+        assertEquals("A client name must not be blank.", nameError.getMessage());
+    }
+
+    @Test
+    public void update_valuesBlankAfterTrimming_preservesNameAndNotes() {
+        Client client = new Client("C001", "Acme");
+        client.addNote("Existing note");
+        for (String text : List.of("\u0000\u001f", "\u0000\u2003\u001f")) {
+            ClientException nameError = assertThrows(ClientException.class, () -> client.setName(text));
+            ClientException noteError = assertThrows(ClientException.class, () -> client.addNote(text));
+            assertEquals("A client name must not be blank.", nameError.getMessage());
+            assertEquals("A client note must not be blank.", noteError.getMessage());
+        }
+        assertEquals("Acme", client.getName());
+        assertEquals(List.of("Existing note"), client.getNotes());
+    }
+
+    @Test
     public void addNote_multipleNotes_preservesTextAndInsertionOrder() {
         Client client = new Client("C001", "Acme Studio");
         client.addNote("  Prefers  weekly updates  ");

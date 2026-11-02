@@ -22,7 +22,7 @@ public final class Client {
      * @throws ClientException If the ID or name is null or blank.
      */
     public Client(String clientId, String name) {
-        if (clientId == null || clientId.isBlank()) {
+        if (clientId == null || clientId.trim().isBlank()) {
             throw new ClientException("A client ID must not be blank.");
         }
         this.clientId = clientId.trim();
@@ -39,7 +39,7 @@ public final class Client {
 
     /** Updates only the name, rejecting null or blank values before changing the client. */
     public void setName(String name) {
-        if (name == null || name.isBlank()) {
+        if (name == null || name.trim().isBlank()) {
             throw new ClientException("A client name must not be blank.");
         }
         this.name = name.trim();
@@ -52,7 +52,7 @@ public final class Client {
      * @throws ClientException If the note is null or blank.
      */
     public void addNote(String note) {
-        if (note == null || note.isBlank()) {
+        if (note == null || note.trim().isBlank()) {
             throw new ClientException("A client note must not be blank.");
         }
         notes.add(note.trim());
