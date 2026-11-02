@@ -129,7 +129,7 @@ class CommandHandlerTest {
         assertEquals(List.of("Task T001 marked as completed.",
                 "Format: task.mark TASK_ID", "Format: task.mark TASK_ID",
                 "Format: task.mark TASK_ID"), ui.messages);
-        assertEquals(List.of("Task T999 was not found.",
+        assertEquals(List.of("Task T999 was not found. Use project.view to see task IDs.",
                 "Provide exactly one task ID.", "Provide exactly one task ID."), ui.errors);
     }
 
@@ -148,7 +148,7 @@ class CommandHandlerTest {
         assertEquals(List.of("Task T001 reopened. Status: [In Progress]",
                 "Format: task.unmark TASK_ID", "Format: task.unmark TASK_ID",
                 "Format: task.unmark TASK_ID"), ui.messages);
-        assertEquals(List.of("Task T999 was not found.",
+        assertEquals(List.of("Task T999 was not found. Use project.view to see task IDs.",
                 "Provide exactly one task ID.", "Provide exactly one task ID."), ui.errors);
     }
 
@@ -376,7 +376,17 @@ class CommandHandlerTest {
     public void execute_unsupportedTarget_reportsError() {
         assertFalse(handler.execute("invoice.add name/Acme"));
 
-        assertEquals(List.of("Unsupported target: invoice."), ui.errors);
+        assertEquals(List.of("Unsupported target: invoice. Type help to see available commands."), ui.errors);
+        assertTrue(ui.messages.isEmpty());
+    }
+
+    @Test
+    public void execute_unsupportedTargetWithOtherAction_reportsTargetNotAction() {
+        assertFalse(handler.execute("foo.bar"));
+        assertFalse(handler.execute("CLIENT.ADD name/Acme"));
+
+        assertEquals(List.of("Unsupported target: foo. Type help to see available commands.",
+                "Unsupported target: CLIENT. Type help to see available commands."), ui.errors);
         assertTrue(ui.messages.isEmpty());
     }
 
@@ -656,8 +666,10 @@ class CommandHandlerTest {
         List<String> inputs = List.of("task.delete", "task.delete   ", "task.delete invalid",
                 "task.delete T999", "task.delete t001", "task.delete P001", "task.delete T001 T002");
         List<String> errors = List.of("A task ID must not be blank.", "A task ID must not be blank.",
-                "Task invalid was not found.", "Task T999 was not found.", "Task t001 was not found.",
-                "Task P001 was not found.", "Provide exactly one task ID.");
+                "Task invalid was not found. Use project.view to see task IDs.",
+                "Task T999 was not found. Use project.view to see task IDs.",
+                "Task t001 was not found. Use project.view to see task IDs.",
+                "Task P001 was not found. Use project.view to see task IDs.", "Provide exactly one task ID.");
         List<DynamicTest> tests = new ArrayList<>();
         for (int i = 0; i < inputs.size(); i++) {
             String input = inputs.get(i);
@@ -765,7 +777,7 @@ class CommandHandlerTest {
                 fixture.handler.execute("task.delete T001");
 
                 assertFalse(fixture.handler.isAwaitingDeletionConfirmation());
-                assertEquals(List.of("Task T001 was not found."), fixture.ui.errors);
+                assertEquals(List.of("Task T001 was not found. Use project.view to see task IDs."), fixture.ui.errors);
                 assertEquals(List.of("Format: task.delete TASK_ID"), fixture.ui.messages);
             }));
         }

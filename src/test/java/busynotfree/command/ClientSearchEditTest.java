@@ -86,7 +86,7 @@ class ClientSearchEditTest {
                 "client.edit C001", "client.edit C001 name/", "client.edit C001 name/ \t ",
                 "client.edit C999 name/New", "client.edit c001 name/New", "client.edit invalid name/New",
                 "client.edit C001 C002 name/New", "client.edit C001 name/First name/Second",
-                "client.edit C001 name/New due/2026-11-30")) {
+                "client.edit C001 due/2026-11-30 name/New")) {
             ui.messages.clear();
             ui.errors.clear();
             handler.execute(input);

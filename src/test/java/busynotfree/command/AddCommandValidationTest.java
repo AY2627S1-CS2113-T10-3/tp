@@ -72,17 +72,34 @@ class AddCommandValidationTest {
         return tests;
     }
 
-    /** Checks recognized prefixes that do not belong to the current command. */
+    /** Checks that prefixes of other commands stay part of a name instead of being rejected. */
     @TestFactory
-    public List<DynamicTest> execute_inappropriatePrefixes_reportsErrorWithoutMutation() {
+    public List<DynamicTest> execute_otherCommandPrefixInName_preservesText() {
         List<DynamicTest> tests = new ArrayList<>();
         for (String entity : ENTITIES) {
-            List<String> inappropriate = entity.equals("project")
+            List<String> names = entity.equals("project")
+                    ? List.of("Plan project/phase review", "Discuss date/time slot")
+                    : List.of("Fix client/server bug", "Agree due/payable terms");
+            for (String name : names) {
+                String input = entity + ".add " + String.join(" ", validArguments(entity, name, "2026-11-30"));
+                tests.add(dynamicTest(entity + " keeps " + name,
+                        () -> assertSuccessfulAdd(entity, input, name, DATE)));
+            }
+        }
+        return tests;
+    }
+
+    /** Checks that another command's prefix after the date makes the date invalid instead of being dropped. */
+    @TestFactory
+    public List<DynamicTest> execute_otherCommandPrefixAfterDate_reportsInvalidDate() {
+        List<DynamicTest> tests = new ArrayList<>();
+        for (String entity : ENTITIES) {
+            List<String> otherPrefixes = entity.equals("project")
                     ? List.of("project", "date") : List.of("client", "due");
-            for (String prefix : inappropriate) {
+            for (String prefix : otherPrefixes) {
                 String input = validCommand(entity) + " " + prefix + "/unexpected";
-                tests.add(dynamicTest("Unexpected " + prefix + " in " + entity,
-                        () -> assertRejectedAdd(entity, input, "Unexpected prefix: " + prefix + "/.")));
+                tests.add(dynamicTest("Trailing " + prefix + " in " + entity,
+                        () -> assertRejectedAdd(entity, input, "Use a valid date in YYYY-MM-DD format.")));
             }
         }
         return tests;

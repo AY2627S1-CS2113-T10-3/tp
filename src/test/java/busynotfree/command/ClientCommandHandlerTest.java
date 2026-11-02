@@ -61,10 +61,11 @@ class ClientCommandHandlerTest {
     public List<DynamicTest> execute_invalidAddArguments_reportsErrorWithoutConsumingId() {
         List<String> inputs = List.of("client.add", "client.add Acme", "client.add name/",
                 "client.add name/ \t ", "client.add name/Acme name/Other",
-                "client.add name/Acme due/2026-11-30", "client.add stray name/Acme");
+                "client.add due/2026-11-30 name/Acme", "client.add stray name/Acme");
         List<String> errors = List.of("Missing required prefix: name/.", "Missing required prefix: name/.",
                 "A value is required after name/.", "A value is required after name/.", "Repeated prefix: name/.",
-                "Unexpected prefix: due/.", "Arguments must start with a prefix such as name/.");
+                "Arguments must start with a prefix such as name/.",
+                "Arguments must start with a prefix such as name/.");
         List<DynamicTest> tests = new ArrayList<>();
         for (int i = 0; i < inputs.size(); i++) {
             String input = inputs.get(i);
@@ -95,18 +96,30 @@ class ClientCommandHandlerTest {
         assertTrue(ui.errors.isEmpty());
     }
 
+    @Test
+    public void execute_noteWithOtherCommandPrefixes_keepsThemAsText() {
+        Client client = manager.addClient("Acme Studio");
+
+        assertFalse(handler.execute("client.note C001 text/Discuss date/time slot"));
+        assertFalse(handler.execute("client.note C001 text/Send name/logo files to client/server"));
+
+        assertEquals(List.of("Discuss date/time slot", "Send name/logo files to client/server"), client.getNotes());
+        assertTrue(ui.errors.isEmpty());
+    }
+
     /** Tests malformed note arguments without mutating previously recorded notes. */
     @TestFactory
     public List<DynamicTest> execute_invalidNoteArguments_reportsErrorWithoutMutation() {
         List<String> inputs = List.of("client.note", "client.note text/Note", "client.note C001",
                 "client.note C001 Note", "client.note C001 text/", "client.note C001 text/ \t ",
-                "client.note C001 text/First text/Second", "client.note C001 text/Note name/Other",
+                "client.note C001 text/First text/Second", "client.note C001 name/Other text/Note",
                 "client.note C001 extra text/Note", "client.note C999 text/Note",
                 "client.note P001 text/Note", "client.note c001 text/Note", "client.note C1 text/Note");
         List<String> errors = List.of("A client ID is required before text/.",
                 "A client ID is required before text/.", "Missing required prefix: text/.",
                 "Missing required prefix: text/.", "A value is required after text/.",
-                "A value is required after text/.", "Repeated prefix: text/.", "Unexpected prefix: name/.",
+                "A value is required after text/.", "Repeated prefix: text/.",
+                "Arguments must start with a prefix such as name/.",
                 "Arguments must start with a prefix such as name/.", "Client C999 does not exist.",
                 "Client P001 does not exist.", "Client c001 does not exist.", "Client C1 does not exist.");
         List<DynamicTest> tests = new ArrayList<>();
