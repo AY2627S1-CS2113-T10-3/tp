@@ -47,12 +47,12 @@ alt user confirms
   deactivate PM
   CH -> TM : empty()
   activate TM
-  TM -> TM : deletedProjects.clear()
-  activate TM
-  deactivate TM
-  TM -> TM : deletedClients.clear()
-  activate TM
-  deactivate TM
+  note right of TM
+    deletedProjects.clear()
+  end note
+  note right of TM
+    deletedClients.clear()
+  end note
   TM --> CH : complete
   deactivate TM
   note right of CH
@@ -77,10 +77,10 @@ else user cancels
   note right of CH
     pendingTrashcanEmpty = false
   end note
-  deactivate CH
   CH -> UI : showMessage("Trashcan emptying cancelled.")
   activate UI
   deactivate UI
+  deactivate CH
   deactivate CH
   deactivate CH
   deactivate CH
