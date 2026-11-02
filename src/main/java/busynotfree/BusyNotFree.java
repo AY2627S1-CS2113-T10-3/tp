@@ -8,6 +8,7 @@ import busynotfree.command.CommandHandler;
 import busynotfree.command.CommandParser;
 import busynotfree.model.ClientManager;
 import busynotfree.model.ProjectManager;
+import busynotfree.storage.DataDirectoryLock;
 import busynotfree.storage.DataStorage;
 import busynotfree.ui.Ui;
 
@@ -39,7 +40,16 @@ public class BusyNotFree {
      */
     public static void main(String[] args) {
         Ui ui = new Ui();
-        DataStorage storage = new DataStorage(Path.of("data", "busynotfree.properties"));
+        Path dataDirectory = Path.of("data");
+        try (DataDirectoryLock lock = DataDirectoryLock.acquire(dataDirectory)) {
+            startApplication(ui, new DataStorage(dataDirectory.resolve("busynotfree.properties")));
+        } catch (IOException exception) {
+            ui.showError("Unable to access application data: " + exception.getMessage());
+        }
+    }
+
+    /** Loads the saved model and runs commands while main holds the data-directory lock. */
+    private static void startApplication(Ui ui, DataStorage storage) {
         DataStorage.LoadedData savedData;
         try {
             savedData = storage.load();

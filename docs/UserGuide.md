@@ -491,8 +491,19 @@ While confirmation is pending, those words are treated as answers to the confirm
 The save file is `data/busynotfree.properties` relative to the directory from which you start
 the app, which may differ from the folder containing the JAR. For example, running the JAR
 from a terminal in `C:\Work` uses `C:\Work\data\busynotfree.properties`.
-The app creates the data directory and file on a successful save and loads the file automatically
-when launched from the same directory. Without a save file, it starts with no records.
+The app creates the data directory at startup. A successful save writes the file, which loads
+automatically when launched from the same directory. Without a save file, it starts with no records.
+
+Only one BusyNotFree instance may use a data folder at a time. Starting another instance from
+the same directory displays `Error: Unable to access application data: This data folder is already
+in use by another BusyNotFree instance. Close it before trying again.` and stops before accepting
+commands or saving. Close the first instance before reopening, or launch from a different working
+directory to use separate data. Do not run an older version against the same folder at the same time;
+older versions do not check this lock.
+
+The app keeps a small `.busynotfree.lock` file in the data folder. Its presence does not mean the
+folder is in use: the operating-system lock is released when the app closes or its process ends.
+Leave this file in place, including while the app is running.
 
 To back up or move your data, exit successfully, then copy this file. On another computer,
 place it in a `data` folder relative to the directory from which you will launch BusyNotFree.
