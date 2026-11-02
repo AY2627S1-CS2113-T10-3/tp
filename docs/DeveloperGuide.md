@@ -136,6 +136,8 @@ event.add project/P001 name/Stakeholder meeting date/2026-10-20
 
 ![Object diagram of the model after creating a project, two tasks and an event](images/CreationObjectDiagram.png)
 
+Arrowheads show which object holds a reference to which. The managers refer to the objects they hold, but those objects do not refer back. `p1` and its tasks and event refer to each other, so those links have arrowheads at both ends.
+
 * The second `task.add` is rejected because `P999` does not exist. It does not use up an ID, so the next task is `T002` and `nextTaskNumber` is `3`.
 * Task and event IDs are counted separately, so `e1` is `E001` even though two tasks were added first.
 * `p1` stores only the client's ID, `"C001"`, and has no link to `c1`. The client is looked up through `ClientManager` when it is needed, for example to show its name in a confirmation.
