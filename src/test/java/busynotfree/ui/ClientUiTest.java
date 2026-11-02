@@ -204,6 +204,31 @@ class ClientUiTest {
                 "Updated client C001 from \"Acme\" to \"Acme Studio\"."), output.lines);
     }
 
+    @Test
+    public void showClient_controlsAndTabs_wrapsVisibleEscapesWithoutChangingNotes() {
+        Client client = new Client("C001", "Acme");
+        String note = "x" + "\t".repeat(40) + "\u001b[2Jworld";
+        client.addNote(note);
+
+        ui.showClient(client);
+
+        assertFalse(output.lines.stream().anyMatch(line -> line.contains("\u001b") || line.contains("\t")));
+        assertTrue(output.lines.stream().anyMatch(line -> line.contains("\\u001B[2J")));
+        assertTrue(output.lines.stream().allMatch(line -> line.codePointCount(0, line.length()) <= 80));
+        assertEquals(List.of(note), client.getNotes());
+    }
+
+    @Test
+    public void confirmations_controls_areEscapedEvenWithOverriddenUiPrinting() {
+        Client client = new Client("C001", "Acme\u001b[31m");
+
+        ui.showClientAdded(client);
+        ui.showClientEdited(client, "Old\u0008name");
+
+        assertEquals(List.of("Added client C001: Acme\\u001B[31m.",
+                "Updated client C001 from \"Old\\u0008name\" to \"Acme\\u001B[31m\"."), output.lines);
+    }
+
     /** Records every rendered line, including whitespace and decoration. */
     private static class RecordingUi extends Ui {
         private final List<String> lines = new ArrayList<>();

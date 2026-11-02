@@ -1,6 +1,7 @@
 package busynotfree.ui;
 
 import java.util.List;
+import java.util.Locale;
 
 import busynotfree.model.Client;
 import busynotfree.model.Event;
@@ -430,7 +431,7 @@ public class Ui {
      * @param message response to display
      */
     public void showMessage(String message) {
-        System.out.println(message);
+        System.out.println(escapeControls(message));
     }
 
     /**
@@ -439,6 +440,36 @@ public class Ui {
      * @param message error to display
      */
     public void showError(String message) {
-        System.out.println("Error: " + message);
+        System.out.println("Error: " + escapeControls(message));
+    }
+
+    /**
+     * Makes terminal controls and isolated surrogates visible without changing stored text.
+     * Preserves line feeds, normalizes CRLF to a line feed and displays tabs as a literal backslash-t.
+     * This shared output boundary also protects client deletion, restoration and error messages.
+     */
+    static String escapeControls(String message) {
+        String text = String.valueOf(message);
+        StringBuilder displayed = new StringBuilder(text.length());
+        for (int offset = 0; offset < text.length();) {
+            int codePoint = text.codePointAt(offset);
+            offset += Character.charCount(codePoint);
+            if (codePoint == '\n') {
+                displayed.append('\n');
+            } else if (codePoint == '\r' && offset < text.length() && text.charAt(offset) == '\n') {
+                displayed.append('\n');
+                offset++;
+            } else if (codePoint == '\t') {
+                displayed.append("\\t");
+            } else if (codePoint == '\r') {
+                displayed.append("\\r");
+            } else if (Character.isISOControl(codePoint)
+                    || (codePoint >= Character.MIN_SURROGATE && codePoint <= Character.MAX_SURROGATE)) {
+                displayed.append(String.format(Locale.ROOT, "\\u%04X", codePoint));
+            } else {
+                displayed.appendCodePoint(codePoint);
+            }
+        }
+        return displayed.toString();
     }
 }

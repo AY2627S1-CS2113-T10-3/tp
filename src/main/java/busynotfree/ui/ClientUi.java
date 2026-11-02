@@ -21,18 +21,18 @@ public final class ClientUi {
 
     /** Displays the new client's assigned ID and name. */
     public void showClientAdded(Client client) {
-        ui.showMessage("Added client " + client.getClientId() + ": " + client.getName() + ".");
+        showMessage("Added client " + client.getClientId() + ": " + client.getName() + ".");
     }
 
     /** Confirms the previous and updated names alongside the client's unchanged ID. */
     public void showClientEdited(Client client, String previousName) {
-        ui.showMessage("Updated client " + client.getClientId() + " from \"" + previousName
+        showMessage("Updated client " + client.getClientId() + " from \"" + previousName
                 + "\" to \"" + client.getName() + "\".");
     }
 
     /** Confirms that a note was attached to its client. */
     public void showNoteAdded(Client client) {
-        ui.showMessage("Note added to client " + client.getClientId() + ".");
+        showMessage("Note added to client " + client.getClientId() + ".");
     }
 
     /** Displays the client's details and every note in insertion order. */
@@ -92,11 +92,19 @@ public final class ClientUi {
      * are respected, and long unbroken words are split without cutting a surrogate pair.
      */
     private void appendWrappedText(List<String> lines, String prefix, String text) {
+        prefix = Ui.escapeControls(prefix);
         int prefixWidth = prefix.codePointCount(0, prefix.length());
+        if (prefixWidth >= MAX_LINE_WIDTH) {
+            // Render an oversized label on its own lines so the content always has room to advance.
+            appendWrappedText(lines, "", prefix);
+            prefix = "";
+            prefixWidth = 0;
+        }
         int textWidth = MAX_LINE_WIDTH - prefixWidth;
         String indentation = " ".repeat(prefixWidth);
         String linePrefix = prefix;
-        for (String paragraph : text.split("\\R", -1)) {
+        for (String originalParagraph : text.split("\\R", -1)) {
+            String paragraph = Ui.escapeControls(originalParagraph);
             int start = 0;
             int remaining = paragraph.codePointCount(0, paragraph.length());
             do {
@@ -134,39 +142,44 @@ public final class ClientUi {
             width = Math.max(width, line.codePointCount(0, line.length()));
         }
         String separator = "=".repeat(Math.min(width, MAX_LINE_WIDTH));
-        ui.showMessage(separator);
+        showMessage(separator);
         for (String line : lines) {
-            ui.showMessage(line);
+            showMessage(line);
         }
-        ui.showMessage(separator);
+        showMessage(separator);
+    }
+
+    /** Protects client output even when a supplied UI overrides the shared printing method. */
+    private void showMessage(String message) {
+        ui.showMessage(Ui.escapeControls(message));
     }
 
     /** Displays the expected syntax after a supported client command fails. */
     public void showCommandUsage(String action) {
         switch (action) {
         case "add":
-            ui.showMessage("Format: client.add name/CLIENT_NAME");
+            showMessage("Format: client.add name/CLIENT_NAME");
             break;
         case "note":
-            ui.showMessage("Format: client.note CLIENT_ID text/NOTE");
+            showMessage("Format: client.note CLIENT_ID text/NOTE");
             break;
         case "view":
-            ui.showMessage("Format: client.view CLIENT_ID");
+            showMessage("Format: client.view CLIENT_ID");
             break;
         case "list":
-            ui.showMessage("Format: client.list");
+            showMessage("Format: client.list");
             break;
         case "find":
-            ui.showMessage("Format: client.find NAME");
+            showMessage("Format: client.find NAME");
             break;
         case "edit":
-            ui.showMessage("Format: client.edit CLIENT_ID name/NEW_NAME");
+            showMessage("Format: client.edit CLIENT_ID name/NEW_NAME");
             break;
         case "delete":
-            ui.showMessage("Format: client.delete CLIENT_ID");
+            showMessage("Format: client.delete CLIENT_ID");
             break;
         case "delete_note":
-            ui.showMessage("Format: client.delete_note CLIENT_ID index/NOTE_INDEX");
+            showMessage("Format: client.delete_note CLIENT_ID index/NOTE_INDEX");
             break;
         default:
             break;

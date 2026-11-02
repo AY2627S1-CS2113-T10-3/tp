@@ -37,6 +37,9 @@ Reserved prefixes such as `name/` cannot appear after whitespace inside a value.
 Ordinary slash-containing text such as `UI/UX` is accepted. Quoting or escaping
 reserved prefixes is not supported.
 
+Terminal control characters in displayed text use visible escapes such as `\u001B`
+and `\t`; the stored text is unchanged. Ordinary line breaks are retained.
+
 ## Clients
 
 ### Add a client: `client.add`
