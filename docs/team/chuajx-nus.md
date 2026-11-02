@@ -54,4 +54,4 @@ and progress, and saving data between sessions.
   and task-completion diagrams following peer feedback. Added the shared
   [architecture overview](../DeveloperGuide.md#architecture-overview),
   [command-processing explanation](../DeveloperGuide.md#shared-command-processing)
-  and linked contents, and clarified the [Task/Event glossary](../DeveloperGuide.md#glossary).
+  and linked contents, and clarified the [Task/Event glossary](../DeveloperGuide.md#appendix-d-glossary).
