@@ -66,5 +66,6 @@ Project *-up-> "   events *" Event
 ' ProjectManager owns every project and checks clients through the ClientLookup interface.
 ProjectManager *-up-> "projects *   " Project
 ProjectManager -down-> "clientLookup 1   " ClientLookup
-ClientManager .left.|> ClientLookup
+' The blank label lengthens the realization arrow so its dashed line and triangle are visible.
+ClientManager .left.|> ClientLookup : "          "
 @enduml
