@@ -89,4 +89,37 @@ class ClientTest {
         assertEquals(List.of("First"), snapshot);
         assertEquals(List.of("First", "Second"), client.getNotes());
     }
+
+    @Test
+    public void constructor_unpairedSurrogates_rejectsMalformedIdOrName() {
+        for (String text : List.of("\uD800", "\uDC00", "a\uD800b", "a\uDC00b")) {
+            assertThrows(ClientException.class, () -> new Client(text, "Acme"));
+            assertThrows(ClientException.class, () -> new Client("C001", text));
+        }
+    }
+
+    @Test
+    public void update_unpairedSurrogates_preservesNameNotesAndIdCounter() {
+        ClientManager manager = new ClientManager();
+        Client client = manager.addClient("Acme");
+        client.addNote("Existing note");
+        for (String text : List.of("\uD800", "\uDC00", "a\uD800b", "a\uDC00b")) {
+            assertThrows(ClientException.class, () -> client.setName(text));
+            assertThrows(ClientException.class, () -> client.addNote(text));
+            assertThrows(ClientException.class, () -> manager.addClient(text));
+        }
+        assertEquals("Acme", client.getName());
+        assertEquals(List.of("Existing note"), client.getNotes());
+        assertEquals(2, manager.getNextClientNumber());
+    }
+
+    @Test
+    public void constructorAndNotes_validSurrogatePairs_preservesSupplementaryCharacters() {
+        Client client = new Client("C001", "Acme 😀");
+        client.addNote("Call 📞 on Friday");
+
+        assertEquals("Acme 😀", client.getName());
+        assertEquals(List.of("Call 📞 on Friday"), client.getNotes());
+        assertEquals(client.getNotes(), client.copy().getNotes());
+    }
 }

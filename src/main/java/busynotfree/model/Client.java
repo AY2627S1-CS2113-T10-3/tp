@@ -19,12 +19,13 @@ public final class Client {
      *
      * @param clientId Unique ID assigned by the client manager.
      * @param name Non-blank client name.
-     * @throws ClientException If the ID or name is null or blank.
+     * @throws ClientException If the ID or name is null, blank or contains malformed Unicode.
      */
     public Client(String clientId, String name) {
         if (clientId == null || clientId.trim().isBlank()) {
             throw new ClientException("A client ID must not be blank.");
         }
+        validateUnicode(clientId, "ID");
         this.clientId = clientId.trim();
         setName(name);
     }
@@ -37,11 +38,12 @@ public final class Client {
         return name;
     }
 
-    /** Updates only the name, rejecting null or blank values before changing the client. */
+    /** Updates only the name, validating nonblank, well-formed Unicode before changing the client. */
     public void setName(String name) {
         if (name == null || name.trim().isBlank()) {
             throw new ClientException("A client name must not be blank.");
         }
+        validateUnicode(name, "name");
         this.name = name.trim();
     }
 
@@ -49,13 +51,27 @@ public final class Client {
      * Appends a note without replacing previously recorded notes.
      *
      * @param note Non-blank note text; internal spaces are preserved.
-     * @throws ClientException If the note is null or blank.
+     * @throws ClientException If the note is null, blank or contains malformed Unicode.
      */
     public void addNote(String note) {
         if (note == null || note.trim().isBlank()) {
             throw new ClientException("A client note must not be blank.");
         }
+        validateUnicode(note, "note");
         notes.add(note.trim());
+    }
+
+    /** Rejects isolated UTF-16 surrogates that cannot be written to the UTF-8 save file. */
+    private static void validateUnicode(String text, String field) {
+        for (int i = 0; i < text.length(); i++) {
+            char character = text.charAt(i);
+            if (Character.isHighSurrogate(character) && i + 1 < text.length()
+                    && Character.isLowSurrogate(text.charAt(i + 1))) {
+                i++;
+            } else if (Character.isSurrogate(character)) {
+                throw new ClientException("A client " + field + " must contain valid Unicode text.");
+            }
+        }
     }
 
     /**
