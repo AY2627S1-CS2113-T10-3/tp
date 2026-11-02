@@ -57,10 +57,13 @@ object "<u>e1:Event</u>" as e1 {
   date = 2026-10-20
 }
 
-pm -right- cm : "clientLookup"
-cm -down- c1
-pm -down- p1
-p1 -down- t1
-p1 -down- t2
-p1 -down- e1
+' Arrows show navigability, matching the fields in the code.
+' One-way: the managers hold references, but the referenced objects do not refer back.
+pm -right-> cm : "clientLookup"
+cm -down-> c1
+pm -down-> p1
+' Two-way: p1 holds its tasks and events, and each one holds its project.
+p1 <-down-> t1
+p1 <-down-> t2
+p1 <-down-> e1
 @enduml
