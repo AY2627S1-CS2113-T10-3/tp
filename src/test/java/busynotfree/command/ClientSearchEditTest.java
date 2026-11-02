@@ -110,6 +110,29 @@ class ClientSearchEditTest {
         }
     }
 
+    @Test
+    public void find_unicodeCaseVariant_findsClientThroughSharedRouting() {
+        handler.execute("client.add name/ΟΣ");
+        ui.messages.clear();
+
+        handler.execute("client.find οσ");
+
+        assertTrue(ui.messages.contains("Found 1 matching client."));
+        assertTrue(ui.messages.contains("1. C001 | ΟΣ"));
+        assertTrue(ui.errors.isEmpty());
+    }
+
+    @Test
+    public void find_controlAndWhitespaceOnly_reportsErrorAndUsage() {
+        clients.addClient("Acme");
+
+        handler.execute("client.find \u0000\u2003");
+
+        assertEquals(List.of("A search name must not be blank."), ui.errors);
+        assertEquals(List.of("Format: client.find NAME"), ui.messages);
+        assertEquals(1, clients.getClients().size());
+    }
+
     /** Captures responses so tests verify visible results as well as model state. */
     private static class RecordingUi extends Ui {
         private final List<String> messages = new ArrayList<>();

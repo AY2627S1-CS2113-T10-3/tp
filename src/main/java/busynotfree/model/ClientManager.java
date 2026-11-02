@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 import busynotfree.exception.ClientException;
 import busynotfree.exception.ClientHasProjectsException;
@@ -240,21 +241,24 @@ public final class ClientManager implements ClientLookup {
         return number + 1;
     }
 
-    /** Finds case-insensitive name substrings in creation order, rejecting blank searches. */
+    /** Finds Unicode case-insensitive literal name substrings in numeric ID order, rejecting blank searches. */
     public List<Client> findClients(String name) {
-        if (name == null || name.isBlank()) {
+        String search = name == null ? "" : name.trim();
+        if (search.isBlank()) {
             throw new ClientException("A search name must not be blank.");
         }
-        String search = name.trim().toLowerCase(Locale.ROOT);
+        // Literal matching keeps punctuation ordinary while handling Unicode case variants such as sigma.
+        Pattern searchPattern = Pattern.compile(search,
+                Pattern.LITERAL | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         return clients.values().stream()
-                .filter(client -> client.getName().toLowerCase(Locale.ROOT).contains(search))
+                .filter(client -> searchPattern.matcher(client.getName()).find())
                 .toList();
     }
 
     /**
-     * Returns an unmodifiable snapshot of clients in creation order.
+     * Returns an unmodifiable snapshot of active clients in numeric ID order.
      *
-     * @return Clients registered in this application run.
+     * @return Active clients, including those loaded or restored during this session.
      */
     public List<Client> getClients() {
         return List.copyOf(clients.values());
