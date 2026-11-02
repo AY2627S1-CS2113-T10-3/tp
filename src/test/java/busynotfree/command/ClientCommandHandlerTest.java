@@ -135,7 +135,8 @@ class ClientCommandHandlerTest {
 
         assertFalse(handler.execute("client.view C001"));
 
-        assertEquals(List.of("C001 | Acme Studio", "Notes: No notes found."), ui.messages);
+        assertEquals(List.of("=".repeat(24), "C001 | Acme Studio", "", "Notes: No notes found.",
+                "=".repeat(24)), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -147,8 +148,8 @@ class ClientCommandHandlerTest {
 
         assertFalse(handler.execute("client.view C001"));
 
-        assertEquals(List.of("C001 | Acme Studio", "Note 1: Prefers weekly updates",
-                "Note 2: Follow up on Friday"), ui.messages);
+        assertEquals(List.of("=".repeat(30), "C001 | Acme Studio", "", "Note 1: Prefers weekly updates",
+                "Note 2: Follow up on Friday", "=".repeat(30)), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -185,7 +186,8 @@ class ClientCommandHandlerTest {
 
         assertFalse(handler.execute("client.list"));
 
-        assertEquals(List.of("1. C001 | Acme Studio", "2. C002 | Bright Ideas"), ui.messages);
+        assertEquals(List.of("=".repeat(24), "1. C001 | Acme Studio", "2. C002 | Bright Ideas",
+                "=".repeat(24)), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -193,7 +195,7 @@ class ClientCommandHandlerTest {
     public void execute_listWithoutClients_displaysEmptyMessage() {
         assertFalse(handler.execute("client.list"));
 
-        assertEquals(List.of("No clients found."), ui.messages);
+        assertEquals(List.of("=".repeat(24), "No clients found.", "=".repeat(24)), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -201,7 +203,7 @@ class ClientCommandHandlerTest {
     public void execute_listWithExtraArguments_ignoresArgumentsAsGuideSpecifies() {
         assertFalse(handler.execute("client.list ignored arguments"));
 
-        assertEquals(List.of("No clients found."), ui.messages);
+        assertEquals(List.of("=".repeat(24), "No clients found.", "=".repeat(24)), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -214,7 +216,8 @@ class ClientCommandHandlerTest {
         assertEquals("Acme  UI/UX Studio", manager.getClient("C001").getName());
         assertEquals(List.of("Review  src/main at https://example.com"), manager.getClient("C001").getNotes());
         assertEquals(List.of("Added client C001: Acme  UI/UX Studio.", "Note added to client C001.",
-                "C001 | Acme  UI/UX Studio", "Note 1: Review  src/main at https://example.com"), ui.messages);
+                "=".repeat(47), "C001 | Acme  UI/UX Studio", "", "Note 1: Review  src/main at https://example.com",
+                "=".repeat(47)), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -316,7 +319,7 @@ class ClientCommandHandlerTest {
 
         // Cancellation must return the handler to normal command processing.
         handler.execute("client.view C001");
-        assertEquals("Note 1: Keep this note", ui.messages.getLast());
+        assertEquals("Note 1: Keep this note", ui.messages.get(ui.messages.size() - 2));
     }
 
     @Test
@@ -469,10 +472,10 @@ class ClientCommandHandlerTest {
                 fixture.handler.execute("client.view C001");
                 for (int position = 0; position < expected.size(); position++) {
                     assertEquals("Note " + (position + 1) + ": " + expected.get(position),
-                            fixture.ui.messages.get(position + 1));
+                            fixture.ui.messages.get(position + 3));
                 }
                 if (expected.isEmpty()) {
-                    assertEquals("Notes: No notes found.", fixture.ui.messages.getLast());
+                    assertEquals("Notes: No notes found.", fixture.ui.messages.get(fixture.ui.messages.size() - 2));
                 }
             }));
         }
@@ -491,7 +494,7 @@ class ClientCommandHandlerTest {
         assertEquals("Note deletion cancelled.", ui.messages.getLast());
         assertTrue(ui.errors.isEmpty());
         handler.execute("client.view C001");
-        assertEquals("Note 1: Keep this note", ui.messages.getLast());
+        assertEquals("Note 1: Keep this note", ui.messages.get(ui.messages.size() - 2));
     }
 
     @Test
