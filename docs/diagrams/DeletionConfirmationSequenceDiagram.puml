@@ -96,9 +96,8 @@ else input ends
 
   App -> App : saveAndReportExit()
   activate App
-  App --> App : save result
+  deactivate App
   deactivate App
   note right of App : run() returns after the save attempt\nbecause no further input is available.
 end
-deactivate App
 @enduml
