@@ -27,6 +27,10 @@ If you are building from source, run `.\gradlew.bat shadowJar` on Windows or `./
 
 The commands and IDs are case-sensitive. Enter dates as real calendar dates in `YYYY-MM-DD` format, such as `2026-11-30`. Names, descriptions, and notes may contain spaces. Prefixes such as `name/` can be supplied in any order, but each required prefix must appear once with a non-blank value.
 
+Reserved prefixes such as `name/` cannot appear after whitespace inside a value.
+Ordinary slash-containing text such as `UI/UX` is accepted. Quoting or escaping
+reserved prefixes is not supported.
+
 ## Clients
 
 ### Add a client: `client.add`
@@ -67,8 +71,8 @@ Note 1: Prefers weekly updates
 
 Format: `client.list`
 
-Lists client IDs and names in insertion order. A restored client is appended; after
-restarting, clients appear in numeric ID order. If there are none, the app shows
+Lists client IDs and names in ascending numeric ID order, including after restoration
+and restarting. If there are none, the app shows
 `No clients found.` Extra words after this command are ignored.
 
 ### Find clients by name: `client.find`
@@ -78,7 +82,7 @@ Format: `client.find NAME`
 Finds clients whose names contain `NAME`, ignoring case. For example,
 `client.find acme` matches `Acme Studio`. Multiword searches are allowed.
 A summary such as `Found 2 matching clients.` appears before the matching client
-IDs and names in insertion order, using the same format as `client.list`.
+IDs and names in ascending numeric ID order, using the same format as `client.list`.
 A single match displays `Found 1 matching client.` No matches displays
 `Found 0 matching clients.` followed by `No clients found.` A search must not be blank.
 
@@ -240,8 +244,13 @@ Moves an existing project and its tasks and events to the trashcan after confirm
 It does not delete the client. Deleted IDs are not reused. Use `trashcan.restore PROJECT_ID`
 to recover the project while its client is still active.
 
+Type `yes` to confirm or `no` to cancel. Other input repeats the confirmation prompt.
+
 ```text
 project.delete P001
+Delete project P001 "Website redesign" and 2 associated activities?
+Type yes to confirm deletion or no to cancel.
+yes
 Website redesign has been deleted
 2 associated activities removed.
 ```
@@ -378,9 +387,10 @@ Provide exactly one project ID or client ID. The slash means "or"; do not type i
 
 Restores a project immediately, including its tasks and events with their original
 IDs, descriptions, dates, status and task completion states. The restored project
-is removed from the trashcan and appended to the active project list.
+is removed from the trashcan, and active projects are sorted by numeric project ID.
 For a client ID, restores the client's original name, ID and all notes in their
-original order. Its deleted projects remain in the trashcan until restored separately.
+original order. Active clients are then sorted by numeric client ID. Its deleted
+projects remain in the trashcan until restored separately.
 No new IDs are allocated. Changes are saved on `save` or `exit`.
 
 ```text

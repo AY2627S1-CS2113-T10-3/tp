@@ -49,7 +49,7 @@ class DataStorageTest {
 
         DataStorage.LoadedData loaded = storage.load();
         loaded.clientManager().getTrashcanManager().restoreClient("C001", loaded.clientManager());
-        assertEquals(List.of("C002", "C001"), loaded.clientManager().getClients().stream()
+        assertEquals(List.of("C001", "C002"), loaded.clientManager().getClients().stream()
                 .map(client -> client.getClientId()).toList());
         storage.save(loaded.clientManager(), loaded.projectManager());
 

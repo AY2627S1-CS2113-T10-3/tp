@@ -14,9 +14,15 @@ participant ":Ui" as UI
 User -> CH : execute("project.delete P001")
 activate CH
 CH -> PM : getProject("P001")
+activate PM
 PM --> CH : project
+deactivate PM
 CH -> CH : retain pending selection
+activate CH
+deactivate CH
 CH -> UI : showProjectDeleteConfirmation(project)
+activate UI
+deactivate UI
 deactivate CH
 
 note over CH, P
@@ -26,21 +32,33 @@ end note
 User -> CH : execute("yes")
 activate CH
 CH -> CH : clear pending selection
+activate CH
+deactivate CH
 CH -> PM : deleteProject("P001")
 activate PM
 PM -> TM : storeProject(project)
 activate TM
 TM -> P : copy()
+activate P
 P --> TM : independent project and activities
+deactivate P
 TM -> TM : retain snapshot
+activate TM
+deactivate TM
 TM --> PM : snapshot stored
 deactivate TM
 PM -> P : removeAllActivities()
+activate P
 P --> PM : removedCount
+deactivate P
 PM -> PM : remove active project
+activate PM
+deactivate PM
 PM --> CH : removedCount
 deactivate PM
 CH -> UI : showProjectDeleted(...)
+activate UI
+deactivate UI
 deactivate CH
 
 note over PM, TM

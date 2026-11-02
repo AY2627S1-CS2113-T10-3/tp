@@ -1,9 +1,9 @@
 # About us
 
-Display |    Name    |          Github Profile           |           Portfolio
---- | --- | --- | ---
-![](https://via.placeholder.com/100.png?text=Photo) | Chang Feng | [Github](https://github.com/CF36) |       [Portfolio](team/cf36.md)        |
-<img src="team/pictures/chuajx.jpeg" alt="Photo of Chua Choon Hsiang" width="100"> | Chua Choon Hsiang | [Github](https://github.com/ChuaJx-NUS) |[Portfolio](team/chuajx-nus.md)
-![](https://via.placeholder.com/100.png?text=Photo) | Tan Xuan You | [Github](https://github.com/txythecegkid) |[Portfolio](team/txythecegkid.md) 
-![](https://via.placeholder.com/100.png?text=Photo) | Yap Ting | [Github](https://github.com/yt0812) | [Portfolio](team/yt0812.md)
-<img src="team/pictures/shrikkanth.jpeg" alt="Photo of Balakrishnan Shrikkanth" width="100"> | Balakrishnan Shrikkanth | [Github](https://github.com/CodinShrek) | [Portfolio](team/codinshrek.md)
+| Photo | Name | GitHub Profile | Portfolio |
+| --- | --- | --- | --- |
+| <img src="https://via.placeholder.com/100.png?text=Photo" alt="Photo placeholder for Chang Feng" width="100"> | Chang Feng | [GitHub](https://github.com/CF36) | [Portfolio](team/cf36.md) |
+| <img src="team/pictures/chuajx.jpeg" alt="Chua Choon Hsiang" width="100"> | Chua Choon Hsiang | [GitHub](https://github.com/ChuaJx-NUS) | [Portfolio](team/chuajx-nus.md) |
+| <img src="https://via.placeholder.com/100.png?text=Photo" alt="Photo placeholder for Tan Xuan You" width="100"> | Tan Xuan You | [GitHub](https://github.com/txythecegkid) | [Portfolio](team/txythecegkid.md) |
+| <img src="https://via.placeholder.com/100.png?text=Photo" alt="Photo placeholder for Yap Ting" width="100"> | Yap Ting | [GitHub](https://github.com/yt0812) | [Portfolio](team/yt0812.md) |
+| <img src="team/pictures/shrikkanth.jpeg" alt="Balakrishnan Shrikkanth" width="100"> | Balakrishnan Shrikkanth | [GitHub](https://github.com/CodinShrek) | [Portfolio](team/codinshrek.md) |

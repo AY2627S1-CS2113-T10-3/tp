@@ -5,34 +5,60 @@ hide circle
 hide empty members
 skinparam defaultFontSize 14
 skinparam classAttributeIconSize 0
+skinparam nodesep 40
+skinparam ranksep 45
+skinparam minClassWidth 90
 
 class CommandHandler
 class TrashcanCommandHandler
-class ClientManager
-class ProjectManager
-class TrashcanManager
+
+class ClientManager {
+  +deleteClient(clientId: String, manager: ProjectManager): Client
+  ~registerRestoredClient(client: Client): void
+  +loadDeletedClient(client: Client): void
+}
+
+class ProjectManager {
+  +deleteProject(projectId: String): int
+  ~registerRestoredProject(project: Project): void
+  +loadDeletedProject(project: Project): void
+}
+
+class TrashcanManager {
+  ~storeProject(project: Project): void
+  ~storeClient(client: Client): void
+  +restoreProject(projectId: String, manager: ProjectManager): Project
+  +restoreClient(clientId: String, manager: ClientManager): Client
+  +empty(): void
+}
+
 class Project
 class Client
 class Task
 class Event
 
-CommandHandler --> TrashcanCommandHandler : delegates
-CommandHandler ..> TrashcanManager : empty() after\nconfirmation
-TrashcanCommandHandler --> TrashcanManager : lists / restores
-TrashcanCommandHandler --> ProjectManager : supplies\nrestore target
-TrashcanCommandHandler --> ClientManager : supplies\nrestore target
-ClientManager --> TrashcanManager : stores deleted\nclients
-ProjectManager --> TrashcanManager : stores deleted\nprojects
-TrashcanManager ..> ProjectManager : registerRestoredProject(...)
-TrashcanManager ..> ClientManager : registerRestoredClient(...)
+CommandHandler -down-> TrashcanCommandHandler
+CommandHandler -down-> ProjectManager
+CommandHandler -down-> ClientManager
+CommandHandler ..> TrashcanManager
+TrashcanCommandHandler -down-> TrashcanManager
+TrashcanCommandHandler -down-> ProjectManager
+TrashcanCommandHandler -down-> ClientManager
+ClientManager -down-> TrashcanManager
+ClientManager .right.> ProjectManager
+ProjectManager -down-> TrashcanManager
+TrashcanManager .up.> ProjectManager
+TrashcanManager .up.> ClientManager
 
-TrashcanManager --> "0..*" Project : retained snapshots
-TrashcanManager --> "0..*" Client : retained snapshots
-Project *-- "0..*" Task
-Project *-- "0..*" Event
+TrashcanManager -down-> "0..*  " Project
+TrashcanManager -down-> "0..*  " Client
+Project "1   " *-down- "0..*" Task
+Project "1" *-down- "0..*   " Event
 
 note bottom of TrashcanManager
-  One shared instance per application.
-  Active collections and utility classes are omitted.
+  One shared trashcan per application.
+  Retained records are independent snapshots.
+  Selected operations are shown; unrelated details are omitted.
 end note
+
 @enduml

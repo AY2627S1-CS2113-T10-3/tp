@@ -1,5 +1,5 @@
 @startuml
-' Restore after client-ID validation; input loop and decorative output are omitted.
+' Restoration outcomes for well-formed client IDs; input loop and decorative output are omitted.
 hide footbox
 skinparam defaultFontSize 14
 skinparam maxMessageSize 145
@@ -10,33 +10,94 @@ participant ":TrashcanManager" as TM
 participant ":ClientManager" as CM
 participant ":Ui" as UI
 
-CH -> TCH : execute(restoreCommand)
-TCH -> TCH : validate one client ID
-TCH -> TM : restoreClient("C001", clientManager)
-TM -> TM : find retained client
-
-alt retained client exists
+alt retained client exists and ID is available
+  CH -> TCH : execute(restoreCommand)
+  activate CH
+  activate TCH
+  TCH -> TCH : validate one client ID
+  activate TCH
+  deactivate TCH
+  TCH -> TM : restoreClient("C001", clientManager)
+  activate TM
+  TM -> TM : find retained client
+  activate TM
+  deactivate TM
   TM -> CM : registerRestoredClient(client)
+  activate CM
   CM -> CM : check active client ID
-  alt ID is available
-    CM -> CM : add client with original notes
-    CM --> TM : registration complete
-    TM -> TM : remove retained client entry
-    TM --> TCH : restored client
-    TCH -> UI : show restoration message
-  else ID conflicts
-    CM --> TM : ClientException
-    TM --> TCH : propagate exception
-    TCH --> CH : propagate exception
-    CH -> UI : show error and usage
-    note over TM, CM
-      Active client and retained snapshot are unchanged.
-    end note
-  end
-else no retained client
-  TM --> TCH : ClientException
+  activate CM
+  deactivate CM
+  CM -> CM : add client with original notes
+  activate CM
+  deactivate CM
+  CM -> CM : sortClientsById()
+  activate CM
+  deactivate CM
+  CM --> TM : registration complete
+  deactivate CM
+  TM -> TM : remove retained client entry
+  activate TM
+  deactivate TM
+  TM --> TCH : restored client
+  deactivate TM
+  TCH -> UI : show restoration message
+  activate UI
+  deactivate UI
+  TCH --> CH
+  deactivate TCH
+  deactivate CH
+
+else active client ID conflicts
+  CH -> TCH : execute(restoreCommand)
+  activate CH
+  activate TCH
+  TCH -> TCH : validate one client ID
+  activate TCH
+  deactivate TCH
+  TCH -> TM : restoreClient("C001", clientManager)
+  activate TM
+  TM -> TM : find retained client
+  activate TM
+  deactivate TM
+  TM -> CM : registerRestoredClient(client)
+  activate CM
+  CM -> CM : check active client ID
+  activate CM
+  deactivate CM
+  CM --> TM : ClientException
+  deactivate CM
+  TM --> TCH : propagate exception
+  deactivate TM
   TCH --> CH : propagate exception
+  deactivate TCH
   CH -> UI : show error and usage
+  activate UI
+  deactivate UI
+  note over TM, CM
+    Active client and retained snapshot are unchanged.
+  end note
+  deactivate CH
+
+else no retained client
+  CH -> TCH : execute(restoreCommand)
+  activate CH
+  activate TCH
+  TCH -> TCH : validate one client ID
+  activate TCH
+  deactivate TCH
+  TCH -> TM : restoreClient("C001", clientManager)
+  activate TM
+  TM -> TM : find retained client
+  activate TM
+  deactivate TM
+  TM --> TCH : ClientException
+  deactivate TM
+  TCH --> CH : propagate exception
+  deactivate TCH
+  CH -> UI : show error and usage
+  activate UI
+  deactivate UI
+  deactivate CH
 end
 
 note over TM, CM

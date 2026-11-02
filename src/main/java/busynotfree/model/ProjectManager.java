@@ -288,6 +288,7 @@ public final class ProjectManager {
 
     /**
      * Registers a restored project after checking its client and active IDs.
+     * Keeps active projects in numeric project ID order.
      * Leaves ID counters unchanged.
      *
      * @param project Snapshot to register in the active collection.
@@ -300,6 +301,20 @@ public final class ProjectManager {
         }
         validateProjectIds(project, projects.values());
         projects.put(project.getProjectId(), project);
+        sortProjectsById();
+    }
+
+    /** Reorders active projects by the numeric portion of their IDs. */
+    private void sortProjectsById() {
+        List<Project> sortedProjects = projects.values().stream()
+                .sorted(Comparator.comparingInt(
+                        project -> Integer.parseInt(project.getProjectId().substring(1))))
+                .toList();
+
+        projects.clear();
+        for (Project project : sortedProjects) {
+            projects.put(project.getProjectId(), project);
+        }
     }
 
     /**
@@ -322,16 +337,7 @@ public final class ProjectManager {
 
     /** Rejects project or activity ID collisions before a restore or storage import changes data. */
     private void validateProjectIds(Project candidate, Iterable<Project> existingProjects) {
-        for (Project existing : existingProjects) {
-            boolean duplicateTask = candidate.getTasks().stream().anyMatch(task -> existing.getTasks().stream()
-                    .anyMatch(other -> other.getId().equals(task.getId())));
-            boolean duplicateEvent = candidate.getEvents().stream().anyMatch(event -> existing.getEvents().stream()
-                    .anyMatch(other -> other.getId().equals(event.getId())));
-            if (existing.getProjectId().equals(candidate.getProjectId()) || duplicateTask || duplicateEvent) {
-                throw new ProjectException("Cannot restore or load project " + candidate.getProjectId()
-                        + ": an ID is already in use.");
-            }
-        }
+        ProjectIdValidator.validate(candidate, existingProjects);
     }
 
     /**

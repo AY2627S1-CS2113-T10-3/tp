@@ -10,11 +10,23 @@ participant ":ProjectManager" as PM
 participant ":TrashcanManager" as TM
 participant ":Ui" as UI
 
-User -> CH : execute("trashcan.empty")
+note over User, CH
+  Actor messages are user input passed to execute().
+  The application input loop is omitted.
+end note
+
+User -> CH : trashcan.empty
+activate CH
 CH -> CH : routeCommand(command)
+activate CH
 CH -> CH : validate no arguments\npendingTrashcanEmpty = true
+activate CH
+deactivate CH
 CH -> UI : showMessage(confirmation prompt)
-CH --> User : false
+activate UI
+deactivate UI
+deactivate CH
+deactivate CH
 
 note over CH, TM
   No entries are removed before confirmation.
@@ -22,24 +34,48 @@ note over CH, TM
 end note
 
 alt user confirms
-  User -> CH : execute("yes")
+  User -> CH : yes
+  activate CH
   CH -> CH : handleDeletionConfirmation("yes")
+  activate CH
   CH -> CH : handleTrashcanEmptyConfirmation("yes")
+  activate CH
   CH -> PM : getTrashcanManager()
+  activate PM
   PM --> CH : shared trashcan
+  deactivate PM
   CH -> TM : empty()
+  activate TM
   TM -> TM : deletedProjects.clear()\ndeletedClients.clear()
+  activate TM
+  deactivate TM
   TM --> CH : complete
+  deactivate TM
   CH -> CH : pendingTrashcanEmpty = false
+  activate CH
+  deactivate CH
   CH -> UI : showMessage("Trashcan emptied.")
-  CH --> User : false
+  activate UI
+  deactivate UI
+  deactivate CH
+  deactivate CH
+  deactivate CH
 else user cancels
-  User -> CH : execute("no")
+  User -> CH : no
+  activate CH
   CH -> CH : handleDeletionConfirmation("no")
+  activate CH
   CH -> CH : handleTrashcanEmptyConfirmation("no")
+  activate CH
   CH -> CH : cancelPendingDeletion()\npendingTrashcanEmpty = false
+  activate CH
+  deactivate CH
   CH -> UI : showMessage("Trashcan emptying cancelled.")
-  CH --> User : false
+  activate UI
+  deactivate UI
+  deactivate CH
+  deactivate CH
+  deactivate CH
 end
 
 note over PM, TM
