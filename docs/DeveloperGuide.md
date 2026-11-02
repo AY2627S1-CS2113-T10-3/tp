@@ -810,33 +810,33 @@ commands needed the same confirmation behavior.
 
 #### Verification and current limitations
 
-[`TrashcanCommandTest`](../src/test/java/busynotfree/command/TrashcanCommandTest.java) covers
+[`TrashcanCommandTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/command/TrashcanCommandTest.java) covers
 listing, invalid restoration requests, successful restoration, inactive clients, repeated
 restoration and conflicting IDs. Client restoration tests cover missing/malformed IDs,
 absent or active clients, repeated restoration, note counts and restoring a client
 before its project. It also covers confirmed emptying, rejected arguments,
 repeated emptying, cancellation, invalid confirmation answers and preservation of active
 records and ID counters.
-[`TrashcanManagerTest`](../src/test/java/busynotfree/model/TrashcanManagerTest.java) checks
+[`TrashcanManagerTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/model/TrashcanManagerTest.java) checks
 shared wiring, snapshot isolation, duplicate retained IDs and failed registration preserving
 the snapshot. Client restoration checks also cover note preservation, unchanged counters
 and rejection of conflicting active IDs without losing the retained client.
-[`TrashcanCommandHandlerTest`](../src/test/java/busynotfree/command/TrashcanCommandHandlerTest.java)
+[`TrashcanCommandHandlerTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/command/TrashcanCommandHandlerTest.java)
 verifies delegated parsing and response behavior.
 
-[`ProjectRestoreOrderingTest`](../src/test/java/busynotfree/model/ProjectRestoreOrderingTest.java)
-and [`ClientRestoreOrderingTest`](../src/test/java/busynotfree/model/ClientRestoreOrderingTest.java)
+[`ProjectRestoreOrderingTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/model/ProjectRestoreOrderingTest.java)
+and [`ClientRestoreOrderingTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/model/ClientRestoreOrderingTest.java)
 verify immediate numeric ordering after restoring an older record, IDs beyond three
 digits, preserved record state and counters, and ordering after saving and loading.
 Project checks include equal-deadline ordering; client checks include name-search ordering.
 
-Deletion tests in [`CommandHandlerTest`](../src/test/java/busynotfree/command/CommandHandlerTest.java)
-and [`ClientCommandHandlerTest`](../src/test/java/busynotfree/command/ClientCommandHandlerTest.java)
+Deletion tests in [`CommandHandlerTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/command/CommandHandlerTest.java)
+and [`ClientCommandHandlerTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/command/ClientCommandHandlerTest.java)
 cover invalid IDs, invalid note indexes, confirmation, cancellation and preservation of
-unrelated records. [`BusyNotFreeTest`](../src/test/java/busynotfree/BusyNotFreeTest.java) checks
+unrelated records. [`BusyNotFreeTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/BusyNotFreeTest.java) checks
 cancellation before saving at end of input, including pending trashcan emptying, and
 checks that `save` cannot bypass emptying confirmation.
-[`DataStorageTest`](../src/test/java/busynotfree/storage/DataStorageTest.java) covers persistence,
+[`DataStorageTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/storage/DataStorageTest.java) covers persistence,
 older files, restoration of older projects and prevention of ID reuse. Its emptying test
 first loads previously saved trash, clears it, saves again and reloads to verify both
 collections stay empty while next-ID counters are preserved. Its client restoration
