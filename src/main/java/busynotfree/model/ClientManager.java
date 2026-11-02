@@ -40,16 +40,20 @@ public final class ClientManager implements ClientLookup {
      *
      * @param name Non-blank client name.
      * @return Newly registered client.
-     * @throws ClientException If the name is null or blank.
+     * @throws ClientException If the name is blank, the counter is exhausted or the ID is already active.
      */
     public Client addClient(String name) {
-        // These checks detect internal ID-allocation bugs, not invalid user input.
+        // Check before insertion so an exhausted counter cannot wrap or corrupt saved IDs.
+        int followingNumber = nextNumberAfter(nextClientNumber);
         assert nextClientNumber > 0 : "The next client number must remain positive.";
         String clientId = String.format(Locale.ROOT, "C%03d", nextClientNumber);
+        if (clients.containsKey(clientId)) {
+            throw new ClientException("Cannot add client " + clientId + ": an ID is already in use.");
+        }
         assert !clients.containsKey(clientId) : "A generated client ID must not replace an existing client.";
         Client client = new Client(clientId, name);
         clients.put(clientId, client);
-        nextClientNumber++;
+        nextClientNumber = followingNumber;
         return client;
     }
 
@@ -152,18 +156,20 @@ public final class ClientManager implements ClientLookup {
      * Keeps clients in numeric ID order without changing the ID counter.
      *
      * @param client Retained snapshot to make active.
-     * @throws ClientException If the ID is already active.
+     * @throws ClientException If the ID is invalid or already active.
      */
     void registerRestoredClient(Client client) {
         String id = client.getClientId();
         if (clients.containsKey(id)) {
             throw new ClientException("Cannot restore client " + id + ": an ID is already in use.");
         }
+        // Active IDs were validated when allocated or restored; validate this one before insertion too.
+        clientNumber(id);
         clients.put(id, client);
         sortClientsById();
     }
 
-    /** Reorders active clients by the numeric portion of their IDs. */
+    /** Reorders validated active IDs, preparing the complete sorted list before clearing the map. */
     private void sortClientsById() {
         List<Client> sortedClients = clients.values().stream()
                 .sorted(Comparator.comparingInt(
@@ -181,15 +187,57 @@ public final class ClientManager implements ClientLookup {
      * Rejects duplicate IDs and advances the counter to prevent ID reuse.
      *
      * @param client Saved deleted client including its notes.
-     * @throws ClientException If its ID already exists in active data or the trashcan.
+     * @throws ClientException If its ID is invalid or already exists in active data or the trashcan.
      */
     public void loadDeletedClient(Client client) {
         String id = client.getClientId();
         if (clients.containsKey(id)) {
             throw new ClientException("Duplicate saved client " + id + ".");
         }
+        int followingNumber = nextNumberAfter(clientNumber(id));
+        // Validation and checked arithmetic precede both the snapshot and counter updates.
         trashcanManager.storeClient(client);
-        nextClientNumber = Math.max(nextClientNumber, Integer.parseInt(id.substring(1)) + 1);
+        nextClientNumber = Math.max(nextClientNumber, followingNumber);
+    }
+
+    /**
+     * Parses only IDs that the client allocator can produce.
+     * Rejects aliases such as C1 or C0001 so one numeric identity has one spelling.
+     *
+     * @param id Saved or retained client ID.
+     * @return Positive client number with room for its following counter.
+     * @throws ClientException If the format or numeric range is invalid.
+     */
+    private int clientNumber(String id) {
+        if (!id.matches("C[0-9]{3,}")) {
+            throw new ClientException("Invalid client ID " + id + ".");
+        }
+        int number;
+        try {
+            number = Integer.parseInt(id.substring(1));
+        } catch (NumberFormatException exception) {
+            throw new ClientException("Invalid client ID " + id + ".");
+        }
+        if (number < 1 || number == Integer.MAX_VALUE
+                || !id.equals(String.format(Locale.ROOT, "C%03d", number))) {
+            throw new ClientException("Invalid client ID " + id + ".");
+        }
+        return number;
+    }
+
+    /**
+     * Calculates the successor before a client is registered.
+     * Integer.MAX_VALUE is a valid exhausted counter, but cannot be allocated as an ID.
+     *
+     * @param number Current client number.
+     * @return Following positive counter.
+     * @throws ClientException If the counter is invalid or exhausted.
+     */
+    private int nextNumberAfter(int number) {
+        if (number < 1 || number == Integer.MAX_VALUE) {
+            throw new ClientException("No further client IDs can be allocated.");
+        }
+        return number + 1;
     }
 
     /** Finds case-insensitive name substrings in creation order, rejecting blank searches. */
