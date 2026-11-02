@@ -103,11 +103,15 @@ public class CommandHandler {
         boolean shouldExit = false;
         ParsedCommand command = null;
         try {
+            String[] commandParts = userInput.trim().split("\\s+", 2);
             if (isAwaitingDeletionConfirmation()) {
                 handleDeletionConfirmation(userInput);
-            } else if (userInput.trim().split("\\s+", 2)[0].equals("exit")) {
+            } else if (commandParts[0].equals("exit")) {
                 shouldExit = true;
-            } else if (userInput.trim().equals("help")) {
+            } else if (commandParts[0].equals("help")) {
+                if (commandParts.length > 1) {
+                    throw new CommandException("Use help without arguments.");
+                }
                 ui.showHelp();
             } else {
                 command = commandParser.parse(userInput);

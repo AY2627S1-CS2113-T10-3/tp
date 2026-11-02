@@ -74,39 +74,56 @@ public class Ui {
         }
     }
 
-    /** Displays command names and descriptions with aligned columns. */
+    /** Displays commands grouped by purpose, with consistently aligned descriptions. */
     public void showHelp() {
         showMessage("Available commands:");
-        showMessage("client.add     |   Add a client");
-        showMessage("client.note    |   Add a client note");
-        showMessage("client.view    |   View a client");
-        showMessage("client.list    |   List all clients");
-        showMessage("client.find    |   Find clients by name");
-        showMessage("client.edit    |   Edit a client's name");
-        showMessage("client.delete  |   Delete a client and its notes");
-        showMessage("client.delete_note |   Delete a client note");
-        showMessage("project.add    |   Add a project");
-        showMessage("project.delete |   Delete a project");
-        showMessage("project.status |   Update a project status");
-        showMessage("project.list   |   List all projects");
-        showMessage("project.filter |   Filter projects by status");
-        showMessage("project.deadlines |   List projects by deadline");
-        showMessage("project.overdue |   List overdue active projects");
-        showMessage("project.view   |   View a project summary");
-        showMessage("task.add       |   Add a task");
-        showMessage("task.mark      |   Mark a task complete");
-        showMessage("task.unmark    |   Reopen a task");
-        showMessage("task.edit      |   Edit a task");
-        showMessage("task.delete    |   Delete a task");
-        showMessage("event.add      |   Add an event");
-        showMessage("event.edit     |   Edit an event");
-        showMessage("event.delete   |   Delete an event");
-        showMessage("trashcan.list  |   List deleted projects and clients");
-        showMessage("trashcan.restore |   Restore a deleted project or client");
-        showMessage("trashcan.empty |   Permanently delete all items in the trashcan");
-        showMessage("help           |   View help");
-        showMessage("save           |   Save data and continue");
-        showMessage("exit           |   Save data and exit");
+        showMessage("");
+        showMessage("Clients");
+        showHelpCommand("client.add", "Add a client");
+        showHelpCommand("client.note", "Add a client note");
+        showHelpCommand("client.view", "View a client");
+        showHelpCommand("client.list", "List all clients");
+        showHelpCommand("client.find", "Find clients by name");
+        showHelpCommand("client.edit", "Edit a client's name");
+        showHelpCommand("client.delete", "Delete a client and its notes");
+        showHelpCommand("client.delete_note", "Delete a client note");
+        showMessage("");
+        showMessage("Projects");
+        showHelpCommand("project.add", "Add a project");
+        showHelpCommand("project.delete", "Delete a project");
+        showHelpCommand("project.status", "Update a project status");
+        showHelpCommand("project.list", "List all projects");
+        showHelpCommand("project.filter", "Filter projects by status");
+        showHelpCommand("project.deadlines", "List projects by deadline");
+        showHelpCommand("project.overdue", "List overdue active projects");
+        showHelpCommand("project.view", "View a project summary");
+        showMessage("");
+        showMessage("Tasks");
+        showHelpCommand("task.add", "Add a task");
+        showHelpCommand("task.mark", "Mark a task complete");
+        showHelpCommand("task.unmark", "Reopen a task");
+        showHelpCommand("task.edit", "Edit a task");
+        showHelpCommand("task.delete", "Delete a task");
+        showMessage("");
+        showMessage("Events");
+        showHelpCommand("event.add", "Add an event");
+        showHelpCommand("event.edit", "Edit an event");
+        showHelpCommand("event.delete", "Delete an event");
+        showMessage("");
+        showMessage("Trashcan");
+        showHelpCommand("trashcan.list", "List deleted projects and clients");
+        showHelpCommand("trashcan.restore", "Restore a deleted project or client");
+        showHelpCommand("trashcan.empty", "Permanently delete all items in the trashcan");
+        showMessage("");
+        showMessage("General");
+        showHelpCommand("help", "View help");
+        showHelpCommand("save", "Save data and continue");
+        showHelpCommand("exit", "Save data and exit");
+    }
+
+    /** Pads command names to keep descriptions aligned, including longer command names. */
+    private void showHelpCommand(String command, String description) {
+        showMessage(String.format("  %-18s | %s", command, description));
     }
 
     /**

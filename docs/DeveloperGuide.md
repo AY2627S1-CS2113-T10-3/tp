@@ -18,6 +18,7 @@
   - [Command discovery and internal consistency checks](#command-discovery-and-internal-consistency-checks)
 - [Product scope](#product-scope)
 - [User stories](#user-stories)
+- [Functional requirements](#functional-requirements)
 - [Non-functional requirements](#non-functional-requirements)
 - [Glossary](#glossary)
 - [Instructions for manual testing](#instructions-for-manual-testing)
@@ -855,8 +856,10 @@ parsing and delegates to `Ui#showHelp`. The UI lists command names and short des
 without changing application data. While deletion confirmation is pending, `help` is handled
 as a confirmation answer, preserving the selected operation.
 
-Recognition requires the exact lowercase word after trimming whitespace: ` help ` is
-accepted, but `HELP` or `help extra` reaches dotted-command parsing and produces an error.
+Recognition requires the lowercase command word `help`: ` help ` is accepted,
+while `HELP` reaches dotted-command parsing and produces an error. Extra arguments,
+such as `help extra`, are rejected with `Use help without arguments.` before
+dotted-command parsing.
 `Ui#showHelp` includes deletion, trashcan, save and exit commands. Confirmation tests in
 `CommandHandlerTest` and `ClientCommandHandlerTest` verify that `help` cannot replace
 a pending deletion.
@@ -892,7 +895,7 @@ add no relevant information.
 Removing a record from a collection is not shown with an object-destruction cross because
 other Java references can still exist; snapshots are separate objects.
 
-## Product scope
+## Appendix A: Product scope
 ### Target user profile
 
 BusyNotFree is intended for freelancers and consultants who manage several
@@ -906,7 +909,7 @@ work organised without requiring a separate project-management service.
 Projects group dated tasks and events, while stable IDs make related records
 easy to reference from later commands.
 
-## User Stories
+## Appendix B: User Stories
 
 | Version | As a ... | I want to ... | So that I can ... |
 | --- | --- | --- | --- |
@@ -937,19 +940,21 @@ easy to reference from later commands.
 | v2.0 | freelancer | retain deleted projects and clients across restarts | recover them in a later session |
 | v2.0 | freelancer | permanently empty the trashcan after confirmation | discard retained records I no longer need |
 
-## Non-Functional Requirements
+## Appendix C: Non-Functional Requirements
 
-* The application runs with Java 25 and can be launched from IntelliJ IDEA or a
-  standard terminal.
-* User input is validated before model mutation. Invalid input must not consume
-  a new ID or change existing records.
-* Saved data is loaded from and written to the documented properties file.
-* User-facing output is plain text and remains readable in ordinary terminal
-  windows.
-* Automated tests cover command parsing, routing, model behaviour, persistence,
-  and the application loop.
+* **Compatibility:** The packaged application must run on Java 25 on Windows,
+  Linux and macOS without requiring another Java version.
+* **Portability:** Users must be able to launch the packaged JAR from a terminal
+  without an application installer or additional runtime dependencies beyond
+  Java 25.
+* **Storage:** Application data must be stored locally in a UTF-8, human-editable
+  text file.
+* **Reliability:** Invalid saved data must be reported without overwriting the
+  original file. Startup must stop before accepting commands in this case.
+* **Interface:** Commands and results must use terminal text without requiring
+  mouse interaction.
 
-## Glossary
+## Appendix D: Glossary
 
 * *Client* - A person or organisation whose work is being managed.
 * *Project* - A body of work belonging to one client.
@@ -978,7 +983,7 @@ easy to reference from later commands.
   counters, so deleted IDs are not reused.
 * *Prefix* - The name before `/` in an argument, such as `name/` or `date/`.
 
-## Instructions for manual testing
+## Appendix E: Instructions for manual testing
 
 Use Java 25 from the repository root. Run the application with
 `.\gradlew.bat run` or run `busynotfree.BusyNotFree.main()` from IntelliJ IDEA.

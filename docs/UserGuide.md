@@ -2,7 +2,13 @@
 
 ## Introduction
 
-BusyNotFree is a command-line app for managing clients and their projects. A project can have dated tasks and events. You can view a project's details, update its status, and save your work during a session or when you exit.
+BusyNotFree is a command-line application for freelancers and consultants who manage
+several clients and projects and prefer typing commands.
+
+Keep client notes, project deadlines, dated tasks and events together in one
+lightweight local application. You can review project progress, identify overdue
+work and save your records for the next session without creating an account or
+using an online project-management service.
 
 ## Quick start
 
@@ -439,6 +445,9 @@ Running the command on an already empty trashcan also succeeds after confirmatio
 Format: `help`
 
 Shows a list of available commands and short descriptions.
+
+`help` does not accept arguments. For example, `help now` displays
+`Error: Use help without arguments.`
 
 ### Save without exiting: `save`
 
