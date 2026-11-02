@@ -514,6 +514,12 @@ If loading fails, the app displays `Error: Unable to load saved data: ...` and s
 accepting commands. It does not overwrite that file. Keep a copy of the file and restore a
 known working backup before restarting.
 
+Malformed numbers, dates and project statuses are reported with the saved field name and
+expected value. For example, the message includes
+`Invalid project.0.deadline. Expected a valid date in YYYY-MM-DD format.`
+for an invalid project deadline. Errors in retained `trash.*` records also identify the
+trashcan section and the field within it.
+
 When terminal input ends normally, the app attempts one save and then returns. If that save
 fails, it displays the error but cannot accept another command because input has ended.
 
