@@ -16,12 +16,11 @@
   - [Managing clients](#managing-clients-clientadd-clientnote-clientview-and-clientlist)
   - [Safe deletion and project recovery](#safe-deletion-and-project-recovery)
   - [Command discovery and internal consistency checks](#command-discovery-and-internal-consistency-checks)
-- [Product scope](#product-scope)
-- [User stories](#user-stories)
-- [Functional requirements](#functional-requirements)
-- [Non-functional requirements](#non-functional-requirements)
-- [Glossary](#glossary)
-- [Instructions for manual testing](#instructions-for-manual-testing)
+- [Product scope](#appendix-a-product-scope)
+- [User stories](#appendix-b-user-stories)
+- [Non-functional requirements](#appendix-c-non-functional-requirements)
+- [Glossary](#appendix-d-glossary)
+- [Instructions for manual testing](#appendix-e-instructions-for-manual-testing)
 
 ## Acknowledgements
 
