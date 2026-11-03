@@ -4,8 +4,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 import busynotfree.exception.BusyNotFreeException;
 import busynotfree.exception.ClientHasProjectsException;
@@ -27,6 +29,9 @@ import busynotfree.ui.Ui;
 public class CommandHandler {
     /** Records project view diagnostics when fine logging is enabled. */
     private static final Logger LOGGER = Logger.getLogger(CommandHandler.class.getName());
+    private static final Set<String> SUPPORTED_TARGETS = Set.of("client", "project", "task", "event", "trashcan");
+    /** Matches project/ where ArgumentParser would treat it as a prefix: at the start or after whitespace. */
+    private static final Pattern PROJECT_PREFIX = Pattern.compile("(?<!\\S)project/");
 
     private final CommandParser commandParser;
     private final Ui ui;
@@ -166,6 +171,11 @@ public class CommandHandler {
 
     /** Delegates client operations and routes project, task and event commands. */
     private void routeCommand(ParsedCommand command) {
+        // Check the target first, so an unknown target is not reported as an unknown action.
+        if (!SUPPORTED_TARGETS.contains(command.getEntityType())) {
+            throw new CommandException("Unsupported target: " + command.getEntityType()
+                    + ". Type help to see available commands.");
+        }
         if (command.getEntityType().equals("trashcan") && command.getAction().equals("empty")) {
             if (!command.getArgumentText().isBlank()) {
                 throw new CommandException("Use trashcan.empty without arguments.");
@@ -317,7 +327,7 @@ public class CommandHandler {
 
     /**
      * Separates the positional item ID from the name/ and date/ arguments of an edit command.
-     * Other recognized prefixes, such as project/, are rejected so an edit cannot move an item.
+     * A project/ prefix is rejected so an edit cannot appear to move an item to another project.
      *
      * @param arguments Argument text after task.edit or event.edit.
      * @param itemType Task or event, used in the error message.
@@ -332,6 +342,11 @@ public class CommandHandler {
             throw new CommandException("Provide the " + itemType + " ID before name/ and date/.");
         }
         String prefixedArguments = parts.length > 1 ? parts[1] : "";
+        // ArgumentParser keeps other commands' prefixes as text, so check project/ explicitly.
+        if (PROJECT_PREFIX.matcher(prefixedArguments).find()) {
+            LOGGER.log(Level.FINE, "{0}.edit rejected because it tried to change the project", itemType);
+            throw new CommandException("Unexpected prefix: project/.");
+        }
         Map<String, String> values = argumentParser.parse(prefixedArguments, "name", "date");
         LocalDate date = argumentParser.parseDate(values.get("date"));
         return new EditArguments(itemId, values.get("name"), date);

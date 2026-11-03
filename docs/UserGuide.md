@@ -33,9 +33,11 @@ If you are building from source, run `.\gradlew.bat shadowJar` on Windows or `./
 
 The commands and IDs are case-sensitive. Enter dates as real calendar dates in `YYYY-MM-DD` format, such as `2026-11-30`. Names, descriptions, and notes may contain spaces. Prefixes such as `name/` can be supplied in any order, but each required prefix must appear once with a non-blank value.
 
-Reserved prefixes such as `name/` cannot appear after whitespace inside a value.
-Ordinary slash-containing text such as `UI/UX` is accepted. Quoting or escaping
-reserved prefixes is not supported.
+A command's own prefixes cannot appear after whitespace inside a value. For example, in
+`task.add`, a name cannot contain ` name/`, ` date/` or ` project/`. Other slash-containing
+text is accepted as typed, including other commands' prefixes: `UI/UX`, `Fix client/server bug`
+in a task name and `Discuss date/time slot` in a note all work. Quoting or escaping prefixes is
+not supported.
 
 ## Clients
 

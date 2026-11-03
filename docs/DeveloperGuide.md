@@ -67,11 +67,12 @@ sections below explain each command's additional validation and model changes.
    dotted commands such as `project.view`.
 3. `CommandParser` separates a dotted command into its target, action and argument
    text, held in a `ParsedCommand`. It checks the command-word structure;
-   `CommandHandler#routeCommand` and the specialised handlers check supported actions.
+   `CommandHandler#routeCommand` checks the target first, then it and the specialised
+   handlers check supported actions.
 4. Handlers validate positional IDs and use `ArgumentParser` for prefixed fields.
    Each required prefix must occur once with a non-blank value; field order is free.
-   A recognised prefix that is not allowed for the command is rejected. Unrecognised
-   slash-containing text within a value remains part of that value. Dates must match
+   Only the command's own prefixes separate fields. Other slash-containing text,
+   including other commands' prefixes, remains part of a value. Dates must match
    `YYYY-MM-DD` exactly and represent a real calendar date.
 5. Managers and domain objects check model relationships and invariants before a
    successful change is committed. The handler passes the result to `Ui` or `ClientUi`.
@@ -151,7 +152,7 @@ All three commands are parsed the same way before the model is changed:
 3. The handler calls `ArgumentParser#parse` with the prefixes the command requires, for example `"project", "name", "date"` for `task.add`. It returns a map from each prefix to its trimmed value. The prefixes may appear in any order.
 4. The handler calls `ArgumentParser#parseDate` to turn the date text into a `LocalDate`.
 
-`ArgumentParser#parse` rejects a missing, blank, repeated or unexpected prefix with a `CommandException`. A prefix is recognised only at the start of the arguments or after a space. Slashes that are not recognised prefixes stay part of the value, so names such as `Create UI/UX mockup` or `Review src/main changes` are accepted as typed.
+`ArgumentParser#parse` rejects a missing, blank or repeated prefix, or text before the first prefix, with a `CommandException`. A prefix is recognised only if the command requires it, and only at the start of the arguments or after a space. Any other slash-containing text stays part of the value, so names such as `Create UI/UX mockup` or `Fix client/server bug` are accepted as typed. A prefix typed in the wrong command is usually still caught: after a date it makes the date invalid, and in place of the command's own prefix it leaves that prefix missing.
 
 `ArgumentParser#parseDate` first checks that the text matches `YYYY-MM-DD` exactly, then parses it with `LocalDate#parse`, which rejects dates that do not exist, such as `2026-02-30`.
 
@@ -199,7 +200,8 @@ Each layer throws its own subclass of the unchecked `BusyNotFreeException`: `Com
 * **`ProjectManager` depends on the `ClientLookup` interface, not on `ClientManager`.** Project creation could therefore be built and tested before client management was ready, using `PlaceholderClientLookup`. Tests can also supply a lambda such as `clientId -> false` to simulate a missing client.
 * **A shared `ScheduledItem` superclass for tasks and events.** The common fields and checks live in one place. Each subclass passes its own exception type into the constructor as a function, for example `TaskException::new`, so a failed check throws the right exception without duplicating the checks.
   * Alternative considered: a single `Activity` class with a type field. This was rejected because tasks and events behave differently; for example, only tasks can be marked complete. Separate classes also keep the task and event sections of `project.view` simple.
-* **Prefixed arguments in any order.** The trade-off is that recognised prefixes such as `name/` cannot appear after a space inside a value. Alternative considered: quoting or escaping values. This was rejected as harder to type, because descriptions that need a reserved prefix are rare.
+* **Prefixed arguments in any order.** The trade-off is that a command's own prefixes, such as `name/` in `task.add`, cannot appear after a space inside a value. Alternative considered: quoting or escaping values. This was rejected as harder to type, because descriptions that need the command's own prefix are rare.
+  * Only the command's own prefixes are reserved. An earlier version reserved every command's prefixes, which rejected ordinary text such as `Discuss date/time slot` in a note. The cost of the change is that a wrong prefix placed inside a name, as in `name/X due/2026-12-01` for a task, is kept as part of the name. The confirmation shows the name, so the user can correct it with `task.edit`.
 * **Strict dates.** Impossible or loosely formatted dates are rejected instead of being corrected, so a typo cannot silently schedule work on the wrong day.
 * **Logging without private text.** `ProjectManager` logs creation at the `FINE` level and includes only IDs, never client names or descriptions.
 
@@ -459,7 +461,7 @@ protected final void updateDetails(String description, LocalDate date,
 **Design considerations**
 
 * **An invalid edit leaves the item unchanged.** Every check happens before any field is assigned: the command format and date are checked in `CommandHandler`, the ID in `ProjectManager`, and blank values in `ScheduledItem`. Description and date are assigned together, so an edit never applies half of its changes.
-* **ID and project cannot change.** `ScheduledItem` keeps `id` and `project` as `final` fields and makes only `description` and `date` editable. `parseEditArguments` accepts only `name/` and `date/`, so `project/` is rejected as an unexpected prefix. Editing does not create an item, so ID counters are not advanced.
+* **ID and project cannot change.** `ScheduledItem` keeps `id` and `project` as `final` fields and makes only `description` and `date` editable. `parseEditArguments` accepts only `name/` and `date/`. It explicitly rejects `project/` as an unexpected prefix, because `ArgumentParser` would otherwise keep it as part of the new description and the user might think the item had moved. Editing does not create an item, so ID counters are not advanced.
 * **Completion status is preserved.** `Task#edit` changes only the fields inherited from `ScheduledItem`; it never touches `completed`.
 * **Edits go through `ProjectManager`.** `edit` is package-private, like `Project#removeAllActivities`, so other packages cannot change an item without the manager's ID lookup.
 * **Alternative considered: replacing the item.** A new `Task` or `Event` could replace the old one in its project's list. This would need extra code to copy the completion state and keep the item's position in the list, so editing the existing object was chosen as the simpler option.
@@ -513,7 +515,7 @@ The sequence diagram below shows `client.note C001 text/Prefers weekly updates`,
 4. `Client#addNote` validates and trims the text, then appends it to the existing notes. Earlier notes and other clients are unchanged.
 5. `ClientUi#showNoteAdded` confirms the update with `Note added to client C001.`.
 
-Names and notes preserve internal spaces and ordinary slash-containing text such as `UI/UX` or URLs. Recognised argument prefixes at whitespace boundaries remain reserved: for example, `name/` inside a note is treated as an unexpected argument, and a second `text/` is rejected as a repeated prefix. Quoting or escaping reserved prefixes is not supported.
+Names and notes preserve internal spaces and ordinary slash-containing text such as `UI/UX`, URLs or other commands' prefixes, so a note such as `Discuss date/time slot` is stored as typed. Only the command's own prefix is reserved at a whitespace boundary: a second `text/` in a note is rejected as a repeated prefix. Quoting or escaping reserved prefixes is not supported.
 
 #### Viewing and listing clients
 

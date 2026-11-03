@@ -122,7 +122,9 @@ public final class ProjectManager {
                 }
             }
         }
-        throw new TaskException("Task " + requestedId + " was not found.");
+        LOGGER.fine("Task lookup failed because the task does not exist.");
+        throw new TaskException("Task " + requestedId
+                + " was not found. Use project.view to see task IDs.");
     }
 
     /**

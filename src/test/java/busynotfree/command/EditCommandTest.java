@@ -102,7 +102,8 @@ class EditCommandTest {
     @TestFactory
     public List<DynamicTest> execute_freeTextDescriptions_preservesText() {
         List<String> descriptions = List.of("Review UI/UX mockup", "Review src/main changes",
-                "Visit https://example.com", "Preserve  double spaces", "Prepare café 客户 review");
+                "Visit https://example.com", "Preserve  double spaces", "Prepare café 客户 review",
+                "Fix client/server bug", "Agree due/payable terms");
         List<DynamicTest> tests = new ArrayList<>();
         for (String itemType : ITEM_TYPES) {
             for (String description : descriptions) {
@@ -126,9 +127,8 @@ class EditCommandTest {
             String id = idOf(itemType, 1);
             String missingId = "Provide the " + itemType + " ID before name/ and date/.";
             String otherTypeId = itemType.equals("task") ? "E001" : "T001";
-            // Only event lookups add a recovery hint; task lookups use the existing getTask message from #63.
-            String notFound = capitalize(itemType) + " %s was not found."
-                    + (itemType.equals("event") ? " Use project.view to see event IDs." : "");
+            String notFound = capitalize(itemType) + " %s was not found. Use project.view to see "
+                    + itemType + " IDs.";
             List<String> arguments = List.of("", "name/Revised date/2026-12-01", id,
                     id + " date/2026-12-01", id + " name/Revised",
                     id + " name/ date/2026-12-01", id + " name/Revised date/ \t ",
@@ -136,6 +136,7 @@ class EditCommandTest {
                     id + " name/Revised date/2026-12-01 date/2026-12-02",
                     id + " name/Revised date/2026-02-30", id + " name/Revised date/2026-1-01",
                     id + " name/Revised date/tomorrow", id + " name/Revised date/2026-12-01 project/P002",
+                    id + " name/Revised project/P002 date/2026-12-01",
                     id + " name/Revised date/2026-12-01 due/2026-12-02", id + " extra name/Revised date/2026-12-01",
                     idOf(itemType, 999) + " name/Revised date/2026-12-01",
                     id.toLowerCase(Locale.ROOT) + " name/Revised date/2026-12-01",
@@ -146,7 +147,8 @@ class EditCommandTest {
                     "Repeated prefix: name/.", "Repeated prefix: date/.",
                     "Use a valid date in YYYY-MM-DD format.", "Use a valid date in YYYY-MM-DD format.",
                     "Use a valid date in YYYY-MM-DD format.", "Unexpected prefix: project/.",
-                    "Unexpected prefix: due/.", "Arguments must start with a prefix such as name/.",
+                    "Unexpected prefix: project/.",
+                    "Use a valid date in YYYY-MM-DD format.", "Arguments must start with a prefix such as name/.",
                     String.format(notFound, idOf(itemType, 999)),
                     String.format(notFound, id.toLowerCase(Locale.ROOT)),
                     String.format(notFound, otherTypeId));
