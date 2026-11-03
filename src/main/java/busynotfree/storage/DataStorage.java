@@ -212,9 +212,10 @@ public final class DataStorage {
             String key = "client." + index + ".";
             data.setProperty(key + "id", client.getClientId());
             data.setProperty(key + "name", client.getName());
-            data.setProperty(key + "note.count", Integer.toString(client.getNotes().size()));
-            for (int note = 0; note < client.getNotes().size(); note++) {
-                data.setProperty(key + "note." + note, client.getNotes().get(note));
+            List<String> notes = client.getNotes();
+            data.setProperty(key + "note.count", Integer.toString(notes.size()));
+            for (int note = 0; note < notes.size(); note++) {
+                data.setProperty(key + "note." + note, notes.get(note));
             }
         }
     }

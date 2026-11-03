@@ -2,7 +2,8 @@
 ' Successful client.add after CommandParser has parsed the input.
 hide footbox
 skinparam defaultFontSize 13
-skinparam maxMessageSize 180
+' Keep the creation message on one line so its arrow meets the instance box.
+skinparam maxMessageSize 240
 
 participant ":CommandHandler" as CH
 participant ":ClientCommandHandler" as CCH

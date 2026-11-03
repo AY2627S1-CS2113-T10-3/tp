@@ -52,9 +52,9 @@ Note 1: Prefers weekly updates
 
 Format: `client.list`
 
-The list shows each client's ID and name in insertion order. Restored clients are
-appended; after restarting, clients appear in numeric ID order. As specified by the
-draft's general command rules, extra arguments are ignored for this command.
+The list shows each client's ID and name in ascending numeric client-ID order,
+including immediately after restoration and after restarting. Extra arguments are
+ignored for this command.
 
 ```text
 client.list
@@ -71,7 +71,8 @@ Format: `client.find NAME`
 
 Searches for a case-insensitive substring anywhere in a client's name. Multiword
 searches are allowed. A summary such as `Found 2 matching clients.` precedes the
-numbered IDs and names in insertion order, using the same format as `client.list`.
+numbered IDs and names in ascending numeric client-ID order, including immediately
+after restoration and after restarting, using the same format as `client.list`.
 A single match displays `Found 1 matching client.` No matches displays
 `Found 0 matching clients.` followed by `No clients found.` Missing or
 whitespace-only search text is rejected.
@@ -135,4 +136,4 @@ Use Java 25 to run the complete JUnit and Checkstyle checks:
 ```
 
 The repeatable console test and its captured output are recorded in
-[`test/ui-test-plan.md`](../test/ui-test-plan.md).
+[`test/ui-test-plan.md`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/test/ui-test-plan.md).

@@ -13,7 +13,9 @@
   - [Project tracking and status views](#project-tracking-and-status-views-projectlist-projectstatus-projectfilter-projectdeadlines-and-projectoverdue)
   - [Task completion, project progress and persistence](#task-completion-project-progress-and-persistence)
   - [Editing tasks and events](#editing-tasks-and-events-taskedit-and-eventedit)
-  - [Managing clients](#managing-clients-clientadd-clientnote-clientview-and-clientlist)
+  - [Managing clients](#managing-clients)
+    - [Listing clients](#listing-clients-clientlist)
+    - [Finding clients by name](#finding-clients-by-name-clientfind)
   - [Safe deletion and project recovery](#safe-deletion-and-project-recovery)
   - [Command discovery and internal consistency checks](#command-discovery-and-internal-consistency-checks)
 - [Product scope](#appendix-a-product-scope)
@@ -468,14 +470,19 @@ protected final void updateDetails(String description, LocalDate date,
 * **Storage needs no change.** `DataStorage` already saves each item's current description and date, so edited values survive a restart.
 
 
-### Managing clients: `client.add`, `client.note`, `client.view` and `client.list`
+### Managing clients
 
-Client management lets freelancers register clients and keep notes about their preferences or requirements. The four commands are:
+Client management lets freelancers register clients, keep notes about their preferences or requirements,
+and locate or rename existing clients. This section covers:
 
 * `client.add name/CLIENT_NAME` registers a client and displays the assigned ID.
 * `client.note CLIENT_ID text/NOTE` appends a note to an existing client.
 * `client.view CLIENT_ID` displays a client's ID, name and all recorded notes.
 * `client.list` displays every client's ID and name in numeric ID order. Restoration reorders the active map by numeric client ID, and clients load in that order after a restart.
+* `client.find NAME` finds active clients by a case-insensitive substring of their names.
+* `client.edit CLIENT_ID name/NEW_NAME` updates a client's name while preserving its ID, notes and project links.
+
+Client and note deletion are described in [Safe deletion and project recovery](#safe-deletion-and-project-recovery).
 
 For example, `client.add name/Acme Studio` can create `C001`, after which `client.note C001 text/Prefers weekly updates` records a preference for that client. IDs are case-sensitive; two clients may have the same name but receive different IDs.
 
@@ -517,13 +524,50 @@ The sequence diagram below shows `client.note C001 text/Prefers weekly updates`,
 
 Names and notes preserve internal spaces and ordinary slash-containing text such as `UI/UX`, URLs or other commands' prefixes, so a note such as `Discuss date/time slot` is stored as typed. Only the command's own prefix is reserved at a whitespace boundary: a second `text/` in a note is rejected as a repeated prefix. Quoting or escaping reserved prefixes is not supported.
 
-#### Viewing and listing clients
+#### Viewing a client: `client.view`
 
 `client.view` requires exactly one positional ID. The handler calls `ClientManager#getClient`, then `ClientUi#showClient` prints the ID and name followed by each note in insertion order as `Note 1: ...`, `Note 2: ...` and so on. These one-based positions are used by `client.delete_note`. A client without notes displays `Notes: No notes found.`. Leading and trailing whitespace around an ID is trimmed, but its case and digits must match an existing ID.
 
-`client.list` calls `ClientManager#getClients`, which returns `List.copyOf(clients.values())`. `ClientUi#showClients` prints numbered entries in numeric client ID order, or `No clients found.` when the collection is empty. Listing omits notes; users can request them through `client.view`. Extra arguments to `client.list` are ignored, matching the application's convention for commands without parameters.
+#### Listing clients: `client.list`
+
+Listing follows the existing client command route:
+
+1. `ClientCommandHandler#execute` selects the `list` action and calls `ClientManager#getClients`.
+2. The manager returns `List.copyOf(clients.values())`, preserving the active map's numeric client-ID order.
+   New clients are appended with increasing IDs, restoration reorders the map, and storage loads clients
+   in numeric order. Listing therefore does not need to sort the clients again.
+3. `ClientUi#showClients` displays numbered IDs and names, with number columns aligned for larger lists.
+   Long names wrap beneath their name column. If the collection is empty, it displays `No clients found.`
+
+Listing omits notes; users can request them through `client.view`. Extra arguments to `client.list`
+are ignored, matching the application's convention for this command. Listing does not change client
+data or ID counters and does not trigger a save.
 
 Both `getClients()` and `Client#getNotes()` return unmodifiable snapshots of their collections. Callers cannot add or remove entries through these lists. The client snapshot still contains references to the existing `Client` objects; it is not a deep copy of their state.
+
+#### Finding clients by name: `client.find`
+
+`client.find NAME` searches active client names for a literal substring, ignoring case. A multiword
+query is matched as one phrase, preserving its internal spaces. For example, `client.find acme studio`
+matches `Acme Studio`, while characters such as `.` and `[` retain their ordinary textual meaning.
+
+1. `ClientCommandHandler#execute` passes the complete argument text to `ClientManager#findClients`.
+2. The manager trims the query before checking whether it is blank. Null or blank normalized input
+   raises `ClientException` with `A search name must not be blank.`. The shared handler displays the
+   error and the usage hint `Format: client.find NAME`.
+3. For a valid query, the manager compiles one `Pattern` with `LITERAL`, `CASE_INSENSITIVE` and
+   `UNICODE_CASE`. These flags preserve literal punctuation and handle Unicode case variants,
+   including ordinary and final Greek sigma, without converting the stored names.
+4. The manager filters `clients.values()` using `Matcher#find` and returns the matches with `toList()`.
+   The result is unmodifiable and retains numeric client-ID order, including after restoration.
+   Clients sharing a name remain separate results because each has its own ID.
+5. `ClientUi#showSearchResults` prints the matching-client count, then uses the same numbered
+   ID-and-name rows as `client.list`. A single result displays `Found 1 matching client.`; other
+   counts use `matching clients`. Zero results display `Found 0 matching clients.` followed by
+   `No clients found.`
+
+Both commands use the client UI's response separators and wrapping helpers. Searching reads names
+without changing client names, notes, project links, ID counters or saved data.
 
 #### Validation and error handling
 
@@ -542,7 +586,25 @@ Assertions check internal assumptions: only client commands reach `ClientCommand
 
 #### Existing verification
 
-[`ClientTest`](../src/test/java/busynotfree/model/ClientTest.java) and [`ClientManagerTest`](../src/test/java/busynotfree/model/ClientManagerTest.java) cover validation, duplicate names, ID allocation beyond `C999`, note ownership, collection snapshots and real client lookup during project creation. [`ClientCommandHandlerTest`](../src/test/java/busynotfree/command/ClientCommandHandlerTest.java) covers all four commands through the shared router, including malformed input, missing clients, output order and recovery after errors. [`ClientArgumentParserTest`](../src/test/java/busynotfree/command/ClientArgumentParserTest.java) covers free text and reserved prefixes. The repeatable console acceptance scenario is documented in the [UI test plan](../test/ui-test-plan.md).
+[`ClientTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/model/ClientTest.java)
+and [`ClientManagerTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/model/ClientManagerTest.java)
+cover validation, duplicate names, ID allocation beyond `C999`, note ownership, collection snapshots
+and real client lookup during project creation.
+[`ClientCommandHandlerTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/command/ClientCommandHandlerTest.java)
+covers registration, notes, viewing, listing and deletion through the shared router, including
+malformed input, missing clients, output order and recovery after errors.
+
+[`ClientSearchEditTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/command/ClientSearchEditTest.java)
+checks name-search ordering, multiword and case-insensitive matches, empty results, invalid searches
+and name editing through the shared router.
+[`ClientSearchEdgeTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/model/ClientSearchEdgeTest.java)
+covers Unicode case variants, literal punctuation, blank queries after normalization and unmodifiable results.
+[`ClientUiTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/ui/ClientUiTest.java)
+checks list-number alignment, name wrapping, search-summary wording and empty-result messages.
+
+[`ClientArgumentParserTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/command/ClientArgumentParserTest.java)
+covers free text and reserved prefixes. The repeatable console acceptance scenario is documented
+in the [UI test plan](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/test/ui-test-plan.md).
 
 ### Safe deletion and project recovery
 
@@ -834,33 +896,33 @@ commands needed the same confirmation behavior.
 
 #### Verification and current limitations
 
-[`TrashcanCommandTest`](../src/test/java/busynotfree/command/TrashcanCommandTest.java) covers
+[`TrashcanCommandTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/command/TrashcanCommandTest.java) covers
 listing, invalid restoration requests, successful restoration, inactive clients, repeated
 restoration and conflicting IDs. Client restoration tests cover missing/malformed IDs,
 absent or active clients, repeated restoration, note counts and restoring a client
 before its project. It also covers confirmed emptying, rejected arguments,
 repeated emptying, cancellation, invalid confirmation answers and preservation of active
 records and ID counters.
-[`TrashcanManagerTest`](../src/test/java/busynotfree/model/TrashcanManagerTest.java) checks
+[`TrashcanManagerTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/model/TrashcanManagerTest.java) checks
 shared wiring, snapshot isolation, duplicate retained IDs and failed registration preserving
 the snapshot. Client restoration checks also cover note preservation, unchanged counters
 and rejection of conflicting active IDs without losing the retained client.
-[`TrashcanCommandHandlerTest`](../src/test/java/busynotfree/command/TrashcanCommandHandlerTest.java)
+[`TrashcanCommandHandlerTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/command/TrashcanCommandHandlerTest.java)
 verifies delegated parsing and response behavior.
 
-[`ProjectRestoreOrderingTest`](../src/test/java/busynotfree/model/ProjectRestoreOrderingTest.java)
-and [`ClientRestoreOrderingTest`](../src/test/java/busynotfree/model/ClientRestoreOrderingTest.java)
+[`ProjectRestoreOrderingTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/model/ProjectRestoreOrderingTest.java)
+and [`ClientRestoreOrderingTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/model/ClientRestoreOrderingTest.java)
 verify immediate numeric ordering after restoring an older record, IDs beyond three
 digits, preserved record state and counters, and ordering after saving and loading.
 Project checks include equal-deadline ordering; client checks include name-search ordering.
 
-Deletion tests in [`CommandHandlerTest`](../src/test/java/busynotfree/command/CommandHandlerTest.java)
-and [`ClientCommandHandlerTest`](../src/test/java/busynotfree/command/ClientCommandHandlerTest.java)
+Deletion tests in [`CommandHandlerTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/command/CommandHandlerTest.java)
+and [`ClientCommandHandlerTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/command/ClientCommandHandlerTest.java)
 cover invalid IDs, invalid note indexes, confirmation, cancellation and preservation of
-unrelated records. [`BusyNotFreeTest`](../src/test/java/busynotfree/BusyNotFreeTest.java) checks
+unrelated records. [`BusyNotFreeTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/BusyNotFreeTest.java) checks
 cancellation before saving at end of input, including pending trashcan emptying, and
 checks that `save` cannot bypass emptying confirmation.
-[`DataStorageTest`](../src/test/java/busynotfree/storage/DataStorageTest.java) covers persistence,
+[`DataStorageTest`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/src/test/java/busynotfree/storage/DataStorageTest.java) covers persistence,
 older files, restoration of older projects and prevention of ID reuse. Its emptying test
 first loads previously saved trash, clears it, saves again and reloads to verify both
 collections stay empty while next-ID counters are preserved. Its client restoration

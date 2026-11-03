@@ -39,6 +39,9 @@ text is accepted as typed, including other commands' prefixes: `UI/UX`, `Fix cli
 in a task name and `Discuss date/time slot` in a note all work. Quoting or escaping prefixes is
 not supported.
 
+Terminal control characters in displayed text use visible escapes such as `\u001B`
+and `\t`; the stored text is unchanged. Ordinary line breaks are retained.
+
 ## Clients
 
 ### Add a client: `client.add`
