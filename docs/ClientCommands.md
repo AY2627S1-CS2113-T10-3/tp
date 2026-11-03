@@ -30,10 +30,10 @@ client.note C001 text/Prefers weekly updates
 Note added to client C001.
 ```
 
-Prefix arguments follow the existing parser conventions: `client/`, `project/`,
-`name/`, `due/` and `date/` are reserved when they start at a whitespace boundary.
-`text/` is also reserved when parsing a note. Repeated or inappropriate reserved
-prefixes are rejected. Other slash-containing text remains part of the value.
+Only the current command's prefixes are reserved when they start at a whitespace
+boundary within a value. For example, `text/` is reserved in `client.note`, but
+`name/` can appear in a note. Repeating a command's own prefix is rejected.
+Other slash-containing text remains part of the value.
 
 ## View a client
 
