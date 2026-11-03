@@ -31,8 +31,9 @@ CH -> UI : showTaskMarked(task)
 activate UI
 UI --> CH
 deactivate UI
-CH --> CH
-deactivate CH
+' Return from handleTaskMark to the still-active execute invocation.
+return
+||15||
 deactivate CH
 
 @enduml
