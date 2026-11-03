@@ -5,7 +5,7 @@ hide footbox
 actor User
 participant ":CommandHandler" as CH
 participant ":ProjectManager" as PM
-participant "t:Task" as T
+participant "task:Task" as T
 participant ":Ui" as UI
 
 User -> CH : execute("task.mark T001")
@@ -18,16 +18,16 @@ activate PM
 PM -> PM : getTask("T001")
 activate PM
 note right of PM : Searches active projects' tasks.\nReturns the task with ID T001.
-PM --> PM : t
+PM --> PM : task
 deactivate PM
 PM -> T : markCompleted()
 activate T
 note right of T : completed becomes true.
 T --> PM
 deactivate T
-PM --> CH : t
+PM --> CH : task
 deactivate PM
-CH -> UI : showTaskMarked(t)
+CH -> UI : showTaskMarked(task)
 activate UI
 UI --> CH
 deactivate UI

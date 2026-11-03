@@ -12,11 +12,11 @@ component "DataStorage" as Storage
 artifact "data/busynotfree.properties" as File
 
 App ..> Commands : dispatches input
-App ..> UI : displays prompts\nand errors
-App ..> Storage : loads / saves
-Commands ..> Parsers : parses input
+App ..> UI : requests prompts\nand errors
+App ..> Storage : requests loading\nand saving
+Commands ..> Parsers : requests input\nparsing
 Commands ..> Model : queries / updates
-Commands ..> UI : presents results
+Commands ..> UI : requests result\ndisplay
 UI ..> Model : reads records
 Storage ..> Model : serialises / reconstructs
 Storage ..> File : reads / writes UTF-8
