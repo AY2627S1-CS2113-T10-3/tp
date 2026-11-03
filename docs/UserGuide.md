@@ -12,7 +12,7 @@ using an online project-management service.
 
 ## Quick start
 
-1. Install Java 25.
+1. Install Java 25. Run `java -version` in a terminal and check that it reports version 25.
 2. Download `BusyNotFree.jar` from the [latest release](https://github.com/AY2627S1-CS2113-T10-3/tp/releases/latest) and place it in a folder where you have write permission.
 3. Open a terminal in that folder and run `java -jar BusyNotFree.jar`. Use the terminal so you can enter commands and read the output.
 4. Type a command and press Enter. Try the commands below in order:
@@ -29,7 +29,32 @@ using an online project-management service.
 
 The app prints the assigned ID after each addition. The example IDs assume no existing data; use the IDs shown on your screen if you already have saved data.
 
+BusyNotFree needs an interactive terminal. Double-clicking the JAR may not open a console
+for entering commands; launch it with `java -jar BusyNotFree.jar` as shown above.
+
+Use the downloaded file's actual name in the launch command. For example, a Canvas copy named
+`[CS2113-T10-3][BusyNotFree].jar` can be launched with
+`java -jar "[CS2113-T10-3][BusyNotFree].jar"`. Put the filename or full path in double quotes
+if it contains spaces. Run the command from the JAR's folder, or supply its full path.
+
 If you are building from source, run `.\gradlew.bat shadowJar` on Windows or `./gradlew shadowJar` on macOS or Linux from the repository root. Then run `java -jar build/libs/BusyNotFree.jar` from that directory.
+
+### Startup troubleshooting
+
+| Message or symptom | What to check |
+| --- | --- |
+| `java` is not recognised or not found | Install Java 25 and ensure its executable is available on your terminal's `PATH`. Open a new terminal and run `java -version`. |
+| `UnsupportedClassVersionError` | The selected Java runtime is too old. Configure the terminal to use Java 25 and confirm with `java -version`. |
+| `Unable to access jarfile` | Check the filename and the directory shown in your terminal. Use the actual filename or full path, quoting it if it contains spaces. |
+
+### Entering commands
+
+Inside BusyNotFree, enter one command per line. Names, descriptions and notes cannot span
+multiple input lines; pasting another line starts another command. Values containing spaces
+do not need quotation marks. Quote characters are kept as part of the value, so
+`client.add name/Acme Studio` stores `Acme Studio`, while `client.add name/"Acme Studio"`
+also stores the quote characters. Typing `\n` enters literal text rather than a line break.
+This differs from quoting a JAR filename in the terminal launch command above.
 
 The commands and IDs are case-sensitive. Enter dates as real calendar dates in `YYYY-MM-DD` format, such as `2026-11-30`. Names, descriptions, and notes may contain spaces. Prefixes such as `name/` can be supplied in any order, but each required prefix must appear once with a non-blank value.
 
@@ -40,7 +65,10 @@ in a task name and `Discuss date/time slot` in a note all work. Quoting or escap
 not supported.
 
 Terminal control characters in displayed text use visible escapes such as `\u001B`
-and `\t`; the stored text is unchanged. Ordinary line breaks are retained.
+and `\t`; the stored text is unchanged.
+
+Feature examples below show commands and key output lines. The welcome screen, command
+prompts and decorative separators are omitted.
 
 ## Clients
 
@@ -510,10 +538,15 @@ The app keeps a small `.busynotfree.lock` file in the data folder. Its presence 
 folder is in use: the operating-system lock is released when the app closes or its process ends.
 Leave this file in place, including while the app is running.
 
-To back up or move your data, exit successfully, then copy this file. On another computer,
-place it in a `data` folder relative to the directory from which you will launch BusyNotFree.
+To back up or move your data, exit successfully, then copy `data/busynotfree.properties`.
+On another computer, place it in a `data` folder relative to the directory from which you will launch BusyNotFree.
 Keep a backup before replacing a file. The data is stored as readable text; avoid editing it
 manually because invalid values can prevent the app from loading.
+
+This version can load older save files, but older releases may discard fields introduced
+later when saving. In particular, v1.0 saves omit task completion states and trashcan entries
+from newer data. Back up `data/busynotfree.properties` before changing versions, and use a
+separate working directory when trying an older JAR so it cannot overwrite your current data.
 
 If loading fails, the app displays `Error: Unable to load saved data: ...` and stops before
 accepting commands. It does not overwrite that file. Keep a copy of the file and restore a

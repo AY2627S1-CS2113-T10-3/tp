@@ -345,7 +345,7 @@ calls are summarised in UML notes to keep the scenario focused.
 
 ![Sequence diagram of the save command](images/SaveCommandSequenceDiagram.png)
 
-In `BusyNotFree#main`, the `SaveAction` callback is connected to
+In `BusyNotFree#startApplication`, the `SaveAction` callback is connected to
 `DataStorage#save(clientManager, projectManager)`. Both `save` and `exit` use `saveData`, which
 returns `true` only when that action completes normally. On `IOException`, it displays
 `Critical ERROR!!! Unable to save data: ` followed by the cause and returns `false`.
@@ -397,6 +397,11 @@ to `false`, so data files produced before this enhancement still load with their
 progress. Only the exact values `true` and
 `false` are accepted; an invalid value makes loading fail instead of silently changing a task's
 state. Finally, the saved next-ID counters prevent deleted IDs from being reused after a restart.
+
+The optional fields provide compatibility when reading older files. An older writer may
+discard newer fields: the v1.0 writer rebuilds the properties without completion flags or
+trashcan entries. The User Guide therefore recommends backing up the save file before
+changing versions and using a separate working directory when trying an older release.
 
 The following diagram focuses on restoring one task inside `DataStorage#loadTasks`, after
 clients and projects have been loaded. The task is a new object in the new application run;

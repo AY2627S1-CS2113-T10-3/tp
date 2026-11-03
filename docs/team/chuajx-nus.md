@@ -21,9 +21,13 @@ and progress, and saving data between sessions.
   tasks and events, and connected saving to `exit`. Stored next-ID counters preserve identifiers
   after deletion and restart. Writes use a temporary file before replacement; invalid saved
   data is reported at startup. Added `save` to persist work without ending the session, using
-  a shared save action so tests can simulate I/O failures. Evidence:
-  [PR #32](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/32) and
-  [save command in PR #83](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/83).
+  a shared save action so tests can simulate I/O failures. Added data-folder locking to
+  prevent concurrent instances from overwriting saved work, and field-specific load errors
+  with tests that verify invalid files stay unchanged. Evidence:
+  [PR #32](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/32),
+  [save command in PR #83](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/83),
+  [single-instance protection in PR #108](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/108) and
+  [load diagnostics in PR #115](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/115).
 
 - **Task completion and project progress:** Implemented `task.mark` and `task.unmark`,
   `[COMPLETED]` / `[In Progress]` labels and a completed-task count for each project. Derived
