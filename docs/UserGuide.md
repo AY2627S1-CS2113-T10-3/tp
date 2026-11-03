@@ -157,6 +157,9 @@ project.filter active
 1. P001|Website redesign|ACTIVE|Due 2026-11-30
 ```
 
+Supply exactly one status. A missing, invalid or additional argument displays
+an error and the command format; existing projects remain unchanged.
+
 ### List projects by deadline: `project.deadlines`
 
 Format: `project.deadlines`
@@ -171,6 +174,9 @@ project.deadlines
 2. P002|Logo design|ACTIVE|Due 2026-12-15
 ```
 
+This command does not accept arguments. Additional input displays an error and
+the command format; project data remains unchanged.
+
 ### List overdue active projects: `project.overdue`
 
 Format: `project.overdue`
@@ -183,6 +189,13 @@ are not included. If there are no overdue active projects, the app shows
 ```text
 project.overdue
 1. P001|Website redesign|ACTIVE|Due 2026-10-01
+```
+
+When no active project is overdue, the output is:
+
+```text
+project.overdue
+No overdue projects found.
 ```
 
 `project.list`, `project.filter`, `project.deadlines`, and `project.overdue`
@@ -229,6 +242,9 @@ its name, deadline and activities remain unchanged.
 project.status P001 paused
 Project P001 status changed to PAUSED.
 ```
+
+An unknown project ID, invalid status, missing argument or additional argument
+displays an error and the command format. The project remains unchanged.
 
 ### Delete a project: `project.delete`
 
