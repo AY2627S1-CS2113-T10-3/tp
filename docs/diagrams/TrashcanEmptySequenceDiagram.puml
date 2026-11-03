@@ -19,9 +19,10 @@ User -> CH : trashcan.empty
 activate CH
 CH -> CH : routeCommand(command)
 activate CH
-CH -> CH : validate no arguments\npendingTrashcanEmpty = true
-activate CH
-deactivate CH
+note right of CH
+  Validate no arguments, then set
+  pendingTrashcanEmpty = true
+end note
 CH -> UI : showMessage(confirmation prompt)
 activate UI
 deactivate UI
@@ -46,20 +47,24 @@ alt user confirms
   deactivate PM
   CH -> TM : empty()
   activate TM
-  TM -> TM : deletedProjects.clear()\ndeletedClients.clear()
-  activate TM
-  deactivate TM
+  note right of TM
+    deletedProjects.clear()
+  end note
+  note right of TM
+    deletedClients.clear()
+  end note
   TM --> CH : complete
   deactivate TM
-  CH -> CH : pendingTrashcanEmpty = false
-  activate CH
-  deactivate CH
+  note right of CH
+    pendingTrashcanEmpty = false
+  end note
   CH -> UI : showMessage("Trashcan emptied.")
   activate UI
   deactivate UI
   deactivate CH
   deactivate CH
   deactivate CH
+  ||20||
 else user cancels
   User -> CH : no
   activate CH
@@ -67,15 +72,19 @@ else user cancels
   activate CH
   CH -> CH : handleTrashcanEmptyConfirmation("no")
   activate CH
-  CH -> CH : cancelPendingDeletion()\npendingTrashcanEmpty = false
+  CH -> CH : cancelPendingDeletion()
   activate CH
-  deactivate CH
+  note right of CH
+    pendingTrashcanEmpty = false
+  end note
   CH -> UI : showMessage("Trashcan emptying cancelled.")
   activate UI
   deactivate UI
   deactivate CH
   deactivate CH
   deactivate CH
+  deactivate CH
+  ||20||
 end
 
 note over PM, TM
