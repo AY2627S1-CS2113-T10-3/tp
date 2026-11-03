@@ -9,7 +9,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Properties;
@@ -133,15 +135,19 @@ public final class DataStorage {
         if (trash.isEmpty()) {
             return;
         }
-        ClientManager deletedClients = new ClientManager();
-        loadClients(trash, deletedClients);
-        ProjectManager deletedProjects = new ProjectManager(
-                id -> clients.exists(id) || deletedClients.exists(id));
-        loadProjects(trash, deletedProjects);
-        loadTasks(trash, deletedProjects);
-        loadEvents(trash, deletedProjects);
-        deletedClients.getClients().forEach(clients::loadDeletedClient);
-        deletedProjects.getProjects().forEach(projects::loadDeletedProject);
+        try {
+            ClientManager deletedClients = new ClientManager();
+            loadClients(trash, deletedClients);
+            ProjectManager deletedProjects = new ProjectManager(
+                    id -> clients.exists(id) || deletedClients.exists(id));
+            loadProjects(trash, deletedProjects);
+            loadTasks(trash, deletedProjects);
+            loadEvents(trash, deletedProjects);
+            deletedClients.getClients().forEach(clients::loadDeletedClient);
+            deletedProjects.getProjects().forEach(projects::loadDeletedProject);
+        } catch (RuntimeException exception) {
+            throw new IllegalArgumentException("Invalid trashcan data: " + exception.getMessage(), exception);
+        }
     }
 
     /** Restores clients and their notes in ID order. */
@@ -149,9 +155,9 @@ public final class DataStorage {
         for (int index = 0; index < count(data, "client.count"); index++) {
             String key = "client." + index + ".";
             String id = required(data, key + "id");
-            clients.advanceNextClientNumber(idNumber(id, "C"));
+            clients.advanceNextClientNumber(parseIdNumber(id, "C", key + "id"));
             Client client = clients.addClient(required(data, key + "name"));
-            requireMatchingId(id, client.getClientId());
+            requireMatchingId(id, client.getClientId(), key + "id");
             for (int note = 0; note < count(data, key + "note.count"); note++) {
                 client.addNote(required(data, key + "note." + note));
             }
@@ -163,12 +169,12 @@ public final class DataStorage {
         for (int index = 0; index < count(data, "project.count"); index++) {
             String key = "project." + index + ".";
             String id = required(data, key + "id");
-            projects.advanceNextNumbers(idNumber(id, "P"), projects.getNextTaskNumber(),
+            projects.advanceNextNumbers(parseIdNumber(id, "P", key + "id"), projects.getNextTaskNumber(),
                     projects.getNextEventNumber());
             Project project = projects.addProject(required(data, key + "client"),
-                    required(data, key + "name"), LocalDate.parse(required(data, key + "deadline")));
-            requireMatchingId(id, project.getProjectId());
-            project.changeStatus(ProjectStatus.valueOf(required(data, key + "status")));
+                    required(data, key + "name"), parseDate(data, key + "deadline"));
+            requireMatchingId(id, project.getProjectId(), key + "id");
+            project.changeStatus(parseProjectStatus(data, key + "status"));
         }
     }
 
@@ -177,11 +183,11 @@ public final class DataStorage {
         for (int index = 0; index < count(data, "task.count"); index++) {
             String key = "task." + index + ".";
             String id = required(data, key + "id");
-            projects.advanceNextNumbers(projects.getNextProjectNumber(), idNumber(id, "T"),
+            projects.advanceNextNumbers(projects.getNextProjectNumber(), parseIdNumber(id, "T", key + "id"),
                     projects.getNextEventNumber());
             Task task = projects.addTask(required(data, key + "project"), required(data, key + "description"),
-                    LocalDate.parse(required(data, key + "date")));
-            requireMatchingId(id, task.getId());
+                    parseDate(data, key + "date"));
+            requireMatchingId(id, task.getId(), key + "id");
             String completed = data.getProperty(key + "completed", "false");
             if ("true".equals(completed)) {
                 task.markCompleted();
@@ -197,10 +203,10 @@ public final class DataStorage {
             String key = "event." + index + ".";
             String id = required(data, key + "id");
             projects.advanceNextNumbers(projects.getNextProjectNumber(), projects.getNextTaskNumber(),
-                    idNumber(id, "E"));
+                    parseIdNumber(id, "E", key + "id"));
             Event event = projects.addEvent(required(data, key + "project"), required(data, key + "description"),
-                    LocalDate.parse(required(data, key + "date")));
-            requireMatchingId(id, event.getId());
+                    parseDate(data, key + "date"));
+            requireMatchingId(id, event.getId(), key + "id");
         }
     }
 
@@ -270,20 +276,61 @@ public final class DataStorage {
 
     /** Parses a nonnegative collection size. */
     private int count(Properties data, String key) {
-        int value = Integer.parseInt(required(data, key));
-        if (value < 0) {
-            throw new IllegalArgumentException("Invalid " + key + ".");
-        }
-        return value;
+        return parseNumber(data, key, 0);
     }
 
     /** Parses a positive ID counter. */
     private int positiveNumber(Properties data, String key) {
-        int value = Integer.parseInt(required(data, key));
-        if (value < 1) {
-            throw new IllegalArgumentException("Invalid " + key + ".");
+        return parseNumber(data, key, 1);
+    }
+
+    /** Parses a saved number, identifying its property and accepted range instead of exposing parser text. */
+    private int parseNumber(Properties data, String key, int minimum) {
+        String value = required(data, key);
+        String message = "Invalid " + key + ". Expected a whole number from " + minimum
+                + " to " + Integer.MAX_VALUE + ".";
+        try {
+            int number = Integer.parseInt(value);
+            if (number >= minimum) {
+                return number;
+            }
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException(message, exception);
         }
-        return value;
+        throw new IllegalArgumentException(message);
+    }
+
+    /** Reports a malformed or impossible saved date against the field that contains it. */
+    private LocalDate parseDate(Properties data, String key) {
+        String value = required(data, key);
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException exception) {
+            throw new IllegalArgumentException("Invalid " + key
+                    + ". Expected a valid date in YYYY-MM-DD format.", exception);
+        }
+    }
+
+    /** Keeps saved status validation case-sensitive while naming the field and supported values. */
+    private ProjectStatus parseProjectStatus(Properties data, String key) {
+        String value = required(data, key);
+        try {
+            return ProjectStatus.valueOf(value);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException("Invalid " + key + ". Expected one of "
+                    + Arrays.toString(ProjectStatus.values()) + ".", exception);
+        }
+    }
+
+    /** Adds the saved field name to ID format and numeric-overflow failures. */
+    private int parseIdNumber(String id, String prefix, String key) {
+        try {
+            return idNumber(id, prefix);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException("Invalid " + key + ". Invalid ID " + id
+                    + ". Expected an ID such as " + prefix + "001 with a positive number up to "
+                    + Integer.MAX_VALUE + ".", exception);
+        }
     }
 
     /** Parses the numeric part of an application ID. */
@@ -299,9 +346,9 @@ public final class DataStorage {
     }
 
     /** Rejects IDs that cannot be produced by the application's ID formatter. */
-    private void requireMatchingId(String saved, String generated) {
+    private void requireMatchingId(String saved, String generated, String key) {
         if (!saved.equals(generated)) {
-            throw new IllegalArgumentException("Invalid ID " + saved + ".");
+            throw new IllegalArgumentException("Invalid " + key + ". Invalid ID " + saved + ".");
         }
     }
 }

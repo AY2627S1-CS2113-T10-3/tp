@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
@@ -53,6 +54,31 @@ class BusyNotFreeIntegrationTest {
         assertTrue(output.contains("Unable to load saved data: Saved data is invalid: Unsupported data version."));
         assertEquals(invalidData, Files.readString(file, StandardCharsets.UTF_8));
         assertFalse(output.contains("Data saved. Goodbye!"));
+    }
+
+    @Test
+    public void main_malformedSavedFields_namesFieldWithoutOverwritingFile() throws IOException, InterruptedException {
+        runApplication("client.add name/Acme\nproject.add client/C001 name/Website due/2026-11-30\nexit\n");
+        Path file = directory.resolve("data").resolve("busynotfree.properties");
+        String valid = Files.readString(file, StandardCharsets.UTF_8);
+        for (String[] field : List.of(
+                new String[]{"project.0.status=ACTIVE", "project.0.status=active", "project.0.status"},
+                new String[]{"next.task=1", "next.task=abc", "next.task"},
+                new String[]{"project.0.deadline=2026-11-30", "project.0.deadline=2026-02-30", "project.0.deadline"})) {
+            String invalid = valid.replace(field[0], field[1]);
+            assertFalse(invalid.equals(valid));
+            Files.writeString(file, invalid, StandardCharsets.UTF_8);
+
+            String output = runApplication("");
+
+            assertTrue(output.contains("Saved data is invalid: Invalid " + field[2] + "."), output);
+            assertFalse(output.contains("No enum constant"), output);
+            assertFalse(output.contains("For input string"), output);
+            assertFalse(output.contains("could not be parsed"), output);
+            assertFalse(output.contains("Enter a command:"));
+            assertFalse(output.contains("Data saved. Goodbye!"));
+            assertEquals(invalid, Files.readString(file, StandardCharsets.UTF_8));
+        }
     }
 
     @Test

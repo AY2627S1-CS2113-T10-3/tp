@@ -411,6 +411,19 @@ invalid, before creating the command loop or saving anything over the file. A mi
 creates empty, linked managers. The path `data/busynotfree.properties` is resolved relative
 to the process working directory, not the JAR's directory.
 
+Saved counts and counters use `parseNumber`, dates use `parseDate`, and project statuses use
+`parseProjectStatus`. These helpers identify the saved property and its expected range or
+format instead of passing Java parser messages to the user. ID parsing and ID-format checks
+also name the saved field. Missing fields retain their separate `Missing FIELD.` diagnostic;
+status values remain case-sensitive. The original parser exception is retained as the cause
+for debugging. Trashcan loading uses the same helpers and adds the trashcan section to the
+message because its properties are read without the outer `trash.` prefix.
+
+`DataStorageLoadErrorsTest` checks malformed active and retained records and verifies that
+rejected files keep their original bytes. `BusyNotFreeIntegrationTest` checks the reported
+status, number and date failures through actual application startup, including the absence
+of a command prompt or a successful-save message.
+
 #### Diagram notation and maintenance
 
 These diagrams use the notation in the course's [Modeling (Using UML) chapter](https://nus-cs2113-ay2627-s1.github.io/website/se-book-adapted/chapters/modeling.html#sequence-diagrams-basic).
