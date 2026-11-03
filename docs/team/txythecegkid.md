@@ -15,8 +15,8 @@ the shared command-argument parsing and validation they rely on, and the matchin
     `Project`, `ScheduledItem`, `Task` and `Event` model classes and `ProjectManager`.
     - **Argument parsing:** Wrote the shared `ArgumentParser`, which accepts prefixes in any order and keeps slashes
       inside values (e.g. `name/Review UI/UX mockup`).
-    - **Validation:** Missing, blank, repeated and unexpected prefixes are rejected. Dates are checked strictly, so
-      impossible dates such as `2026-02-30` are rejected instead of being silently corrected.
+    - **Validation:** Missing, blank and repeated prefixes are rejected. Dates are checked strictly, so impossible
+      dates such as `2026-02-30` are rejected instead of being silently corrected.
     - **IDs:** Each type has its own ID sequence (`P001`, `T001`, `E001`), and IDs are allocated only after a command
       succeeds, so failed commands leave no gaps.
     - **Parallel development:** `ProjectManager` checks clients through a `ClientLookup` interface, so project creation
@@ -35,19 +35,33 @@ the shared command-argument parsing and validation they rely on, and the matchin
   - **Usability:** Confirmations now name the project, task, event and client (e.g. `Created project P001 "Website
     redesign" for client C001 "Acme Studio".`). Missing-ID errors point to the command that lists valid IDs; the
     project hint also helps `project.status` and `project.delete`.
+  - **Bug fixes from release testing (v2.1):** Before the final release, I checked every UG and DG statement against
+    the built application and fixed the bugs found in my code.
+    - **Prefixes in free text:** Each command now reserves only its own prefixes, so notes such as
+      `Discuss date/time slot` and task names such as `Fix client/server bug` are accepted instead of being rejected
+      as unexpected prefixes. `task.edit` still rejects `project/` explicitly, so an edit cannot appear to move an item.
+    - **ID counter overflow:** A save file with a counter at `Integer.MAX_VALUE` let the next ID wrap to a negative
+      number that could not be loaded again. Project, task and event creation now reject an exhausted counter
+      without changing any data.
+    - **Clearer errors:** An unknown command target such as `foo.bar` is now reported as an unsupported target with a
+      pointer to `help`, and a missing task ID shows the same `project.view` hint as a missing event ID.
+    - Evidence: [PR #109](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/109),
+      [PR #110](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/110).
   - **Code quality:** Added assertions, null checks and `FINE`-level logging that records only IDs, never client or
-    task details. Brought my code in line with the course's Java coding standard and moved a test-only stub out of
-    the production code.
+    task details. Brought my code in line with the course's Java coding standard, moved a test-only stub out of
+    the production code and removed the unused template classes `Duke` and `DukeTest`.
 
-- **Testing:** Created the JUnit test classes for parsing, creation, editing and the model. These include 159
-  generated cases in `AddCommandValidationTest` (every argument order, invalid dates, free-text names) and 56 in
-  `EditCommandTest`. Each rejected command is checked to leave data unchanged and not to use up an ID.
+- **Testing:** Created the JUnit test classes for parsing, creation, editing and the model. These include 165
+  generated cases in `AddCommandValidationTest` (every argument order, invalid dates, free-text names) and 62 in
+  `EditCommandTest`. Each rejected command is checked to leave data unchanged and not to use up an ID. Added
+  regression tests for every v2.1 bug fix, including exhausted ID counters and other commands' prefixes in names.
 
 - **Contributions to the User Guide:** Wrote the [edit a task](../UserGuide.md#edit-a-task-taskedit) and
   [edit an event](../UserGuide.md#edit-an-event-eventedit) sections and their command-summary rows. Updated the
   [add a project](../UserGuide.md#add-a-project-projectadd), [add a task](../UserGuide.md#add-a-task-taskadd) and
   [add an event](../UserGuide.md#add-an-event-eventadd) sections with the new confirmation messages and tips on
-  looking up IDs.
+  looking up IDs. Rewrote the note on reserved prefixes in the [quick start](../UserGuide.md#quick-start) to match the
+  v2.1 parsing fix.
 
 - **Contributions to the Developer Guide:** Wrote
   [Creating projects, tasks and events](../DeveloperGuide.md#creating-projects-tasks-and-events-projectadd-taskadd-and-eventadd)
@@ -57,9 +71,13 @@ the shared command-argument parsing and validation they rely on, and the matchin
     sample session (`CreationObjectDiagram`), and the `project.add` and `task.add` sequence diagrams
     (`AddProjectSequenceDiagram`, `AddTaskSequenceDiagram`).
   - Revised these diagrams after the DG peer review: removed return arrows to the user, showed the client lookup
-    after project creation, and redrew the class diagram so that no lines cross. Evidence:
+    after project creation, and redrew the class diagram so that no lines cross. Added navigability arrows to the
+    object diagram at the tutor's request, with a sentence explaining the arrowheads. Evidence:
     [PR #97](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/97),
-    [PR #101](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/101).
+    [PR #101](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/101),
+    [PR #113](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/113).
+  - Updated the shared [parsing and routing](../DeveloperGuide.md#parsing-and-routing) steps and the prefix design
+    considerations to describe the v2.1 parsing fix and its trade-off.
 
 - **Contributions to team-based tasks:**
   - Helped set up the issue tracker: created v1.0 epics and user stories for teammates' features as well as my own
@@ -69,11 +87,13 @@ the shared command-argument parsing and validation they rely on, and the matchin
   - Reported [issue #72](https://github.com/AY2627S1-CS2113-T10-3/tp/issues/72): the client UI regression test's
     expected output was out of date and the test was not run in CI. Both were then fixed by the team.
 
-- **Review/mentoring contributions:** Reviewed and approved 14 teammate PRs, including feature PRs
+- **Review/mentoring contributions:** Reviewed and approved 17 teammate PRs, including feature PRs
   [#27](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/27), [#32](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/32),
   [#63](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/63), [#80](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/80),
   [#82](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/82), [#83](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/83),
   [#89](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/89) and [#92](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/92).
+  For [PR #115](https://github.com/AY2627S1-CS2113-T10-3/tp/pull/115), which replaced raw Java text in load errors,
+  I ran the build against corrupted save files before approving and suggested follow-up improvements.
 
 - **Contributions beyond the project team:** Reviewed the Developer Guide of team CS2113-W12-4, with comments on
   their diagrams and explanations
