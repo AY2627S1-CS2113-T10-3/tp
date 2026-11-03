@@ -2,11 +2,17 @@
 
 ## Introduction
 
-BusyNotFree is a command-line app for managing clients and their projects. A project can have dated tasks and events. You can view a project's details, update its status, and save your work during a session or when you exit.
+BusyNotFree is a command-line application for freelancers and consultants who manage
+several clients and projects and prefer typing commands.
+
+Keep client notes, project deadlines, dated tasks and events together in one
+lightweight local application. You can review project progress, identify overdue
+work and save your records for the next session without creating an account or
+using an online project-management service.
 
 ## Quick start
 
-1. Install Java 25.
+1. Install Java 25. Run `java -version` in a terminal and check that it reports version 25.
 2. Download `BusyNotFree.jar` from the [latest release](https://github.com/AY2627S1-CS2113-T10-3/tp/releases/latest) and place it in a folder where you have write permission.
 3. Open a terminal in that folder and run `java -jar BusyNotFree.jar`. Use the terminal so you can enter commands and read the output.
 4. Type a command and press Enter. Try the commands below in order:
@@ -23,9 +29,46 @@ BusyNotFree is a command-line app for managing clients and their projects. A pro
 
 The app prints the assigned ID after each addition. The example IDs assume no existing data; use the IDs shown on your screen if you already have saved data.
 
+BusyNotFree needs an interactive terminal. Double-clicking the JAR may not open a console
+for entering commands; launch it with `java -jar BusyNotFree.jar` as shown above.
+
+Use the downloaded file's actual name in the launch command. For example, a Canvas copy named
+`[CS2113-T10-3][BusyNotFree].jar` can be launched with
+`java -jar "[CS2113-T10-3][BusyNotFree].jar"`. Put the filename or full path in double quotes
+if it contains spaces. Run the command from the JAR's folder, or supply its full path.
+
 If you are building from source, run `.\gradlew.bat shadowJar` on Windows or `./gradlew shadowJar` on macOS or Linux from the repository root. Then run `java -jar build/libs/BusyNotFree.jar` from that directory.
 
+### Startup troubleshooting
+
+| Message or symptom | What to check |
+| --- | --- |
+| `java` is not recognised or not found | Install Java 25 and ensure its executable is available on your terminal's `PATH`. Open a new terminal and run `java -version`. |
+| `UnsupportedClassVersionError` | The selected Java runtime is too old. Configure the terminal to use Java 25 and confirm with `java -version`. |
+| `Unable to access jarfile` | Check the filename and the directory shown in your terminal. Use the actual filename or full path, quoting it if it contains spaces. |
+
+### Entering commands
+
+Inside BusyNotFree, enter one command per line. Names, descriptions and notes cannot span
+multiple input lines; pasting another line starts another command. Values containing spaces
+do not need quotation marks. Quote characters are kept as part of the value, so
+`client.add name/Acme Studio` stores `Acme Studio`, while `client.add name/"Acme Studio"`
+also stores the quote characters. Typing `\n` enters literal text rather than a line break.
+This differs from quoting a JAR filename in the terminal launch command above.
+
 The commands and IDs are case-sensitive. Enter dates as real calendar dates in `YYYY-MM-DD` format, such as `2026-11-30`. Names, descriptions, and notes may contain spaces. Prefixes such as `name/` can be supplied in any order, but each required prefix must appear once with a non-blank value.
+
+A command's own prefixes cannot appear after whitespace inside a value. For example, in
+`task.add`, a name cannot contain ` name/`, ` date/` or ` project/`. Other slash-containing
+text is accepted as typed, including other commands' prefixes: `UI/UX`, `Fix client/server bug`
+in a task name and `Discuss date/time slot` in a note all work. Quoting or escaping prefixes is
+not supported.
+
+Terminal control characters in displayed text use visible escapes such as `\u001B`
+and `\t`; the stored text is unchanged.
+
+Feature examples below show commands and key output lines. The welcome screen, command
+prompts and decorative separators are omitted.
 
 ## Clients
 
@@ -67,7 +110,9 @@ Note 1: Prefers weekly updates
 
 Format: `client.list`
 
-Lists client IDs and names in creation order. If there are none, the app shows `No clients found.` Extra words after this command are ignored.
+Lists client IDs and names in ascending numeric ID order, including after restoration
+and restarting. If there are none, the app shows
+`No clients found.` Extra words after this command are ignored.
 
 ### Find clients by name: `client.find`
 
@@ -76,7 +121,7 @@ Format: `client.find NAME`
 Finds clients whose names contain `NAME`, ignoring case. For example,
 `client.find acme` matches `Acme Studio`. Multiword searches are allowed.
 A summary such as `Found 2 matching clients.` appears before the matching client
-IDs and names in creation order, using the same format as `client.list`.
+IDs and names in ascending numeric ID order, using the same format as `client.list`.
 A single match displays `Found 1 matching client.` No matches displays
 `Found 0 matching clients.` followed by `No clients found.` A search must not be blank.
 
@@ -254,8 +299,13 @@ Moves an existing project and its tasks and events to the trashcan after confirm
 It does not delete the client. Deleted IDs are not reused. Use `trashcan.restore PROJECT_ID`
 to recover the project while its client is still active.
 
+Type `yes` to confirm or `no` to cancel. Other input repeats the confirmation prompt.
+
 ```text
 project.delete P001
+Delete project P001 "Website redesign" and 2 associated activities?
+Type yes to confirm deletion or no to cancel.
+yes
 Website redesign has been deleted
 2 associated activities removed.
 ```
@@ -384,13 +434,18 @@ available after restarting. Individually deleted tasks, events and notes are not
 retained; project snapshots contain only activities present when the project was deleted.
 Items deleted before this feature was installed cannot be recovered.
 
-### Restore a deleted project: `trashcan.restore`
+### Restore a deleted project or client: `trashcan.restore`
 
-Format: `trashcan.restore PROJECT_ID`
+Format: `trashcan.restore PROJECT_ID/CLIENT_ID`
+
+Provide exactly one project ID or client ID. The slash means "or"; do not type it.
 
 Restores a project immediately, including its tasks and events with their original
 IDs, descriptions, dates, status and task completion states. The restored project
-is removed from the trashcan and appended to the active project list.
+is removed from the trashcan, and active projects are sorted by numeric project ID.
+For a client ID, restores the client's original name, ID and all notes in their
+original order. Active clients are then sorted by numeric client ID. Its deleted
+projects remain in the trashcan until restored separately.
 No new IDs are allocated. Changes are saved on `save` or `exit`.
 
 ```text
@@ -398,11 +453,39 @@ trashcan.restore P001
 Restored project P001 "Website" with 2 tasks and 1 event.
 ```
 
-Missing, unknown, active, lowercase or multiple IDs are rejected. Only projects
-can be restored. The owning client must still be active; a client with the same
-name and a different ID does not satisfy this requirement. If a client was deleted
-after its projects, those projects remain visible in the trashcan but cannot yet
-be restored. Restoration also rejects conflicting IDs without changing any data.
+```text
+trashcan.restore C001
+Restored client C001 "Acme" with 2 notes.
+```
+
+Missing, malformed, unknown, active, lowercase or multiple IDs are rejected. IDs must
+start with uppercase `P` or `C` followed by at least three digits, such as `P001`,
+`C001` or `C1000`. Use the exact ID shown by `trashcan.list`.
+For project restoration, the owning client must be active; a client with the same
+name and a different ID does not satisfy this requirement. If both were deleted,
+restore the client first, then restore each project by its own ID. Restoration rejects
+conflicting IDs without replacing active records or removing retained snapshots.
+
+### Empty the trashcan: `trashcan.empty`
+
+Format: `trashcan.empty`
+
+Permanently removes all deleted projects and clients from the trashcan, including
+their stored tasks, events and notes. Emptied entries cannot be restored.
+Active records remain unchanged, and deleted IDs are not reused.
+Enter `save` or `exit` to persist the change.
+
+```text
+trashcan.empty
+Permanently delete all items in the trashcan? Type yes or no.
+yes
+Trashcan emptied.
+```
+
+Enter `no` to cancel. Other answers keep confirmation pending; finish with `yes`
+or `no` before entering another command. If input ends before confirmation,
+emptying is cancelled. Extra command arguments are rejected without changing data.
+Running the command on an already empty trashcan also succeeds after confirmation.
 
 ## Help and saving
 
@@ -411,6 +494,9 @@ be restored. Restoration also rejects conflicting IDs without changing any data.
 Format: `help`
 
 Shows a list of available commands and short descriptions.
+
+`help` does not accept arguments. For example, `help now` displays
+`Error: Use help without arguments.`
 
 ### Save without exiting: `save`
 
@@ -454,17 +540,39 @@ While confirmation is pending, those words are treated as answers to the confirm
 The save file is `data/busynotfree.properties` relative to the directory from which you start
 the app, which may differ from the folder containing the JAR. For example, running the JAR
 from a terminal in `C:\Work` uses `C:\Work\data\busynotfree.properties`.
-The app creates the data directory and file on a successful save and loads the file automatically
-when launched from the same directory. Without a save file, it starts with no records.
+The app creates the data directory at startup. A successful save writes the file, which loads
+automatically when launched from the same directory. Without a save file, it starts with no records.
 
-To back up or move your data, exit successfully, then copy this file. On another computer,
-place it in a `data` folder relative to the directory from which you will launch BusyNotFree.
+Only one BusyNotFree instance may use a data folder at a time. Starting another instance from
+the same directory displays `Error: Unable to access application data: This data folder is already
+in use by another BusyNotFree instance. Close it before trying again.` and stops before accepting
+commands or saving. Close the first instance before reopening, or launch from a different working
+directory to use separate data. Do not run an older version against the same folder at the same time;
+older versions do not check this lock.
+
+The app keeps a small `.busynotfree.lock` file in the data folder. Its presence does not mean the
+folder is in use: the operating-system lock is released when the app closes or its process ends.
+Leave this file in place, including while the app is running.
+
+To back up or move your data, exit successfully, then copy `data/busynotfree.properties`.
+On another computer, place it in a `data` folder relative to the directory from which you will launch BusyNotFree.
 Keep a backup before replacing a file. The data is stored as readable text; avoid editing it
 manually because invalid values can prevent the app from loading.
+
+This version can load older save files, but older releases may discard fields introduced
+later when saving. In particular, v1.0 saves omit task completion states and trashcan entries
+from newer data. Back up `data/busynotfree.properties` before changing versions, and use a
+separate working directory when trying an older JAR so it cannot overwrite your current data.
 
 If loading fails, the app displays `Error: Unable to load saved data: ...` and stops before
 accepting commands. It does not overwrite that file. Keep a copy of the file and restore a
 known working backup before restarting.
+
+Malformed numbers, dates and project statuses are reported with the saved field name and
+expected value. For example, the message includes
+`Invalid project.0.deadline. Expected a valid date in YYYY-MM-DD format.`
+for an invalid project deadline. Errors in retained `trash.*` records also identify the
+trashcan section and the field within it.
 
 When terminal input ends normally, the app attempts one save and then returns. If that save
 fails, it displays the error but cannot accept another command because input has ended.
@@ -499,6 +607,7 @@ fails, it displays the error but cannot accept another command because input has
 | Edit event | `event.edit EVENT_ID name/DESCRIPTION date/YYYY-MM-DD` |
 | Help | `help` |
 | List deleted items | `trashcan.list` |
-| Restore project | `trashcan.restore PROJECT_ID` |
+| Restore project or client | `trashcan.restore PROJECT_ID/CLIENT_ID` |
+| Empty trashcan | `trashcan.empty` |
 | Save and continue | `save` |
 | Save and exit | `exit` |

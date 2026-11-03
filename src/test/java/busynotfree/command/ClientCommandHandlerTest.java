@@ -61,10 +61,11 @@ class ClientCommandHandlerTest {
     public List<DynamicTest> execute_invalidAddArguments_reportsErrorWithoutConsumingId() {
         List<String> inputs = List.of("client.add", "client.add Acme", "client.add name/",
                 "client.add name/ \t ", "client.add name/Acme name/Other",
-                "client.add name/Acme due/2026-11-30", "client.add stray name/Acme");
+                "client.add due/2026-11-30 name/Acme", "client.add stray name/Acme");
         List<String> errors = List.of("Missing required prefix: name/.", "Missing required prefix: name/.",
                 "A value is required after name/.", "A value is required after name/.", "Repeated prefix: name/.",
-                "Unexpected prefix: due/.", "Arguments must start with a prefix such as name/.");
+                "Arguments must start with a prefix such as name/.",
+                "Arguments must start with a prefix such as name/.");
         List<DynamicTest> tests = new ArrayList<>();
         for (int i = 0; i < inputs.size(); i++) {
             String input = inputs.get(i);
@@ -95,18 +96,30 @@ class ClientCommandHandlerTest {
         assertTrue(ui.errors.isEmpty());
     }
 
+    @Test
+    public void execute_noteWithOtherCommandPrefixes_keepsThemAsText() {
+        Client client = manager.addClient("Acme Studio");
+
+        assertFalse(handler.execute("client.note C001 text/Discuss date/time slot"));
+        assertFalse(handler.execute("client.note C001 text/Send name/logo files to client/server"));
+
+        assertEquals(List.of("Discuss date/time slot", "Send name/logo files to client/server"), client.getNotes());
+        assertTrue(ui.errors.isEmpty());
+    }
+
     /** Tests malformed note arguments without mutating previously recorded notes. */
     @TestFactory
     public List<DynamicTest> execute_invalidNoteArguments_reportsErrorWithoutMutation() {
         List<String> inputs = List.of("client.note", "client.note text/Note", "client.note C001",
                 "client.note C001 Note", "client.note C001 text/", "client.note C001 text/ \t ",
-                "client.note C001 text/First text/Second", "client.note C001 text/Note name/Other",
+                "client.note C001 text/First text/Second", "client.note C001 name/Other text/Note",
                 "client.note C001 extra text/Note", "client.note C999 text/Note",
                 "client.note P001 text/Note", "client.note c001 text/Note", "client.note C1 text/Note");
         List<String> errors = List.of("A client ID is required before text/.",
                 "A client ID is required before text/.", "Missing required prefix: text/.",
                 "Missing required prefix: text/.", "A value is required after text/.",
-                "A value is required after text/.", "Repeated prefix: text/.", "Unexpected prefix: name/.",
+                "A value is required after text/.", "Repeated prefix: text/.",
+                "Arguments must start with a prefix such as name/.",
                 "Arguments must start with a prefix such as name/.", "Client C999 does not exist.",
                 "Client P001 does not exist.", "Client c001 does not exist.", "Client C1 does not exist.");
         List<DynamicTest> tests = new ArrayList<>();
@@ -135,7 +148,8 @@ class ClientCommandHandlerTest {
 
         assertFalse(handler.execute("client.view C001"));
 
-        assertEquals(List.of("C001 | Acme Studio", "Notes: No notes found."), ui.messages);
+        assertEquals(List.of("=".repeat(24), "C001 | Acme Studio", "", "Notes: No notes found.",
+                "=".repeat(24)), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -147,8 +161,8 @@ class ClientCommandHandlerTest {
 
         assertFalse(handler.execute("client.view C001"));
 
-        assertEquals(List.of("C001 | Acme Studio", "Note 1: Prefers weekly updates",
-                "Note 2: Follow up on Friday"), ui.messages);
+        assertEquals(List.of("=".repeat(30), "C001 | Acme Studio", "", "Note 1: Prefers weekly updates",
+                "Note 2: Follow up on Friday", "=".repeat(30)), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -185,7 +199,8 @@ class ClientCommandHandlerTest {
 
         assertFalse(handler.execute("client.list"));
 
-        assertEquals(List.of("1. C001 | Acme Studio", "2. C002 | Bright Ideas"), ui.messages);
+        assertEquals(List.of("=".repeat(24), "1. C001 | Acme Studio", "2. C002 | Bright Ideas",
+                "=".repeat(24)), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -193,7 +208,7 @@ class ClientCommandHandlerTest {
     public void execute_listWithoutClients_displaysEmptyMessage() {
         assertFalse(handler.execute("client.list"));
 
-        assertEquals(List.of("No clients found."), ui.messages);
+        assertEquals(List.of("=".repeat(24), "No clients found.", "=".repeat(24)), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -201,7 +216,7 @@ class ClientCommandHandlerTest {
     public void execute_listWithExtraArguments_ignoresArgumentsAsGuideSpecifies() {
         assertFalse(handler.execute("client.list ignored arguments"));
 
-        assertEquals(List.of("No clients found."), ui.messages);
+        assertEquals(List.of("=".repeat(24), "No clients found.", "=".repeat(24)), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -214,7 +229,8 @@ class ClientCommandHandlerTest {
         assertEquals("Acme  UI/UX Studio", manager.getClient("C001").getName());
         assertEquals(List.of("Review  src/main at https://example.com"), manager.getClient("C001").getNotes());
         assertEquals(List.of("Added client C001: Acme  UI/UX Studio.", "Note added to client C001.",
-                "C001 | Acme  UI/UX Studio", "Note 1: Review  src/main at https://example.com"), ui.messages);
+                "=".repeat(47), "C001 | Acme  UI/UX Studio", "", "Note 1: Review  src/main at https://example.com",
+                "=".repeat(47)), ui.messages);
         assertTrue(ui.errors.isEmpty());
     }
 
@@ -316,7 +332,7 @@ class ClientCommandHandlerTest {
 
         // Cancellation must return the handler to normal command processing.
         handler.execute("client.view C001");
-        assertEquals("Note 1: Keep this note", ui.messages.getLast());
+        assertEquals("Note 1: Keep this note", ui.messages.get(ui.messages.size() - 2));
     }
 
     @Test
@@ -469,10 +485,10 @@ class ClientCommandHandlerTest {
                 fixture.handler.execute("client.view C001");
                 for (int position = 0; position < expected.size(); position++) {
                     assertEquals("Note " + (position + 1) + ": " + expected.get(position),
-                            fixture.ui.messages.get(position + 1));
+                            fixture.ui.messages.get(position + 3));
                 }
                 if (expected.isEmpty()) {
-                    assertEquals("Notes: No notes found.", fixture.ui.messages.getLast());
+                    assertEquals("Notes: No notes found.", fixture.ui.messages.get(fixture.ui.messages.size() - 2));
                 }
             }));
         }
@@ -491,7 +507,7 @@ class ClientCommandHandlerTest {
         assertEquals("Note deletion cancelled.", ui.messages.getLast());
         assertTrue(ui.errors.isEmpty());
         handler.execute("client.view C001");
-        assertEquals("Note 1: Keep this note", ui.messages.getLast());
+        assertEquals("Note 1: Keep this note", ui.messages.get(ui.messages.size() - 2));
     }
 
     @Test

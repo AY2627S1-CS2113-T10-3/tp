@@ -2,6 +2,8 @@
 ' Classes responsible for task completion and its persisted state.
 !pragma layout smetana
 skinparam classAttributeIconSize 0
+skinparam nodesep 65
+skinparam ranksep 65
 hide circle
 hide empty members
 
@@ -31,8 +33,9 @@ class Ui {
   +showProjectSummary(project, client) : void
 }
 
-ProjectManager --> "0..*" Project : projects
-Project "1" *-- "0..*" Task : contains
+' Endpoint-label padding keeps multiplicities clear of arrowheads in the Smetana renderer.
+ProjectManager -down-> "0..*     " Project : projects
+Project "1   " *-down- "0..*   " Task : contains
 DataStorage .down.> ProjectManager : reads / rebuilds
 DataStorage ..> Task : saves / restores completion
 Ui ..> Project : reads tasks

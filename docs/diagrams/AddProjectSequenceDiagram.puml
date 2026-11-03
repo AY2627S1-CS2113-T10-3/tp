@@ -7,11 +7,16 @@ participant ":CommandHandler" as CH
 participant ":CommandParser" as CP
 participant ":ArgumentParser" as AP
 participant ":ProjectManager" as PM
-participant ":ClientLookup" as CL
+participant ":ClientManager" as CM
 participant ":Ui" as UI
 
 User -> CH : execute("project.add client/C001\nname/Website due/2026-11-30")
 activate CH
+
+note right of CH
+  Internal calls to routeCommand and
+  handleProjectAdd are omitted.
+end note
 
 CH -> CP : parse(userInput)
 activate CP
@@ -22,6 +27,11 @@ CH -> AP : parse(argumentText, "client", "name", "due")
 activate AP
 AP --> CH : values
 deactivate AP
+
+note right of CH
+  parseDate runs before addProject
+  because its result is an argument.
+end note
 
 CH -> AP : parseDate("2026-11-30")
 activate AP
@@ -37,20 +47,30 @@ activate P
 P --> PM
 deactivate P
 
-PM -> CL : exists("C001")
-activate CL
-CL --> PM : true
-deactivate CL
+PM -> CM : exists("C001")
+activate CM
+note right of CM : Called through the\nClientLookup interface.
+CM --> PM : true
+deactivate CM
 
 PM -> PM : store p, nextProjectNumber++
 PM --> CH : p
 deactivate PM
 
-CH -> UI : showProjectAdded(p)
+CH -> CM : exists("C001")
+activate CM
+CM --> CH : true
+deactivate CM
+
+CH -> CM : getClient("C001")
+activate CM
+CM --> CH : client
+deactivate CM
+
+CH -> UI : showProjectAdded(p, client)
 activate UI
 UI --> CH
 deactivate UI
 
-CH --> User : false
 deactivate CH
 @enduml

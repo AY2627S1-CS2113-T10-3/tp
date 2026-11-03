@@ -1,6 +1,7 @@
 package busynotfree.ui;
 
 import java.util.List;
+import java.util.Locale;
 
 import busynotfree.model.Client;
 import busynotfree.model.Event;
@@ -74,38 +75,56 @@ public class Ui {
         }
     }
 
-    /** Displays command names and descriptions with aligned columns. */
+    /** Displays commands grouped by purpose, with consistently aligned descriptions. */
     public void showHelp() {
         showMessage("Available commands:");
-        showMessage("client.add     |   Add a client");
-        showMessage("client.note    |   Add a client note");
-        showMessage("client.view    |   View a client");
-        showMessage("client.list    |   List all clients");
-        showMessage("client.find    |   Find clients by name");
-        showMessage("client.edit    |   Edit a client's name");
-        showMessage("client.delete  |   Delete a client and its notes");
-        showMessage("client.delete_note |   Delete a client note");
-        showMessage("project.add    |   Add a project");
-        showMessage("project.delete |   Delete a project");
-        showMessage("project.status |   Update a project status");
-        showMessage("project.list   |   List all projects");
-        showMessage("project.filter |   Filter projects by status");
-        showMessage("project.deadlines |   List projects by deadline");
-        showMessage("project.overdue |   List overdue active projects");
-        showMessage("project.view   |   View a project summary");
-        showMessage("task.add       |   Add a task");
-        showMessage("task.mark      |   Mark a task complete");
-        showMessage("task.unmark    |   Reopen a task");
-        showMessage("task.edit      |   Edit a task");
-        showMessage("task.delete    |   Delete a task");
-        showMessage("event.add      |   Add an event");
-        showMessage("event.edit     |   Edit an event");
-        showMessage("event.delete   |   Delete an event");
-        showMessage("trashcan.list  |   List deleted projects and clients");
-        showMessage("trashcan.restore |   Restore a deleted project");
-        showMessage("help           |   View help");
-        showMessage("save           |   Save data and continue");
-        showMessage("exit           |   Save data and exit");
+        showMessage("");
+        showMessage("Clients");
+        showHelpCommand("client.add", "Add a client");
+        showHelpCommand("client.note", "Add a client note");
+        showHelpCommand("client.view", "View a client");
+        showHelpCommand("client.list", "List all clients");
+        showHelpCommand("client.find", "Find clients by name");
+        showHelpCommand("client.edit", "Edit a client's name");
+        showHelpCommand("client.delete", "Delete a client and its notes");
+        showHelpCommand("client.delete_note", "Delete a client note");
+        showMessage("");
+        showMessage("Projects");
+        showHelpCommand("project.add", "Add a project");
+        showHelpCommand("project.delete", "Delete a project");
+        showHelpCommand("project.status", "Update a project status");
+        showHelpCommand("project.list", "List all projects");
+        showHelpCommand("project.filter", "Filter projects by status");
+        showHelpCommand("project.deadlines", "List projects by deadline");
+        showHelpCommand("project.overdue", "List overdue active projects");
+        showHelpCommand("project.view", "View a project summary");
+        showMessage("");
+        showMessage("Tasks");
+        showHelpCommand("task.add", "Add a task");
+        showHelpCommand("task.mark", "Mark a task complete");
+        showHelpCommand("task.unmark", "Reopen a task");
+        showHelpCommand("task.edit", "Edit a task");
+        showHelpCommand("task.delete", "Delete a task");
+        showMessage("");
+        showMessage("Events");
+        showHelpCommand("event.add", "Add an event");
+        showHelpCommand("event.edit", "Edit an event");
+        showHelpCommand("event.delete", "Delete an event");
+        showMessage("");
+        showMessage("Trashcan");
+        showHelpCommand("trashcan.list", "List deleted projects and clients");
+        showHelpCommand("trashcan.restore", "Restore a deleted project or client");
+        showHelpCommand("trashcan.empty", "Permanently delete all items in the trashcan");
+        showMessage("");
+        showMessage("General");
+        showHelpCommand("help", "View help");
+        showHelpCommand("save", "Save data and continue");
+        showHelpCommand("exit", "Save data and exit");
+    }
+
+    /** Pads command names to keep descriptions aligned, including longer command names. */
+    private void showHelpCommand(String command, String description) {
+        showMessage(String.format("  %-18s | %s", command, description));
     }
 
     /**
@@ -412,7 +431,7 @@ public class Ui {
      * @param message response to display
      */
     public void showMessage(String message) {
-        System.out.println(message);
+        System.out.println(escapeControls(message));
     }
 
     /**
@@ -421,6 +440,36 @@ public class Ui {
      * @param message error to display
      */
     public void showError(String message) {
-        System.out.println("Error: " + message);
+        System.out.println("Error: " + escapeControls(message));
+    }
+
+    /**
+     * Makes terminal controls and isolated surrogates visible without changing stored text.
+     * Preserves line feeds, normalizes CRLF to a line feed and displays tabs as a literal backslash-t.
+     * This shared output boundary also protects client deletion, restoration and error messages.
+     */
+    static String escapeControls(String message) {
+        String text = String.valueOf(message);
+        StringBuilder displayed = new StringBuilder(text.length());
+        for (int offset = 0; offset < text.length();) {
+            int codePoint = text.codePointAt(offset);
+            offset += Character.charCount(codePoint);
+            if (codePoint == '\n') {
+                displayed.append('\n');
+            } else if (codePoint == '\r' && offset < text.length() && text.charAt(offset) == '\n') {
+                displayed.append('\n');
+                offset++;
+            } else if (codePoint == '\t') {
+                displayed.append("\\t");
+            } else if (codePoint == '\r') {
+                displayed.append("\\r");
+            } else if (Character.isISOControl(codePoint)
+                    || (codePoint >= Character.MIN_SURROGATE && codePoint <= Character.MAX_SURROGATE)) {
+                displayed.append(String.format(Locale.ROOT, "\\u%04X", codePoint));
+            } else {
+                displayed.appendCodePoint(codePoint);
+            }
+        }
+        return displayed.toString();
     }
 }

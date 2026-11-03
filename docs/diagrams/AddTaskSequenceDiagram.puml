@@ -13,7 +13,11 @@ participant ":Ui" as UI
 User -> CH : execute("task.add project/P001\nname/Wireframe date/2026-10-15")
 activate CH
 
-note right of CH : Command word parsing by\nCommandParser is omitted.
+note right of CH
+  Command word parsing by CommandParser and
+  internal calls to routeCommand and
+  handleTaskAdd are omitted.
+end note
 
 CH -> AP : parse(argumentText, "project", "name", "date")
 activate AP
@@ -51,6 +55,5 @@ activate UI
 UI --> CH
 deactivate UI
 
-CH --> User : false
 deactivate CH
 @enduml

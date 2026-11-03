@@ -30,10 +30,10 @@ client.note C001 text/Prefers weekly updates
 Note added to client C001.
 ```
 
-Prefix arguments follow the existing parser conventions: `client/`, `project/`,
-`name/`, `due/` and `date/` are reserved when they start at a whitespace boundary.
-`text/` is also reserved when parsing a note. Repeated or inappropriate reserved
-prefixes are rejected. Other slash-containing text remains part of the value.
+Only the current command's prefixes are reserved when they start at a whitespace
+boundary within a value. For example, `text/` is reserved in `client.note`, but
+`name/` can appear in a note. Repeating a command's own prefix is rejected.
+Other slash-containing text remains part of the value.
 
 ## View a client
 
@@ -52,8 +52,9 @@ Note 1: Prefers weekly updates
 
 Format: `client.list`
 
-The list shows each client's ID and name in creation order. As specified by the
-draft's general command rules, extra arguments are ignored for this command.
+The list shows each client's ID and name in ascending numeric client-ID order,
+including immediately after restoration and after restarting. Extra arguments are
+ignored for this command.
 
 ```text
 client.list
@@ -70,7 +71,8 @@ Format: `client.find NAME`
 
 Searches for a case-insensitive substring anywhere in a client's name. Multiword
 searches are allowed. A summary such as `Found 2 matching clients.` precedes the
-numbered IDs and names in creation order, using the same format as `client.list`.
+numbered IDs and names in ascending numeric client-ID order, including immediately
+after restoration and after restarting, using the same format as `client.list`.
 A single match displays `Found 1 matching client.` No matches displays
 `Found 0 matching clients.` followed by `No clients found.` Missing or
 whitespace-only search text is rejected.
@@ -98,7 +100,8 @@ Delete those projects first. Changes are saved on `save` or `exit`, and deleted 
 are never reused.
 
 The deleted client and its notes remain visible in `trashcan.list`, including
-after saving and restarting. Client restoration is not currently supported.
+after saving and restarting. Use `trashcan.restore CLIENT_ID` to restore the client
+and its notes. Restore any deleted projects separately after restoring their client.
 
 ## Delete a client note
 
@@ -133,4 +136,4 @@ Use Java 25 to run the complete JUnit and Checkstyle checks:
 ```
 
 The repeatable console test and its captured output are recorded in
-[`test/ui-test-plan.md`](../test/ui-test-plan.md).
+[`test/ui-test-plan.md`](https://github.com/AY2627S1-CS2113-T10-3/tp/blob/master/test/ui-test-plan.md).

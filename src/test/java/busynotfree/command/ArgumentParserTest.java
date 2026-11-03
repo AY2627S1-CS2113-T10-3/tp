@@ -110,11 +110,20 @@ class ArgumentParserTest {
     }
 
     @Test
-    public void parse_unexpectedPrefix_throwsException() {
+    public void parse_otherCommandPrefixInValue_keepsItAsText() {
+        Map<String, String> values = parser.parse("project/P001 name/Fix client/server bug date/2026-10-15",
+                "project", "name", "date");
+
+        assertEquals("Fix client/server bug", values.get("name"));
+    }
+
+    @Test
+    public void parse_otherCommandPrefixInsteadOfOwn_reportsMissingPrefix() {
+        // due/ belongs to project.add, so here it stays in the name and date/ is missing.
         CommandException exception = assertThrows(CommandException.class,
                 () -> parser.parse("project/P001 name/Wireframe due/2026-10-15", "project", "name", "date"));
 
-        assertEquals("Unexpected prefix: due/.", exception.getMessage());
+        assertEquals("Missing required prefix: date/.", exception.getMessage());
     }
 
     @Test

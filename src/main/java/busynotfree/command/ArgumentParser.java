@@ -6,7 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -17,21 +16,19 @@ import busynotfree.exception.CommandException;
  * Used by the add and edit commands for projects, tasks and events, and by client commands.
  */
 public final class ArgumentParser {
-    /** Reserved argument names across commands, including those disallowed by the current command. */
-    private static final Set<String> RECOGNIZED_PREFIXES = Set.of("client", "project", "name", "due", "date");
     private static final Pattern PREFIX_PATTERN = Pattern.compile("(?<!\\S)([A-Za-z][A-Za-z0-9]*)/");
 
     /**
      * Extracts each required prefix once, allowing any order and spaces within values.
      * Prefixes must start at the beginning of the input or after whitespace.
-     * Recognized and required prefixes delimit arguments;
-     * other slash-containing text remains part of a value.
-     * Recognized prefixes are reserved and cannot appear literally after whitespace within a value.
+     * Only the command's own prefixes delimit arguments, so they cannot appear after whitespace
+     * within a value. Other slash-containing text, including other commands' prefixes such as
+     * date/ in a note, remains part of a value.
      *
      * @param argumentText Argument text after the command word.
      * @param requiredPrefixes Allowed prefixes, without trailing slashes.
      * @return An unmodifiable map of prefixes to trimmed, non-blank values.
-     * @throws CommandException If an argument is missing, repeated, blank or unexpected.
+     * @throws CommandException If an argument is missing, repeated, blank or not first.
      */
     public Map<String, String> parse(String argumentText, String... requiredPrefixes) {
         assert requiredPrefixes.length > 0 : "A command must require at least one prefix.";
@@ -42,7 +39,7 @@ public final class ArgumentParser {
         int valueStart = 0;
         while (matcher.find()) {
             String matchedPrefix = matcher.group(1);
-            if (!RECOGNIZED_PREFIXES.contains(matchedPrefix) && !allowedPrefixes.contains(matchedPrefix)) {
+            if (!allowedPrefixes.contains(matchedPrefix)) {
                 continue;
             }
             if (previousPrefix == null) {
@@ -53,9 +50,6 @@ public final class ArgumentParser {
                 putArgument(arguments, previousPrefix, argumentText.substring(valueStart, matcher.start()));
             }
             previousPrefix = matchedPrefix;
-            if (!allowedPrefixes.contains(previousPrefix)) {
-                throw new CommandException("Unexpected prefix: " + previousPrefix + "/.");
-            }
             valueStart = matcher.end();
         }
         if (previousPrefix != null) {

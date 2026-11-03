@@ -32,6 +32,55 @@ class TrashcanManagerTest {
     }
 
     @Test
+    public void restoreClient_preservesOriginalIdNotesAndCounter() {
+        Client original = clients.addClient("Acme");
+        clients.addNote("C001", "First note");
+        clients.addNote("C001", "First note");
+        clients.deleteClient("C001", projects);
+        original.setName("Changed after deletion");
+
+        Client restored = trashcan.restoreClient(" C001 ", clients);
+
+        assertSame(restored, clients.getClient("C001"));
+        assertEquals("Acme", restored.getName());
+        assertEquals(List.of("First note", "First note"), restored.getNotes());
+        assertTrue(trashcan.getDeletedClients().isEmpty());
+        assertEquals(2, clients.getNextClientNumber());
+        assertThrows(ClientException.class, () -> trashcan.restoreClient("C001", clients));
+    }
+
+    @Test
+    public void restoreClient_invalidId_preservesRetainedNotes() {
+        clients.addClient("Acme");
+        clients.addNote("C001", "Keep this note");
+        clients.deleteClient("C001", projects);
+
+        assertThrows(ClientException.class, () -> trashcan.restoreClient(null, clients));
+        for (String id : List.of("", " ", "invalid", "c001", "C999", "P001")) {
+            assertThrows(ClientException.class, () -> trashcan.restoreClient(id, clients));
+        }
+
+        assertTrue(clients.getClients().isEmpty());
+        assertEquals(List.of("Keep this note"), trashcan.getDeletedClients().getFirst().getNotes());
+        assertEquals(2, clients.getNextClientNumber());
+    }
+
+    @Test
+    public void restoreClient_conflictingActiveId_keepsBothRecordsUnchanged() {
+        Client deleted = new Client("C001", "Deleted client");
+        deleted.addNote("Retained note");
+        trashcan.storeClient(deleted);
+        Client active = clients.addClient("Active client");
+
+        assertThrows(ClientException.class, () -> trashcan.restoreClient("C001", clients));
+
+        assertSame(active, clients.getClient("C001"));
+        assertEquals("Deleted client", trashcan.getDeletedClients().getFirst().getName());
+        assertEquals(List.of("Retained note"), trashcan.getDeletedClients().getFirst().getNotes());
+        assertEquals(2, clients.getNextClientNumber());
+    }
+
+    @Test
     public void deleteClientAndProject_storesIndependentSnapshotsInSharedTrashcan() {
         Client client = clients.addClient("Acme");
         clients.addNote("C001", "Call on Friday");

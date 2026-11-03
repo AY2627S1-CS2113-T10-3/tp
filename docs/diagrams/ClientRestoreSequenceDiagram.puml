@@ -1,0 +1,108 @@
+@startuml
+' Restoration outcomes for well-formed client IDs; input loop and decorative output are omitted.
+hide footbox
+skinparam defaultFontSize 14
+skinparam maxMessageSize 145
+
+participant ":CommandHandler" as CH
+participant ":TrashcanCommandHandler" as TCH
+participant ":TrashcanManager" as TM
+participant ":ClientManager" as CM
+participant ":Ui" as UI
+
+alt retained client exists and ID is available
+  CH -> TCH : execute(restoreCommand)
+  activate CH
+  activate TCH
+  note right of TCH
+    validate one client ID
+  end note
+  TCH -> TM : restoreClient("C001", clientManager)
+  activate TM
+  note right of TM
+    find retained client
+  end note
+  TM -> CM : registerRestoredClient(client)
+  activate CM
+  note right of CM
+    check active client ID
+  end note
+  note right of CM
+    add client with original notes
+  end note
+  CM -> CM : sortClientsById()
+  activate CM
+  deactivate CM
+  CM --> TM : registration complete
+  deactivate CM
+  note right of TM
+    remove retained client entry
+  end note
+  TM --> TCH : restored client
+  deactivate TM
+  TCH -> UI : show restoration message
+  activate UI
+  deactivate UI
+  TCH --> CH
+  deactivate TCH
+  deactivate CH
+
+else active client ID conflicts
+  CH -> TCH : execute(restoreCommand)
+  activate CH
+  activate TCH
+  note right of TCH
+    validate one client ID
+  end note
+  TCH -> TM : restoreClient("C001", clientManager)
+  activate TM
+  note right of TM
+    find retained client
+  end note
+  TM -> CM : registerRestoredClient(client)
+  activate CM
+  note right of CM
+    check active client ID
+  end note
+  CM --> TM : ClientException
+  deactivate CM
+  TM --> TCH : propagate exception
+  deactivate TM
+  TCH --> CH : propagate exception
+  deactivate TCH
+  CH -> UI : show error and usage
+  activate UI
+  deactivate UI
+  note over TM, CM
+    Active client and retained snapshot are unchanged.
+  end note
+  deactivate CH
+
+else no retained client
+  CH -> TCH : execute(restoreCommand)
+  activate CH
+  activate TCH
+  note right of TCH
+    validate one client ID
+  end note
+  TCH -> TM : restoreClient("C001", clientManager)
+  activate TM
+  note right of TM
+    find retained client
+  end note
+  TM --> TCH : ClientException
+  deactivate TM
+  TCH --> CH : propagate exception
+  deactivate TCH
+  CH -> UI : show error and usage
+  activate UI
+  deactivate UI
+  deactivate CH
+  ||20||
+end
+
+note over TM, CM
+  ID counters are unchanged.
+  Deleted projects require separate restore commands.
+end note
+@enduml

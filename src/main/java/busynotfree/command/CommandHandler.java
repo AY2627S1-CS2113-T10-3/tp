@@ -4,8 +4,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 import busynotfree.exception.BusyNotFreeException;
 import busynotfree.exception.ClientHasProjectsException;
@@ -27,6 +29,9 @@ import busynotfree.ui.Ui;
 public class CommandHandler {
     /** Records project view diagnostics when fine logging is enabled. */
     private static final Logger LOGGER = Logger.getLogger(CommandHandler.class.getName());
+    private static final Set<String> SUPPORTED_TARGETS = Set.of("client", "project", "task", "event", "trashcan");
+    /** Matches project/ where ArgumentParser would treat it as a prefix: at the start or after whitespace. */
+    private static final Pattern PROJECT_PREFIX = Pattern.compile("(?<!\\S)project/");
 
     private final CommandParser commandParser;
     private final Ui ui;
@@ -50,6 +55,9 @@ public class CommandHandler {
 
     /** Event awaiting confirmation; null when no event deletion is pending. */
     private Event pendingEventDeletion;
+
+    /** True while permanent removal of all trashcan entries awaits confirmation. */
+    private boolean pendingTrashcanEmpty;
 
     /** Stores the selected note's client ID, position and preview text. */
     private record PendingNoteDeletion(String clientId, int noteIndex, String text) {
@@ -84,7 +92,7 @@ public class CommandHandler {
         this.clientManager = clientManager;
         this.clientCommandHandler = new ClientCommandHandler(clientManager, ui);
         this.trashcanCommandHandler = new TrashcanCommandHandler(
-                projectManager.getTrashcanManager(), projectManager, ui);
+                projectManager.getTrashcanManager(), projectManager, clientManager, ui);
     }
 
     /**
@@ -100,11 +108,15 @@ public class CommandHandler {
         boolean shouldExit = false;
         ParsedCommand command = null;
         try {
+            String[] commandParts = userInput.trim().split("\\s+", 2);
             if (isAwaitingDeletionConfirmation()) {
                 handleDeletionConfirmation(userInput);
-            } else if (userInput.trim().split("\\s+", 2)[0].equals("exit")) {
+            } else if (commandParts[0].equals("exit")) {
                 shouldExit = true;
-            } else if (userInput.trim().equals("help")) {
+            } else if (commandParts[0].equals("help")) {
+                if (commandParts.length > 1) {
+                    throw new CommandException("Use help without arguments.");
+                }
                 ui.showHelp();
             } else {
                 command = commandParser.parse(userInput);
@@ -159,6 +171,19 @@ public class CommandHandler {
 
     /** Delegates client operations and routes project, task and event commands. */
     private void routeCommand(ParsedCommand command) {
+        // Check the target first, so an unknown target is not reported as an unknown action.
+        if (!SUPPORTED_TARGETS.contains(command.getEntityType())) {
+            throw new CommandException("Unsupported target: " + command.getEntityType()
+                    + ". Type help to see available commands.");
+        }
+        if (command.getEntityType().equals("trashcan") && command.getAction().equals("empty")) {
+            if (!command.getArgumentText().isBlank()) {
+                throw new CommandException("Use trashcan.empty without arguments.");
+            }
+            pendingTrashcanEmpty = true;
+            ui.showMessage("Permanently delete all items in the trashcan? Type yes or no.");
+            return;
+        }
         if (command.getEntityType().equals("trashcan")) {
             trashcanCommandHandler.execute(command);
             return;
@@ -302,7 +327,7 @@ public class CommandHandler {
 
     /**
      * Separates the positional item ID from the name/ and date/ arguments of an edit command.
-     * Other recognized prefixes, such as project/, are rejected so an edit cannot move an item.
+     * A project/ prefix is rejected so an edit cannot appear to move an item to another project.
      *
      * @param arguments Argument text after task.edit or event.edit.
      * @param itemType Task or event, used in the error message.
@@ -317,6 +342,11 @@ public class CommandHandler {
             throw new CommandException("Provide the " + itemType + " ID before name/ and date/.");
         }
         String prefixedArguments = parts.length > 1 ? parts[1] : "";
+        // ArgumentParser keeps other commands' prefixes as text, so check project/ explicitly.
+        if (PROJECT_PREFIX.matcher(prefixedArguments).find()) {
+            LOGGER.log(Level.FINE, "{0}.edit rejected because it tried to change the project", itemType);
+            throw new CommandException("Unexpected prefix: project/.");
+        }
         Map<String, String> values = argumentParser.parse(prefixedArguments, "name", "date");
         LocalDate date = argumentParser.parseDate(values.get("date"));
         return new EditArguments(itemId, values.get("name"), date);
@@ -365,15 +395,20 @@ public class CommandHandler {
     /**
      * Reports whether the next input must answer a deletion confirmation.
      *
-     * @return True while a project, client, note, task or event is awaiting confirmation.
+     * @return True while an item deletion or trashcan emptying is awaiting confirmation.
      */
     public boolean isAwaitingDeletionConfirmation() {
         return pendingDeletion != null || pendingClientDeletion != null
-                || pendingNoteDeletion != null || pendingTaskDeletion != null || pendingEventDeletion != null;
+                || pendingNoteDeletion != null || pendingTaskDeletion != null || pendingEventDeletion != null
+                || pendingTrashcanEmpty;
     }
 
     /** Deletes only after yes; keeps the confirmation pending for other invalid input. */
     private void handleDeletionConfirmation(String input) {
+        if (pendingTrashcanEmpty) {
+            handleTrashcanEmptyConfirmation(input);
+            return;
+        }
         if (pendingEventDeletion != null) {
             handleEventDeletionConfirmation(input);
             return;
@@ -409,6 +444,10 @@ public class CommandHandler {
 
     /** Cancels any pending deletion, including when the input stream ends. */
     public void cancelPendingDeletion() {
+        if (pendingTrashcanEmpty) {
+            pendingTrashcanEmpty = false;
+            ui.showMessage("Trashcan emptying cancelled.");
+        }
         if (pendingEventDeletion != null) {
             pendingEventDeletion = null;
             ui.showMessage("Event deletion cancelled.");
@@ -428,6 +467,24 @@ public class CommandHandler {
         if (pendingDeletion != null) {
             pendingDeletion = null;
             ui.showMessage("Project deletion cancelled.");
+        }
+    }
+
+    /** Empties the trashcan only after yes; invalid answers leave confirmation pending. */
+    private void handleTrashcanEmptyConfirmation(String input) {
+        switch (input.trim()) {
+        case "yes":
+            projectManager.getTrashcanManager().empty();
+            pendingTrashcanEmpty = false;
+            ui.showMessage("Trashcan emptied.");
+            break;
+        case "no":
+            cancelPendingDeletion();
+            break;
+        default:
+            ui.showError("Please type yes to confirm deletion or no to cancel.");
+            ui.showMessage("Permanently delete all items in the trashcan? Type yes or no.");
+            break;
         }
     }
 

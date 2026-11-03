@@ -1,10 +1,42 @@
 @startuml
 ' Model classes used by project.add, task.add and event.add.
+' Layout, top to bottom: superclass, its subclasses, Project, then the managers.
+' This keeps the superclass above its subclasses and stops any lines from crossing.
 ' The smetana layout renders class diagrams without a separate Graphviz install.
 !pragma layout smetana
 hide circle
 hide empty members
 skinparam classAttributeIconSize 0
+skinparam nodesep 60
+skinparam ranksep 70
+
+' The back-reference to Project is shown as a field, not an arrow,
+' because an arrow from ScheduledItem down to Project would cross the compositions.
+abstract class ScheduledItem {
+  -id : String
+  -project : Project
+  -description : String
+  -date : LocalDate
+  {abstract} +getType() : String
+}
+
+class Task {
+  -completed : boolean
+}
+
+class Event
+
+class Project {
+  -projectId : String
+  -clientId : String
+  -name : String
+  -deadline : LocalDate
+  -status : ProjectStatus
+  +addTask(task)
+  +addEvent(event)
+  +getTasks() : List<Task>
+  +getEvents() : List<Event>
+}
 
 class ProjectManager {
   -nextProjectNumber : int
@@ -22,37 +54,18 @@ interface ClientLookup <<interface>> {
 
 class ClientManager
 
-class Project {
-  -projectId : String
-  -clientId : String
-  -name : String
-  -deadline : LocalDate
-  -status : ProjectStatus
-  +addTask(task)
-  +addEvent(event)
-  +getTasks() : List<Task>
-  +getEvents() : List<Event>
-}
-
-abstract class ScheduledItem {
-  -id : String
-  -description : String
-  -date : LocalDate
-  {abstract} +getType() : String
-}
-
-class Task {
-  -completed : boolean
-}
-
-class Event
-
-ProjectManager --> "1" ClientLookup : clientLookup
-ClientManager ..|> ClientLookup
-ProjectManager *--> "*" Project : projects
-Project *--> "*" Task : tasks
-Project *--> "*" Event : events
+' Generalization: both subclasses point up to the shared superclass.
 Task -up-|> ScheduledItem
 Event -up-|> ScheduledItem
-ScheduledItem --> "1" Project : project
+
+' Project owns its tasks and events.
+' The spaces inside each label keep the multiplicity clear of the arrowhead.
+Project *-up-> "tasks *   " Task
+Project *-up-> "   events *" Event
+
+' ProjectManager owns every project and checks clients through the ClientLookup interface.
+ProjectManager *-up-> "projects *   " Project
+ProjectManager -down-> "clientLookup 1   " ClientLookup
+' The blank label lengthens the realization arrow so its dashed line and triangle are visible.
+ClientManager .left.|> ClientLookup : "          "
 @enduml

@@ -59,9 +59,16 @@ public final class ProjectManager {
      * @param name Non-blank project name.
      * @param deadline Project deadline.
      * @return The newly registered project.
-     * @throws ProjectException If required data is missing or the client does not exist.
+     * @throws ProjectException If required data is missing, the client does not exist
+     *         or no project ID is left.
      */
     public Project addProject(String clientId, String name, LocalDate deadline) {
+        // Checked with an exception, not an assertion, because assertions may be disabled.
+        // Incrementing past Integer.MAX_VALUE would save a negative counter that cannot be loaded.
+        if (nextProjectNumber == Integer.MAX_VALUE) {
+            LOGGER.fine("Project creation rejected because no project ID is left.");
+            throw new ProjectException("No more project IDs are available.");
+        }
         Project project = new Project(formatId("P", nextProjectNumber), clientId, name, deadline);
         if (!clientLookup.exists(project.getClientId())) {
             LOGGER.fine("Project creation rejected because the client does not exist.");
@@ -85,10 +92,15 @@ public final class ProjectManager {
      * @param date Task date.
      * @return The newly attached task.
      * @throws ProjectException If the project ID is blank or the project does not exist.
-     * @throws TaskException If required task data is missing or the task cannot be attached.
+     * @throws TaskException If required task data is missing, the task cannot be attached
+     *         or no task ID is left.
      */
     public Task addTask(String projectId, String description, LocalDate date) {
         Project project = getProject(projectId);
+        if (nextTaskNumber == Integer.MAX_VALUE) {
+            LOGGER.fine("Task creation rejected because no task ID is left.");
+            throw new TaskException("No more task IDs are available.");
+        }
         Task task = new Task(formatId("T", nextTaskNumber), project, description, date);
         project.addTask(task);
         assert project.getTasks().getLast() == task : "A new task must be appended to its own project.";
@@ -110,7 +122,9 @@ public final class ProjectManager {
                 }
             }
         }
-        throw new TaskException("Task " + requestedId + " was not found.");
+        LOGGER.fine("Task lookup failed because the task does not exist.");
+        throw new TaskException("Task " + requestedId
+                + " was not found. Use project.view to see task IDs.");
     }
 
     /**
@@ -218,10 +232,15 @@ public final class ProjectManager {
      * @param date Event date.
      * @return The newly attached event.
      * @throws ProjectException If the project ID is blank or the project does not exist.
-     * @throws EventException If required event data is missing or the event cannot be attached.
+     * @throws EventException If required event data is missing, the event cannot be attached
+     *         or no event ID is left.
      */
     public Event addEvent(String projectId, String description, LocalDate date) {
         Project project = getProject(projectId);
+        if (nextEventNumber == Integer.MAX_VALUE) {
+            LOGGER.fine("Event creation rejected because no event ID is left.");
+            throw new EventException("No more event IDs are available.");
+        }
         Event event = new Event(formatId("E", nextEventNumber), project, description, date);
         project.addEvent(event);
         assert project.getEvents().getLast() == event : "A new event must be appended to its own project.";
@@ -288,6 +307,7 @@ public final class ProjectManager {
 
     /**
      * Registers a restored project after checking its client and active IDs.
+     * Keeps active projects in numeric project ID order.
      * Leaves ID counters unchanged.
      *
      * @param project Snapshot to register in the active collection.
@@ -300,6 +320,20 @@ public final class ProjectManager {
         }
         validateProjectIds(project, projects.values());
         projects.put(project.getProjectId(), project);
+        sortProjectsById();
+    }
+
+    /** Reorders active projects by the numeric portion of their IDs. */
+    private void sortProjectsById() {
+        List<Project> sortedProjects = projects.values().stream()
+                .sorted(Comparator.comparingInt(
+                        project -> Integer.parseInt(project.getProjectId().substring(1))))
+                .toList();
+
+        projects.clear();
+        for (Project project : sortedProjects) {
+            projects.put(project.getProjectId(), project);
+        }
     }
 
     /**
@@ -322,16 +356,7 @@ public final class ProjectManager {
 
     /** Rejects project or activity ID collisions before a restore or storage import changes data. */
     private void validateProjectIds(Project candidate, Iterable<Project> existingProjects) {
-        for (Project existing : existingProjects) {
-            boolean duplicateTask = candidate.getTasks().stream().anyMatch(task -> existing.getTasks().stream()
-                    .anyMatch(other -> other.getId().equals(task.getId())));
-            boolean duplicateEvent = candidate.getEvents().stream().anyMatch(event -> existing.getEvents().stream()
-                    .anyMatch(other -> other.getId().equals(event.getId())));
-            if (existing.getProjectId().equals(candidate.getProjectId()) || duplicateTask || duplicateEvent) {
-                throw new ProjectException("Cannot restore or load project " + candidate.getProjectId()
-                        + ": an ID is already in use.");
-            }
-        }
+        ProjectIdValidator.validate(candidate, existingProjects);
     }
 
     /**
